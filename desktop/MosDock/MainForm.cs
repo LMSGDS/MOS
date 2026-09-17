@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace MosDock;
@@ -79,7 +81,40 @@ sealed class MainForm : Form
             }
 
             ApplyDock(waitForWord: true);
-            await _web.EnsureCoreWebView2Async();
+            try
+            {
+                var dataDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "MOS",
+                    "MosDock",
+                    "WebView2");
+                Directory.CreateDirectory(dataDir);
+                var env = await CoreWebView2Environment.CreateAsync(null, dataDir);
+                await _web.EnsureCoreWebView2Async(env);
+            }
+            catch (Exception ex)
+            {
+                _web.Visible = false;
+                _status.Text = "Thiếu WebView2 — cài lại Setup.exe";
+                MessageBox.Show(
+                    "MOS Dock không tải được WebView2.\n\n"
+                    + "Gỡ bản cũ rồi tải Setup.exe mới tại https://mos.gds.edu.vn/cai-dat\n"
+                    + "Hoặc cài Microsoft Edge WebView2 Runtime rồi mở lại MOS Dock.\n\n"
+                    + ex.Message,
+                    "MOS Dock",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                try
+                {
+                    Process.Start(new ProcessStartInfo("https://mos.gds.edu.vn/cai-dat") { UseShellExecute = true });
+                }
+                catch
+                {
+                    // ignore
+                }
+
+                return;
+            }
             _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             _web.CoreWebView2.WebMessageReceived += (_, e) =>
             {

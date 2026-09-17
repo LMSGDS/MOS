@@ -26,6 +26,10 @@ jobs:
         run: |
           dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
           Copy-Item desktop/installer/windows/install.ps1 dist-win/
+          $loader = Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Select-Object -First 1
+          if (-not $loader) { throw "WebView2Loader.dll missing after publish" }
+          Copy-Item $loader.FullName (Join-Path dist-win "WebView2Loader.dll") -Force
+          Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Format-Table FullName, Length
       - name: Compile Inno Setup installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
         with:

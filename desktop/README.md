@@ -8,7 +8,7 @@ CI (Actions → **Build MOS Dock**) tạo:
 
 | Nền tảng | File |
 | --- | --- |
-| Windows | `MOS-Dock-Setup-Windows.exe` — cài per-user, đăng ký `mosdock:`, chạy cùng Windows |
+| Windows | `MOS-Dock-Setup-Windows.exe` — cài per-user, kèm WebView2Loader.dll, đăng ký `mosdock:` |
 | macOS | `MOS-Dock-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS Dock.command` → Mở |
 | macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple; không dùng làm mặc định |
 

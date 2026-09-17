@@ -1,6 +1,6 @@
 ; MOS Dock — cài per-user, không cần Admin
 #define MyAppName "MOS Dock"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Trường GDS"
 #define MyAppURL "https://mos.gds.edu.vn/cai-dat"
 #ifndef Dist
@@ -32,7 +32,7 @@ RestartApplications=no
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "{#Dist}\MosDock.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Dist}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,install.ps1"
 
 [Icons]
 Name: "{group}\MOS Dock"; Filename: "{app}\MosDock.exe"

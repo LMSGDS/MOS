@@ -13,7 +13,15 @@ if (-not (Test-Path $exeSrc)) {
 }
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
-Copy-Item -Force $exeSrc (Join-Path $dest "MosDock.exe")
+Get-ChildItem -Path $PayloadDir -File | Where-Object { $_.Name -ne "install.ps1" -and $_.Extension -ne ".pdb" } | ForEach-Object {
+    Copy-Item -Force $_.FullName (Join-Path $dest $_.Name)
+}
+Get-ChildItem -Path $PayloadDir -Directory | ForEach-Object {
+    Copy-Item -Force -Recurse $_.FullName (Join-Path $dest $_.Name)
+}
+if (-not (Test-Path (Join-Path $dest "MosDock.exe"))) {
+    Copy-Item -Force $exeSrc (Join-Path $dest "MosDock.exe")
+}
 
 $exe = Join-Path $dest "MosDock.exe"
 $classes = "HKCU:\Software\Classes\mosdock"
