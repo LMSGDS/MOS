@@ -1,22 +1,27 @@
-using System.Diagnostics;
-using System.Net;
-using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
-
 namespace MosDock;
 
+/// <summary>
+/// MOS-KulKul trên PC: đề từ PostgreSQL, mở Word/Excel/PowerPoint trên máy, dock TopMost.
+/// Không nhúng website, không dùng Office Online.
+/// </summary>
 sealed class MainForm : Form
 {
-    readonly Panel _bar = new();
-    readonly WebView2 _web = new();
+    readonly FlowLayoutPanel _bar = new();
+    readonly Panel _exam = new();
+    readonly ComboBox _projects = new();
+    readonly TextBox _steps = new();
+    readonly Label _meta = new();
+    readonly Label _score = new();
     readonly System.Windows.Forms.Timer _keepWord = new();
-    readonly Label _status = new();
+    readonly Button _openBtn = new();
+    readonly Button _submitBtn = new();
     LocalAgent? _agent;
     string _state;
     string _app;
     bool _compact;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
+    IReadOnlyList<MosProject> _items = [];
 
     public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null)
     {
@@ -30,37 +35,81 @@ sealed class MainForm : Form
         ShowInTaskbar = true;
         StartPosition = FormStartPosition.Manual;
         BackColor = Color.FromArgb(30, 79, 115);
+        Font = new Font("Segoe UI", 10f);
 
-        _bar.Height = 40;
+        _bar.Height = 44;
         _bar.Dock = DockStyle.Top;
-        _bar.Padding = new Padding(8, 6, 8, 6);
+        _bar.WrapContents = false;
+        _bar.Padding = new Padding(6, 6, 6, 4);
+        _bar.BackColor = Color.FromArgb(30, 79, 115);
 
-        var title = new Label
+        _bar.Controls.Add(MakeLabel("MOS-KulKul  " + (ExamSession.DisplayName ?? "")));
+        AddAppButton("Word", "word", Color.FromArgb(43, 87, 154));
+        AddAppButton("Excel", "excel", Color.FromArgb(33, 115, 70));
+        AddAppButton("PPT", "powerpoint", Color.FromArgb(210, 71, 38));
+        AddDockButton("Thu nhỏ", "minimized");
+        AddDockButton("Trái", "left");
+        AddDockButton("Phải", "right");
+        AddDockButton("Đáy", "bottom");
+        AddDockButton("Đặt cửa sổ", "place", placeOnly: true);
+        AddDockButton("Mở rộng đề", "expand", placeOnly: true);
+
+        _exam.Dock = DockStyle.Fill;
+        _exam.BackColor = Color.FromArgb(244, 248, 252);
+        _exam.Padding = new Padding(12, 8, 12, 8);
+
+        _meta.AutoSize = false;
+        _meta.Dock = DockStyle.Top;
+        _meta.Height = 22;
+        _meta.ForeColor = Color.FromArgb(15, 23, 42);
+        _meta.Text = ModeText();
+
+        var row = new FlowLayoutPanel
         {
-            Text = "MOS-KulKul",
-            ForeColor = Color.White,
-            AutoSize = true,
-            Location = new Point(8, 10),
+            Dock = DockStyle.Top,
+            Height = 36,
+            WrapContents = false,
+            BackColor = Color.FromArgb(244, 248, 252),
         };
-        _bar.Controls.Add(title);
-        AddButton("Thu nhỏ", "minimized", 140);
-        AddButton("Đính trái", "left", 240);
-        AddButton("Đính phải", "right", 350);
-        AddButton("Đính đáy", "bottom", 460);
-        AddButton("Đặt cửa sổ", "place", 570, placeOnly: true);
-        AddButton("Mở rộng đề", "expand", 680, placeOnly: true);
-        AddButton("Tải đề", "exam-open", 790, placeOnly: true);
-        AddButton("Nộp bài", "exam-submit", 900, placeOnly: true);
+        var pickLbl = new Label
+        {
+            Text = "Đề MOS",
+            AutoSize = true,
+            Margin = new Padding(0, 8, 8, 0),
+            ForeColor = Color.FromArgb(15, 23, 42),
+        };
+        _projects.DropDownStyle = ComboBoxStyle.DropDownList;
+        _projects.Width = 280;
+        _projects.Margin = new Padding(0, 4, 8, 0);
+        _projects.SelectedIndexChanged += (_, _) => ShowSelected();
+        StyleAction(_openBtn, "Mở đề trên máy", Color.FromArgb(0, 142, 226));
+        _openBtn.Click += async (_, _) => await StartExam();
+        StyleAction(_submitBtn, "Nộp bài", Color.FromArgb(15, 118, 110));
+        _submitBtn.Click += async (_, _) => await SubmitExam();
+        row.Controls.Add(pickLbl);
+        row.Controls.Add(_projects);
+        row.Controls.Add(_openBtn);
+        row.Controls.Add(_submitBtn);
 
-        _status.AutoSize = true;
-        _status.ForeColor = Color.FromArgb(200, 230, 255);
-        _status.Location = new Point(1010, 12);
-        _status.Text = ExamSession.Mode == "testing" ? "Chế độ thi" : "Chế độ luyện tập";
-        _bar.Controls.Add(_status);
+        _steps.Multiline = true;
+        _steps.ReadOnly = true;
+        _steps.Dock = DockStyle.Fill;
+        _steps.BorderStyle = BorderStyle.FixedSingle;
+        _steps.BackColor = Color.White;
+        _steps.ScrollBars = ScrollBars.Vertical;
 
-        _web.Dock = DockStyle.Fill;
+        _score.AutoSize = false;
+        _score.Dock = DockStyle.Bottom;
+        _score.Height = 24;
+        _score.ForeColor = Color.FromArgb(0, 107, 176);
+        _score.Text = "Chưa mở đề.";
 
-        Controls.Add(_web);
+        _exam.Controls.Add(_steps);
+        _exam.Controls.Add(_score);
+        _exam.Controls.Add(row);
+        _exam.Controls.Add(_meta);
+
+        Controls.Add(_exam);
         Controls.Add(_bar);
 
         Load += async (_, _) =>
@@ -72,7 +121,7 @@ sealed class MainForm : Form
             }
             catch (Exception ex)
             {
-                _status.Text = "Agent local lỗi: " + ex.Message;
+                _score.Text = "Agent local lỗi: " + ex.Message;
             }
 
             if (_launchOnStart)
@@ -82,101 +131,14 @@ sealed class MainForm : Form
             }
 
             ApplyDock(waitForWord: true);
+            await LoadProjects();
             try
             {
-                var dataDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "MOS",
-                    "KulKul",
-                    "WebView2");
-                Directory.CreateDirectory(dataDir);
-                var env = await CoreWebView2Environment.CreateAsync(null, dataDir);
-                await _web.EnsureCoreWebView2Async(env);
-                SyncWebViewCookies();
-                _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
-                _web.CoreWebView2.WebMessageReceived += (_, e) =>
-                {
-                    var raw = e.TryGetWebMessageAsString();
-                    var launch = raw?.Contains("\"open\"", StringComparison.OrdinalIgnoreCase) == true
-                        || raw?.Contains("mos-open", StringComparison.OrdinalIgnoreCase) == true;
-                    OnPlaceRequest(
-                        ExtractField(raw, "state") ?? _state,
-                        ExtractField(raw, "app"),
-                        launch,
-                        ExtractField(raw, "file"),
-                        launch);
-                };
-                _web.CoreWebView2.NavigationStarting += (_, e) =>
-                {
-                    if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase)
-                        || e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase)
-                        || e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase)
-                        || e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase)
-                        || e.Uri.StartsWith("mos-kulkul:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        e.Cancel = true;
-                        if (e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _app = "excel";
-                        }
-                        else if (e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _app = "powerpoint";
-                        }
-                        else if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _app = "word";
-                        }
-
-                        var launch = !e.Uri.Contains(":place", StringComparison.OrdinalIgnoreCase);
-                        if (e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase)
-                            || e.Uri.StartsWith("mos-kulkul:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            var parsed = Protocol.Parse([e.Uri]);
-                            if (!string.IsNullOrWhiteSpace(parsed.App))
-                            {
-                                _app = OfficeApp.Resolve(parsed.App).Id;
-                            }
-
-                            if (!string.IsNullOrWhiteSpace(parsed.State))
-                            {
-                                _state = parsed.State;
-                            }
-
-                            launch = parsed.Launch;
-                        }
-
-                        if (launch || e.Uri.StartsWith("ms-", StringComparison.OrdinalIgnoreCase))
-                        {
-                            WordWindow.Launch(_app);
-                        }
-
-                        ApplyDock(waitForWord: true);
-                    }
-                };
-                _web.CoreWebView2.Navigate(
-                    $"{Portal.Origin}/?che-do=dock&chuong-trinh={Uri.EscapeDataString(_app)}");
+                await OfflineQueue.FlushAsync();
             }
-            catch (Exception ex)
+            catch
             {
-                _web.Visible = false;
-                _status.Text = "Thiếu WebView2 — cài lại MOS-KulKul";
-                MessageBox.Show(
-                    "MOS-KulKul không tải được WebView2.\n\n"
-                    + "Gỡ bản cũ rồi tải Setup.exe mới tại https://mos.gds.edu.vn/cai-dat\n"
-                    + "Hoặc cài Microsoft Edge WebView2 Runtime rồi mở lại MOS-KulKul.\n\n"
-                    + ex.Message,
-                    "MOS-KulKul",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-                try
-                {
-                    Process.Start(new ProcessStartInfo("https://mos.gds.edu.vn/cai-dat") { UseShellExecute = true });
-                }
-                catch
-                {
-                    // ignore
-                }
+                // offline
             }
         };
 
@@ -187,65 +149,81 @@ sealed class MainForm : Form
         _keepWord.Start();
     }
 
-    void SyncWebViewCookies()
+    static string ModeText() =>
+        (ExamSession.Mode == "testing" ? "Chế độ thi" : "Chế độ luyện tập")
+        + " · Office trên máy, không dùng Office Online";
+
+    Label MakeLabel(string text) => new()
     {
-        if (_web.CoreWebView2 is null)
-        {
-            return;
-        }
+        Text = text,
+        ForeColor = Color.White,
+        AutoSize = true,
+        Margin = new Padding(4, 8, 12, 0),
+        Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+    };
 
-        Uri uri;
-        try
-        {
-            uri = new Uri(Portal.Origin + "/");
-        }
-        catch
-        {
-            return;
-        }
-
-        foreach (Cookie cookie in Portal.Cookies.GetCookies(uri))
-        {
-            var domain = string.IsNullOrWhiteSpace(cookie.Domain) ? uri.Host : cookie.Domain.TrimStart('.');
-            var wv = _web.CoreWebView2.CookieManager.CreateCookie(
-                cookie.Name,
-                cookie.Value,
-                domain,
-                string.IsNullOrWhiteSpace(cookie.Path) ? "/" : cookie.Path);
-            wv.IsHttpOnly = cookie.HttpOnly;
-            wv.IsSecure = cookie.Secure;
-            _web.CoreWebView2.CookieManager.AddOrUpdateCookie(wv);
-        }
+    static void StyleAction(Button btn, string text, Color color)
+    {
+        btn.Text = text;
+        btn.AutoSize = true;
+        btn.FlatStyle = FlatStyle.Flat;
+        btn.BackColor = color;
+        btn.ForeColor = Color.White;
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Margin = new Padding(0, 2, 8, 0);
+        btn.Padding = new Padding(10, 4, 10, 4);
     }
 
-    void AddButton(string text, string state, int x, bool placeOnly = false)
+    void AddAppButton(string text, string id, Color color)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            Tag = id,
+            AutoSize = true,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = id == _app ? color : Color.FromArgb(15, 50, 80),
+            ForeColor = Color.White,
+            Margin = new Padding(2, 2, 2, 2),
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Click += async (_, _) =>
+        {
+            _app = id;
+            foreach (Control c in _bar.Controls)
+            {
+                if (c is Button b && b.Tag is string tag && tag is "word" or "excel" or "powerpoint")
+                {
+                    var on = tag == _app;
+                    b.BackColor = on
+                        ? (tag == "excel" ? Color.FromArgb(33, 115, 70)
+                            : tag == "powerpoint" ? Color.FromArgb(210, 71, 38)
+                            : Color.FromArgb(43, 87, 154))
+                        : Color.FromArgb(15, 50, 80);
+                }
+            }
+
+            await LoadProjects();
+        };
+        _bar.Controls.Add(btn);
+    }
+
+    void AddDockButton(string text, string state, bool placeOnly = false)
     {
         var btn = new Button
         {
             Text = text,
             Tag = state,
-            Location = new Point(x, 6),
-            Size = new Size(placeOnly ? 100 : 100, 28),
+            AutoSize = true,
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.FromArgb(0, 142, 226),
             ForeColor = Color.White,
+            Margin = new Padding(2, 2, 2, 2),
         };
         btn.FlatAppearance.BorderSize = 0;
         btn.Click += (_, _) =>
         {
             var tag = (string)btn.Tag!;
-            if (tag == "exam-open")
-            {
-                _ = StartExam();
-                return;
-            }
-
-            if (tag == "exam-submit")
-            {
-                _ = SubmitExam();
-                return;
-            }
-
             if (tag == "expand")
             {
                 _compact = false;
@@ -273,23 +251,81 @@ sealed class MainForm : Form
         _bar.Controls.Add(btn);
     }
 
+    async Task LoadProjects()
+    {
+        _meta.Text = OfficeApp.Resolve(_app).Id.ToUpperInvariant() + " · " + ModeText();
+        try
+        {
+            _items = await ExamHub.ListProjectsAsync(_app);
+        }
+        catch (Exception ex)
+        {
+            _items = [];
+            _score.Text = "Không tải được đề: " + ex.Message;
+        }
+
+        _projects.Items.Clear();
+        foreach (var p in _items)
+        {
+            _projects.Items.Add(p.Title);
+        }
+
+        if (_projects.Items.Count > 0)
+        {
+            _projects.SelectedIndex = 0;
+        }
+
+        ShowSelected();
+    }
+
+    void ShowSelected()
+    {
+        if (_projects.SelectedIndex < 0 || _projects.SelectedIndex >= _items.Count)
+        {
+            _steps.Text = "Chưa có đề cho chương trình này.";
+            return;
+        }
+
+        var p = _items[_projects.SelectedIndex];
+
+        var mins = Math.Max(1, p.TimeLimitSec / 60);
+        _steps.Text =
+            p.Title + Environment.NewLine
+            + "Kỹ năng: " + (string.IsNullOrWhiteSpace(p.Skill) ? "—" : p.Skill)
+            + " · Thời gian: " + mins + " phút" + Environment.NewLine + Environment.NewLine
+            + "Hướng dẫn:" + Environment.NewLine
+            + string.Join(Environment.NewLine, p.Steps.Select((s, i) => $"{i + 1}. {s}"));
+    }
+
     async Task StartExam()
     {
-        _status.Text = "Đang tải đề từ PostgreSQL…";
-        var (ok, msg) = await ExamHub.StartProjectAsync(_app);
+        var id = _projects.SelectedIndex >= 0 && _projects.SelectedIndex < _items.Count
+            ? _items[_projects.SelectedIndex].Id
+            : null;
+        _score.Text = "Đang tải đề và mở Office trên máy…";
+        var (ok, msg) = await ExamHub.StartProjectAsync(_app, id);
         _compact = true;
         ApplyDock(waitForWord: true);
-        _status.Text = ok ? msg : ("Lỗi đề: " + msg);
+        _score.Text = ok ? "Đã mở: " + msg : "Lỗi đề: " + msg;
+        if (!ok)
+        {
+            MessageBox.Show(_score.Text, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     async Task SubmitExam()
     {
-        _status.Text = "Đang nộp bài…";
+        _score.Text = "Đang lưu và nộp bài…";
         var (ok, msg) = await ExamHub.SubmitAsync(_app);
-        _status.Text = msg;
+        _score.Text = msg;
         if (!ok)
         {
             MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        else
+        {
+            _compact = false;
+            ApplyDock(waitForWord: true);
         }
     }
 
@@ -304,6 +340,7 @@ sealed class MainForm : Form
         if (!string.IsNullOrWhiteSpace(app))
         {
             _app = OfficeApp.Resolve(app).Id;
+            _ = LoadProjects();
         }
 
         if (launch || compact || state == "minimized")
@@ -319,31 +356,6 @@ sealed class MainForm : Form
         ApplyDock(waitForWord: true);
     }
 
-    static string? ExtractField(string? raw, string field)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        var key = $"\"{field}\"";
-        var i = raw.IndexOf(key, StringComparison.OrdinalIgnoreCase);
-        if (i < 0)
-        {
-            return field == "state" ? raw.Trim() : null;
-        }
-
-        var colon = raw.IndexOf(':', i + key.Length);
-        if (colon < 0)
-        {
-            return null;
-        }
-
-        var q1 = raw.IndexOf('"', colon);
-        var q2 = q1 < 0 ? -1 : raw.IndexOf('"', q1 + 1);
-        return q1 >= 0 && q2 > q1 ? raw[(q1 + 1)..q2] : null;
-    }
-
     void ApplyDock(bool waitForWord)
     {
         var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
@@ -352,13 +364,13 @@ sealed class MainForm : Form
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
         TopMost = true;
         var controlsOnly = _compact || _state == "minimized";
-        _web.Visible = !controlsOnly;
+        _exam.Visible = !controlsOnly;
         _bar.Dock = controlsOnly ? DockStyle.Fill : DockStyle.Top;
         if (!controlsOnly)
         {
-            _bar.Height = 40;
+            _bar.Height = 44;
         }
-        _status.Text = $"{OfficeApp.Resolve(_app).Id} → ({word.X},{word.Y}) {word.W}×{word.H}";
+
         if (waitForWord)
         {
             WordWindow.ApplySoon(word, _app);

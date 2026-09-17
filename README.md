@@ -33,7 +33,7 @@ Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/et
 
 ## MOS-KulKul
 
-Ứng dụng trên máy: **đăng nhập** và **chọn Word / Excel / PowerPoint** ngay trong MOS-KulKul, rồi kéo cửa sổ Office vào ô dock (TopMost).
+Ứng dụng trên máy: **đăng nhập**, **chọn Word / Excel / PowerPoint**, **luyện tập / thi**, tải đề PostgreSQL và mở Office trên PC (không WebView2, không Office Online).
 
 - Windows: [`MOS-KulKul-Setup-Windows.exe`](/cai-dat/windows)
 - macOS: [`MOS-KulKul-Setup-macOS.zip`](/cai-dat/macos)

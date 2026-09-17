@@ -7,13 +7,9 @@ static class Program
 {
     const string MutexName = @"Local\MOS-KulKul.GDS";
 
-    [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern bool SetDllDirectory(string lpPathName);
-
     [STAThread]
     static void Main(string[] args)
     {
-        EnsureWebView2Loader();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
         Application.ThreadException += (_, e) => ShowError(e.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -49,39 +45,10 @@ static class Program
         Application.Run(new MainForm(parsed.State, appId, parsed.Launch, parsed.File));
     }
 
-    static void EnsureWebView2Loader()
-    {
-        var baseDir = AppContext.BaseDirectory;
-        var dest = Path.Combine(baseDir, "WebView2Loader.dll");
-        if (!File.Exists(dest))
-        {
-            var found = Directory
-                .EnumerateFiles(baseDir, "WebView2Loader.dll", SearchOption.AllDirectories)
-                .FirstOrDefault();
-            if (found != null)
-            {
-                try
-                {
-                    File.Copy(found, dest, overwrite: true);
-                }
-                catch
-                {
-                    SetDllDirectory(Path.GetDirectoryName(found)!);
-                    return;
-                }
-            }
-        }
-
-        SetDllDirectory(baseDir);
-    }
-
     static void ShowError(Exception ex)
     {
         MessageBox.Show(
-            "MOS-KulKul thiếu thư viện WebView2 (Dll was not found).\n\n"
-            + "Gỡ bản cũ, tải lại Setup.exe tại https://mos.gds.edu.vn/cai-dat rồi cài lại.\n"
-            + "Nếu vẫn lỗi, cài Microsoft Edge WebView2 Runtime.\n\n"
-            + ex.GetType().Name + ": " + ex.Message,
+            "MOS-KulKul gặp lỗi.\n\n" + ex.GetType().Name + ": " + ex.Message,
             "MOS-KulKul",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);

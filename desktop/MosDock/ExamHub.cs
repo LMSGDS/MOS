@@ -2,58 +2,76 @@ using System.Text.Json;
 
 namespace MosDock;
 
+readonly record struct MosProject(
+    string Id,
+    string Title,
+    string Skill,
+    string Filename,
+    int TimeLimitSec,
+    string[] Steps);
+
 /// <summary>
 /// Tải đề MOS từ PostgreSQL API, mở trên Office máy, nộp bài + telemetry.
 /// </summary>
 static class ExamHub
 {
+    public static async Task<IReadOnlyList<MosProject>> ListProjectsAsync(string program)
+    {
+        using var list = await Portal.GetJsonAsync("/api/v1/projects?program=" + Uri.EscapeDataString(program));
+        var items = new List<MosProject>();
+        foreach (var p in list.RootElement.GetProperty("projects").EnumerateArray())
+        {
+            var steps = Array.Empty<string>();
+            if (p.TryGetProperty("steps", out var raw) && raw.ValueKind == JsonValueKind.Array)
+            {
+                steps = raw.EnumerateArray()
+                    .Select(x => x.GetString() ?? "")
+                    .Where(x => x.Length > 0)
+                    .ToArray();
+            }
+
+            items.Add(new MosProject(
+                p.GetProperty("id").GetString() ?? "",
+                p.GetProperty("title").GetString() ?? "",
+                p.TryGetProperty("skill_domain", out var skill) ? skill.GetString() ?? "" : "",
+                p.TryGetProperty("filename", out var fn) ? fn.GetString() ?? "" : "",
+                p.TryGetProperty("time_limit_sec", out var tl) && tl.TryGetInt32(out var sec) ? sec : 1800,
+                steps));
+        }
+
+        return items;
+    }
+
     public static async Task<(bool Ok, string Message)> StartProjectAsync(string program, string? projectId = null)
     {
         try
         {
-            using var list = await Portal.GetJsonAsync("/api/v1/projects?program=" + Uri.EscapeDataString(program));
-            JsonElement chosen = default;
-            var found = false;
-            foreach (var p in list.RootElement.GetProperty("projects").EnumerateArray())
-            {
-                var id = p.GetProperty("id").GetString();
-                if (!string.IsNullOrWhiteSpace(projectId) && id != projectId)
-                {
-                    continue;
-                }
-
-                chosen = p;
-                found = true;
-                if (string.IsNullOrWhiteSpace(projectId) || id == projectId)
-                {
-                    break;
-                }
-            }
-
-            if (!found)
+            var projects = await ListProjectsAsync(program);
+            var chosen = string.IsNullOrWhiteSpace(projectId)
+                ? projects.FirstOrDefault()
+                : projects.FirstOrDefault(p => p.Id == projectId);
+            if (string.IsNullOrWhiteSpace(chosen.Id))
             {
                 return (false, "Không có đề MOS trên máy chủ.");
             }
 
-            var pid = chosen.GetProperty("id").GetString()!;
-            var filename = chosen.GetProperty("filename").GetString() ?? (pid + ".bin");
-            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(pid)}/file");
-            var dir = Path.Combine(ExamSession.DataDir, "projects", pid);
+            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
+            var dir = Path.Combine(ExamSession.DataDir, "projects", chosen.Id);
             Directory.CreateDirectory(dir);
-            var local = Path.Combine(dir, filename);
+            var local = Path.Combine(dir, string.IsNullOrWhiteSpace(chosen.Filename) ? chosen.Id + ".bin" : chosen.Filename);
             await File.WriteAllBytesAsync(local, bytes);
 
             using var started = await Portal.PostJsonAsync("/api/v1/attempts", new
             {
-                project_id = pid,
+                project_id = chosen.Id,
                 mode = ExamSession.Mode,
             });
-            ExamSession.ProjectId = pid;
+            ExamSession.ProjectId = chosen.Id;
             ExamSession.AttemptId = started.RootElement.GetProperty("attempt_id").GetString();
             ExamSession.LocalPath = local;
-            await TrackAsync("open", new { file = filename, program });
+            await TrackAsync("open", new { file = chosen.Filename, program });
             WordWindow.Launch(program, local);
-            return (true, chosen.GetProperty("title").GetString() ?? pid);
+            return (true, chosen.Title);
         }
         catch (Exception ex)
         {
