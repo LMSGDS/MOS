@@ -1,0 +1,62 @@
+name: Auto commit
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: Commit message
+        required: false
+        default: "chore: auto-commit generated changes"
+      file_pattern:
+        description: Git pathspec to add (space-separated)
+        required: false
+        default: "."
+  workflow_call:
+    inputs:
+      commit_message:
+        description: Commit message
+        type: string
+        required: false
+        default: "chore: auto-commit generated changes"
+      file_pattern:
+        description: Git pathspec to add (space-separated)
+        type: string
+        required: false
+        default: "."
+    outputs:
+      committed:
+        description: Whether a commit was created and pushed
+        value: ${{ jobs.auto-commit.outputs.committed }}
+
+# Grant this workflow write access to the repo via GITHUB_TOKEN.
+# Also set repo Settings → Actions → General → Workflow permissions
+# to allow workflows to request write (Read and write, or Read plus
+# permission to elevate GITHUB_TOKEN).
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-commit-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  auto-commit:
+    name: Commit and push changes
+    runs-on: ubuntu-latest
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
+          persist-credentials: true
+
+      - name: Commit and push if there are changes
+        id: commit
+        env:
+          COMMIT_MESSAGE: ${{ inputs.commit_message }}
+          FILE_PATTERN: ${{ inputs.file_pattern }}
+        run: bash scripts/auto-commit.sh
