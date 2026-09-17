@@ -20,13 +20,14 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Install OpenVPN
-        run: sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openvpn iproute2
+        run: sudo apt-get update -qq && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openvpn iproute2 sshpass
 
       - name: Connect OpenVPN
         env:
           OPENVPN_CONFIG: ${{ secrets.OPENVPN_CONFIG }}
           OPENVPN_USERNAME: ${{ secrets.OPENVPN_USERNAME }}
           OPENVPN_PASSWORD: ${{ secrets.OPENVPN_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
         run: bash scripts/openvpn-up.sh
 
       - name: SSH to server
@@ -34,5 +35,6 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_PORT: ${{ secrets.SSH_PORT }}
         run: bash scripts/ssh-connect.sh "${{ inputs.ssh_command }}"

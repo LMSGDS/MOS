@@ -42,8 +42,21 @@ if [[ "${MOS_OVPN_FULL_TUNNEL:-0}" != "1" ]]; then
   EXTRA+=(--pull-filter ignore redirect-gateway)
 fi
 
+route_ssh_host() {
+  if [[ -z "${SSH_HOST:-}" ]]; then
+    return 0
+  fi
+  if ! ip -br a | grep -qE '^tun|^tap'; then
+    return 0
+  fi
+  tun_if="$(ip -br a | awk '/^tun|^tap/{print $1; exit}')"
+  sudo ip route replace "${SSH_HOST}/32" dev "${tun_if}"
+  echo "Routed ${SSH_HOST}/32 via ${tun_if}"
+}
+
 if [[ -f "${PID_FILE}" ]] && kill -0 "$(cat "${PID_FILE}")" 2>/dev/null; then
   echo "OpenVPN already running (pid $(cat "${PID_FILE}"))."
+  route_ssh_host
   exit 0
 fi
 
@@ -61,6 +74,7 @@ for _ in $(seq 1 30); do
   if grep -q "Initialization Sequence Completed" "${LOG}" 2>/dev/null; then
     echo "OpenVPN connected."
     ip -br a | grep -E 'tun|tap' || true
+    route_ssh_host
     exit 0
   fi
   if grep -Eqi "AUTH_FAILED|Cannot resolve|TLS Error|Cannot open TUN/TAP" "${LOG}" 2>/dev/null; then
