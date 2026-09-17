@@ -58,7 +58,7 @@ static class Portal
             return (false, "Không kết nối được MOS-KulKul: " + ex.Message, "", app, null);
         }
 
-        await using (resp)
+        using (resp)
         {
             var text = await resp.Content.ReadAsStringAsync();
             try
