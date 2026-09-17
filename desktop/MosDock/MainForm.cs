@@ -24,21 +24,26 @@ sealed class MainForm : Form
     readonly Label _examMeta = new();
     readonly ListView _tasks = new();
     readonly Label _examStatus = new();
-    readonly Button _navHome = Ui.IconBtn(NavIcon.Home, "Lưu và về trang chủ");
-    readonly Button _navLeft = Ui.IconBtn(NavIcon.Left, "Trái");
-    readonly Button _navRight = Ui.IconBtn(NavIcon.Right, "Phải");
-    readonly Button _navBottom = Ui.IconBtn(NavIcon.Bottom, "Đáy");
-    readonly Button _navToggle = Ui.IconBtn(NavIcon.Expand, "Hiện nhiệm vụ");
-    readonly Button _checkBtn = Ui.IconBtn(NavIcon.Check, "Kiểm tra nhiệm vụ");
-    readonly Button _submitBtn = Ui.IconBtn(NavIcon.Submit, "Nộp bài");
+    readonly Panel _dockChrome = new();
+    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Vị trí thanh", Ui.DockBlue);
+    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu bài", Ui.DockBlue);
+    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Danh sách nhiệm vụ", Ui.DockBlue);
+    readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Kiểm tra nhiệm vụ", Ui.DockBlue);
+    readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim luôn trên cùng", Ui.DockBlue);
+    readonly Button _dockMenu = Ui.DockSquare(NavIcon.Menu, "Về trang chủ", Ui.DockTeal);
+    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Kiểm tra nhiệm vụ", Ui.DockTeal);
+    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Nộp bài", Ui.DockBlue);
+    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước", Ui.DockBlue);
+    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Nhiệm vụ sau", Ui.DockGreen);
+    readonly ContextMenuStrip _dockMenuStrip = new();
     readonly ToolTip _navTips = new() { ShowAlways = true };
-    readonly FlowLayoutPanel _navIcons = new();
     readonly System.Windows.Forms.Timer _keepWord = new();
     LocalAgent? _agent;
     string _state = "bottom";
     string _app = "word";
     bool _compact;
     bool _docking;
+    bool _pinned = true;
     Rectangle? _savedWorkspace;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
@@ -261,42 +266,83 @@ sealed class MainForm : Form
     {
         _exam.Dock = DockStyle.Fill;
         _exam.BackColor = Color.White;
-        _exam.Padding = new Padding(8, 4, 8, 8);
+        _exam.Padding = Padding.Empty;
         _exam.Visible = false;
 
-        _navIcons.Dock = DockStyle.Top;
-        _navIcons.Height = LayoutMath.IconBarH;
-        _navIcons.WrapContents = false;
-        _navIcons.FlowDirection = FlowDirection.LeftToRight;
-        _navIcons.BackColor = Ui.Nav;
-        _navIcons.Padding = new Padding(4, 2, 4, 2);
-        _navIcons.Controls.Add(new Label
+        _dockChrome.Dock = DockStyle.Bottom;
+        _dockChrome.Height = LayoutMath.ClusterH;
+        _dockChrome.BackColor = Color.FromArgb(236, 239, 241);
+        _dockChrome.Padding = new Padding(8, 6, 8, 6);
+
+        var row1 = Ui.DockChip();
+        var row2 = new FlowLayoutPanel
         {
-            Text = "MOS",
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
             AutoSize = true,
-            Margin = new Padding(6, 8, 8, 0),
-            UseMnemonic = false,
-        });
-        _navHome.Click += (_, _) => SaveAndHome();
-        _navLeft.Click += (_, _) => MoveDock("left");
-        _navRight.Click += (_, _) => MoveDock("right");
-        _navBottom.Click += (_, _) => MoveDock("bottom");
-        _navToggle.Click += (_, _) =>
+            WrapContents = false,
+            BackColor = Color.Transparent,
+            Margin = new Padding(0),
+        };
+
+        _dockPos.Click += (_, _) =>
+        {
+            _dockMenuStrip.Show(_dockPos, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
+        };
+        _dockSave.Click += (_, _) => ExamHub.SaveInPlace(_app);
+        _dockTasks.Click += (_, _) =>
         {
             _compact = !_compact;
-            EnterDock(_compact);
+            if (_docking)
+            {
+                EnterDock(_compact);
+            }
+            else
+            {
+                ApplyExamChrome();
+            }
         };
-        _checkBtn.Click += async (_, _) => await CheckTasks();
-        _submitBtn.Click += async (_, _) => await SubmitExam();
-        _navIcons.Controls.Add(_navHome);
-        _navIcons.Controls.Add(_navLeft);
-        _navIcons.Controls.Add(_navRight);
-        _navIcons.Controls.Add(_navBottom);
-        _navIcons.Controls.Add(_navToggle);
-        _navIcons.Controls.Add(_checkBtn);
-        _navIcons.Controls.Add(_submitBtn);
+        _dockCheck.Click += async (_, _) => await CheckTasks();
+        _dockPin.Click += (_, _) =>
+        {
+            _pinned = !_pinned;
+            TopMost = _pinned;
+            HighlightDockIcons();
+        };
+        _dockMenu.Click += (_, _) => SaveAndHome();
+        _dockHint.Click += async (_, _) => await CheckTasks();
+        _dockShare.Click += async (_, _) => await SubmitExam();
+        _dockBack.Click += (_, _) => StepTask(-1);
+        _dockNext.Click += (_, _) => StepTask(1);
+
+        row1.Controls.Add(_dockPos);
+        row1.Controls.Add(_dockSave);
+        row1.Controls.Add(_dockTasks);
+        row1.Controls.Add(_dockCheck);
+        row1.Controls.Add(_dockPin);
+        row2.Controls.Add(_dockMenu);
+        row2.Controls.Add(_dockHint);
+        row2.Controls.Add(_dockShare);
+        row2.Controls.Add(_dockBack);
+        row2.Controls.Add(_dockNext);
+
+        var stack = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            BackColor = Color.Transparent,
+        };
+        stack.Controls.Add(row1);
+        stack.Controls.Add(row2);
+        _dockChrome.Controls.Add(stack);
+
+        _dockMenuStrip.Items.Add(DockMenuItem("←   Trái", "left"));
+        _dockMenuStrip.Items.Add(DockMenuItem("→   Phải", "right"));
+        _dockMenuStrip.Items.Add(DockMenuItem("↑   Trên", "top"));
+        _dockMenuStrip.Items.Add(DockMenuItem("↓   Dưới", "bottom"));
+        _dockMenuStrip.Items.Add(new ToolStripSeparator());
+        var undock = new ToolStripMenuItem("⤢   Tháo dock");
+        undock.Click += (_, _) => UnDock();
+        _dockMenuStrip.Items.Add(undock);
 
         _examTitle.Dock = DockStyle.Top;
         _examTitle.Font = Ui.HeadFont;
@@ -327,15 +373,38 @@ sealed class MainForm : Form
         _exam.Controls.Add(_examStatus);
         _exam.Controls.Add(_examMeta);
         _exam.Controls.Add(_examTitle);
-        _exam.Controls.Add(_navIcons);
+        _exam.Controls.Add(_dockChrome);
+    }
+
+    ToolStripMenuItem DockMenuItem(string text, string state)
+    {
+        var item = new ToolStripMenuItem(text);
+        item.Click += (_, _) => MoveDock(state);
+        item.Tag = state;
+        return item;
+    }
+
+    void StepTask(int delta)
+    {
+        if (_tasks.Items.Count == 0)
+        {
+            return;
+        }
+
+        var i = _tasks.SelectedIndices.Count > 0 ? _tasks.SelectedIndices[0] : 0;
+        i = Math.Clamp(i + delta, 0, _tasks.Items.Count - 1);
+        _tasks.SelectedIndices.Clear();
+        _tasks.Items[i].Selected = true;
+        _tasks.EnsureVisible(i);
     }
 
     void MoveDock(string state)
     {
         _state = state;
+        _compact = true;
         if (!_docking)
         {
-            EnterDock(_compact);
+            EnterDock(compact: true);
             return;
         }
 
@@ -343,14 +412,71 @@ sealed class MainForm : Form
         HighlightDockIcons();
     }
 
+    void UnDock()
+    {
+        var switching = _docking;
+        _docking = false;
+        _compact = false;
+        _keepWord.Stop();
+        _header.Visible = false;
+        _body.Visible = false;
+        _exam.Visible = true;
+        TopMost = _pinned;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MinimizeBox = true;
+        MaximizeBox = true;
+        ControlBox = true;
+        Text = "MOS-KulKul";
+        ApplyExamChrome();
+        if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
+        {
+            Bounds = saved;
+        }
+        else
+        {
+            var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
+            var w = Math.Min(980, wa.Width - 40);
+            var h = Math.Min(640, wa.Height - 40);
+            Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
+        }
+
+        if (switching)
+        {
+            Show();
+        }
+    }
+
     void HighlightDockIcons()
     {
-        Ui.SetIconActive(_navLeft, _state == "left");
-        Ui.SetIconActive(_navRight, _state == "right");
-        Ui.SetIconActive(_navBottom, _state is "bottom" or "minimized");
-        _navToggle.Tag = _compact ? NavIcon.Expand : NavIcon.Collapse;
-        _navTips.SetToolTip(_navToggle, _compact ? "Hiện nhiệm vụ" : "Thu gọn thanh");
-        _navToggle.Invalidate();
+        foreach (ToolStripItem item in _dockMenuStrip.Items)
+        {
+            if (item.Tag is string state)
+            {
+                item.BackColor = state == _state ? Ui.DockBlue : Color.White;
+                item.ForeColor = state == _state ? Color.White : Ui.Text;
+            }
+        }
+
+        Ui.SetIconActive(_dockPin, _pinned);
+        _dockPin.BackColor = _pinned ? Ui.DockBlue : Color.FromArgb(148, 163, 184);
+        _navTips.SetToolTip(_dockTasks, _compact ? "Hiện nhiệm vụ" : "Thu gọn thanh");
+    }
+
+    void ApplyExamChrome()
+    {
+        var showTasks = !_compact || !_docking;
+        _exam.Padding = showTasks ? new Padding(12, 8, 12, 0) : Padding.Empty;
+        _exam.BackColor = showTasks ? Color.White : Color.FromArgb(236, 239, 241);
+        _dockChrome.Visible = true;
+        _tasks.Visible = showTasks;
+        _examTitle.Visible = showTasks;
+        _examMeta.Visible = showTasks;
+        _examStatus.Visible = showTasks;
+        HighlightDockIcons();
+        if (_tasks.Visible && _tasks.Columns.Count >= 1)
+        {
+            _tasks.Columns[0].Width = Math.Max(160, _exam.ClientSize.Width - 120);
+        }
     }
 
     void ShowPage(HubPage view, string title)
@@ -564,7 +690,9 @@ sealed class MainForm : Form
         _examTitle.Text = ExamSession.ProjectTitle ?? "Bài MOS";
         _examMeta.Text = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
             + (ExamSession.Mode == "testing" ? " · điểm ẩn đến khi nộp" : " · có kiểm tra nhiệm vụ");
-        _checkBtn.Visible = ExamSession.Mode != "testing";
+        var train = ExamSession.Mode != "testing";
+        _dockCheck.Visible = train;
+        _dockHint.Visible = train;
         _examStatus.Text = "Làm bài trên cửa sổ Office bên cạnh. Khung này giữ danh sách nhiệm vụ.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
@@ -668,7 +796,7 @@ sealed class MainForm : Form
 
     void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null, bool compact = false)
     {
-        if (state is "left" or "right" or "minimized" or "bottom")
+        if (state is "left" or "right" or "minimized" or "bottom" or "top")
         {
             _state = state;
         }
@@ -737,7 +865,7 @@ sealed class MainForm : Form
         _header.Visible = false;
         FormBorderStyle = FormBorderStyle.None;
         ControlBox = false;
-        TopMost = true;
+        TopMost = _pinned;
         if (!_keepWord.Enabled)
         {
             _keepWord.Start();
@@ -747,7 +875,7 @@ sealed class MainForm : Form
         if (switching)
         {
             Show();
-            TopMost = true;
+            TopMost = _pinned;
         }
     }
 
@@ -762,15 +890,8 @@ sealed class MainForm : Form
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
         var (dock, word) = LayoutMath.Compute(work, _state, _compact);
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
-        TopMost = true;
-        _exam.Padding = _compact ? Padding.Empty : new Padding(12, 8, 12, 12);
-        _exam.BackColor = _compact ? Ui.Nav : Color.White;
-        _navIcons.Visible = true;
-        _tasks.Visible = !_compact;
-        _examTitle.Visible = !_compact;
-        _examMeta.Visible = !_compact;
-        _examStatus.Visible = !_compact;
-        HighlightDockIcons();
+        TopMost = _pinned;
+        ApplyExamChrome();
         if (_tasks.Visible && _tasks.Columns.Count >= 1)
         {
             _tasks.Columns[0].Width = Math.Max(160, _exam.ClientSize.Width - 120);

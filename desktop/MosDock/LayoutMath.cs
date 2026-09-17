@@ -8,8 +8,9 @@ public readonly record struct Rect(int X, int Y, int W, int H)
 
 public static class LayoutMath
 {
-    public const int IconBarH = 48;
-    public const int IconBarW = 360;
+    public const int ClusterW = 260;
+    public const int ClusterH = 108;
+    public const int ClusterMargin = 8;
     public const int ExpandedSideW = 340;
     public const int MinWord = 400;
 
@@ -17,47 +18,52 @@ public static class LayoutMath
     {
         state = (state ?? "bottom").ToLowerInvariant();
         compact = compact || state == "minimized";
+        if (compact)
+        {
+            return (Cluster(work, state), work);
+        }
+
         Rect dock;
         Rect word;
         if (state == "left")
         {
-            if (compact)
-            {
-                dock = new Rect(work.X, work.Bottom - IconBarH, IconBarW, IconBarH);
-                word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
-            }
-            else
-            {
-                dock = new Rect(work.X, work.Y, ExpandedSideW, work.H);
-                word = new Rect(dock.Right, work.Y, work.W - ExpandedSideW, work.H);
-            }
+            dock = new Rect(work.X, work.Y, ExpandedSideW, work.H);
+            word = new Rect(dock.Right, work.Y, work.W - ExpandedSideW, work.H);
         }
         else if (state == "right")
         {
-            if (compact)
-            {
-                dock = new Rect(work.Right - IconBarW, work.Bottom - IconBarH, IconBarW, IconBarH);
-                word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
-            }
-            else
-            {
-                dock = new Rect(work.Right - ExpandedSideW, work.Y, ExpandedSideW, work.H);
-                word = new Rect(work.X, work.Y, work.W - ExpandedSideW, work.H);
-            }
+            dock = new Rect(work.Right - ExpandedSideW, work.Y, ExpandedSideW, work.H);
+            word = new Rect(work.X, work.Y, work.W - ExpandedSideW, work.H);
         }
-        else if (state == "minimized")
+        else if (state == "top")
         {
-            dock = new Rect(work.X, work.Bottom - IconBarH, work.W, IconBarH);
-            word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
+            var dockH = Math.Max(200, (int)(work.H * 0.22));
+            dock = new Rect(work.X, work.Y, work.W, dockH);
+            word = new Rect(work.X, dock.Bottom, work.W, work.H - dockH);
         }
         else
         {
-            var dockH = compact ? IconBarH : Math.Max(200, (int)(work.H * 0.22));
+            var dockH = Math.Max(200, (int)(work.H * 0.22));
             dock = new Rect(work.X, work.Bottom - dockH, work.W, dockH);
             word = new Rect(work.X, work.Y, work.W, work.H - dockH);
         }
 
         return (dock, ClampWord(word, work));
+    }
+
+    public static Rect Cluster(Rect work, string state)
+    {
+        var w = ClusterW;
+        var h = ClusterH;
+        var m = ClusterMargin;
+        state = (state ?? "bottom").ToLowerInvariant();
+        return state switch
+        {
+            "left" => new Rect(work.X + m, work.Y + Math.Max(m, (work.H - h) / 2), w, h),
+            "right" => new Rect(work.Right - w - m, work.Y + Math.Max(m, (work.H - h) / 2), w, h),
+            "top" => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Y + m, w, h),
+            _ => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Bottom - h - m, w, h),
+        };
     }
 
     static Rect ClampWord(Rect word, Rect work)

@@ -22,7 +22,9 @@ static class Ui
     public static readonly Color Ppt = Color.FromArgb(183, 71, 42);
     public static readonly Color Warning = Color.FromArgb(189, 107, 0);
     public static readonly Color SignIn = Color.FromArgb(11, 37, 69);
-    public static readonly Color SignInHover = Color.FromArgb(8, 28, 54);
+    public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
+    public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
+    public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
 
     public static Color Navy => Nav;
     public static Color Blue => Primary;
@@ -391,15 +393,15 @@ static class Ui
     public static string ModeLabel(string mode) =>
         mode == "testing" ? "Thi" : "Luyện tập";
 
-    public static Button IconBtn(NavIcon icon, string tip)
+    public static Button DockSquare(NavIcon icon, string tip, Color fill)
     {
         var btn = new Button
         {
-            Size = new Size(36, 32),
+            Size = new Size(40, 40),
             FlatStyle = FlatStyle.Flat,
-            BackColor = NavDark,
+            BackColor = fill,
             ForeColor = Color.White,
-            Margin = new Padding(2, 4, 2, 4),
+            Margin = new Padding(3, 3, 3, 3),
             Tag = icon,
             Cursor = Cursors.Hand,
             UseMnemonic = false,
@@ -407,8 +409,8 @@ static class Ui
             AccessibleName = tip,
         };
         btn.FlatAppearance.BorderSize = 0;
-        btn.FlatAppearance.MouseOverBackColor = Primary;
-        btn.FlatAppearance.MouseDownBackColor = PrimaryDark;
+        btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(fill);
+        btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(fill);
         var hint = new ToolTip { ShowAlways = true };
         hint.SetToolTip(btn, tip);
         btn.Paint += (_, e) =>
@@ -417,6 +419,29 @@ static class Ui
             var kind = btn.Tag is NavIcon n ? n : icon;
             DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White);
         };
+        RoundControl(btn, 6);
+        return btn;
+    }
+
+    public static FlowLayoutPanel DockChip()
+    {
+        var chip = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            BackColor = Color.White,
+            Padding = new Padding(4, 4, 4, 4),
+            Margin = new Padding(0, 0, 0, 2),
+        };
+        RoundControl(chip, 10);
+        return chip;
+    }
+
+    public static Button IconBtn(NavIcon icon, string tip)
+    {
+        var btn = DockSquare(icon, tip, DockBlue);
+        btn.Size = new Size(36, 32);
         return btn;
     }
 
@@ -439,6 +464,11 @@ static class Ui
                 g.FillPolygon(brush, new[] { new Point(cx, cy - 8), new Point(cx - 8, cy + 1), new Point(cx + 8, cy + 1) });
                 g.FillRectangle(brush, cx - 5, cy, 10, 8);
                 break;
+            case NavIcon.Dock:
+                g.DrawRectangle(pen, new Rectangle(cx - 9, cy - 8, 12, 10));
+                g.FillRectangle(brush, new Rectangle(cx - 3, cy - 4, 12, 10));
+                g.FillPolygon(brush, new[] { new Point(cx + 10, cy + 8), new Point(cx + 14, cy + 4), new Point(cx + 6, cy + 4) });
+                break;
             case NavIcon.Left:
                 g.DrawRectangle(pen, frame);
                 g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Y + 1, 7, frame.Height - 1));
@@ -447,9 +477,56 @@ static class Ui
                 g.DrawRectangle(pen, frame);
                 g.FillRectangle(brush, new Rectangle(frame.Right - 8, frame.Y + 1, 7, frame.Height - 1));
                 break;
+            case NavIcon.Top:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Y + 1, frame.Width - 1, 5));
+                break;
             case NavIcon.Bottom:
                 g.DrawRectangle(pen, frame);
                 g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Bottom - 6, frame.Width - 1, 5));
+                break;
+            case NavIcon.Save:
+                g.FillRectangle(brush, new Rectangle(cx - 8, cy - 8, 16, 16));
+                using (var hole = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                {
+                    g.FillRectangle(hole, new Rectangle(cx - 4, cy - 6, 8, 5));
+                    g.FillRectangle(hole, new Rectangle(cx - 5, cy + 2, 10, 5));
+                }
+                break;
+            case NavIcon.Tasks:
+                g.DrawRectangle(pen, new Rectangle(cx - 8, cy - 8, 16, 16));
+                g.DrawLine(pen, cx - 5, cy - 3, cx + 5, cy - 3);
+                g.DrawLine(pen, cx - 5, cy + 1, cx + 5, cy + 1);
+                g.DrawLine(pen, cx - 5, cy + 5, cx + 5, cy + 5);
+                break;
+            case NavIcon.Refresh:
+                g.DrawArc(pen, cx - 7, cy - 7, 14, 14, 40, 260);
+                g.FillPolygon(brush, new[] { new Point(cx + 6, cy - 8), new Point(cx + 11, cy - 2), new Point(cx + 2, cy - 2) });
+                break;
+            case NavIcon.Pin:
+                g.FillEllipse(brush, cx - 3, cy - 8, 6, 6);
+                g.FillRectangle(brush, cx - 2, cy - 3, 4, 8);
+                g.DrawLine(pen, cx, cy + 5, cx, cy + 9);
+                break;
+            case NavIcon.Menu:
+                g.DrawLine(pen, cx - 8, cy - 5, cx + 8, cy - 5);
+                g.DrawLine(pen, cx - 8, cy, cx + 8, cy);
+                g.DrawLine(pen, cx - 8, cy + 5, cx + 8, cy + 5);
+                break;
+            case NavIcon.Hint:
+                g.FillEllipse(brush, cx - 6, cy - 8, 12, 12);
+                g.FillRectangle(brush, cx - 3, cy + 3, 6, 3);
+                g.DrawLine(pen, cx - 3, cy + 8, cx + 3, cy + 8);
+                break;
+            case NavIcon.Share:
+                g.DrawLines(pen, new[] { new Point(cx - 6, cy + 4), new Point(cx + 2, cy - 4), new Point(cx + 2, cy + 1) });
+                g.DrawLine(pen, cx + 2, cy - 4, cx + 8, cy - 4);
+                break;
+            case NavIcon.Back:
+                g.DrawLines(pen, new[] { new Point(cx + 4, cy - 7), new Point(cx - 6, cy), new Point(cx + 4, cy + 7) });
+                break;
+            case NavIcon.Next:
+                g.DrawLines(pen, new[] { new Point(cx - 4, cy - 7), new Point(cx + 6, cy), new Point(cx - 4, cy + 7) });
                 break;
             case NavIcon.Expand:
                 g.DrawRectangle(pen, frame);
@@ -475,9 +552,20 @@ static class Ui
 enum NavIcon
 {
     Home,
+    Dock,
     Left,
     Right,
+    Top,
     Bottom,
+    Save,
+    Tasks,
+    Refresh,
+    Pin,
+    Menu,
+    Hint,
+    Share,
+    Back,
+    Next,
     Expand,
     Collapse,
     Check,

@@ -5,7 +5,7 @@ namespace MosDock;
 
 /// <summary>
 /// Agent local để trang MOS (Chrome hoặc WebView) gọi sau khi mở Word:
-/// POST http://127.0.0.1:17331/place?state=left|right|bottom|minimized
+/// POST http://127.0.0.1:17331/place?state=left|right|top|bottom|minimized
 /// </summary>
 sealed class LocalAgent : IDisposable
 {
@@ -107,7 +107,7 @@ sealed class LocalAgent : IDisposable
     static string Sanitize(string state)
     {
         state = (state ?? "bottom").ToLowerInvariant();
-        return state is "left" or "right" or "minimized" or "bottom" ? state : "bottom";
+        return state is "left" or "right" or "minimized" or "bottom" or "top" ? state : "bottom";
     }
 
     static void AllowCors(HttpListenerRequest req, HttpListenerResponse res)

@@ -124,12 +124,13 @@ def test_layout_api_side_docks_leave_word_visible():
     assert right["word"]["x"] == 0
     assert right["word"]["w"] + right["dock"]["w"] == 1920
     mini = c.get("/api/layout", params={"state": "minimized", "w": 1920, "h": 1040}).json()
-    assert mini["dock"]["h"] == 48
-    assert mini["word"]["h"] == 1040 - 48
+    assert mini["dock"]["h"] == 108
+    assert mini["dock"]["w"] == 260
+    assert mini["word"]["h"] == 1040
     compact = c.get("/api/layout", params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1}).json()
     assert compact["compact"] is True
-    assert compact["dock"]["h"] == 48
-    assert compact["word"]["h"] == 1040 - 48
+    assert compact["dock"]["h"] == 108
+    assert compact["word"]["h"] == 1040
 
 
 def test_kulkul_home_after_login():

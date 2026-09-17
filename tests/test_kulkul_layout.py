@@ -1,4 +1,4 @@
-from app.kulkul_layout import ICON_BAR_H, ICON_BAR_W, EXPANDED_SIDE_W, Rect, compute, overlap
+from app.kulkul_layout import CLUSTER_H, CLUSTER_W, EXPANDED_SIDE_W, Rect, compute, overlap
 
 WORK = Rect(0, 0, 1920, 1040)  # 1080p trừ taskbar
 
@@ -29,32 +29,38 @@ def test_right_word_is_to_the_left():
     assert not overlap(dock, word)
 
 
-def test_minimized_is_thin_bottom_bar():
-    dock, word = compute(WORK, "minimized")
-    assert dock.h == ICON_BAR_H
-    assert word.h == WORK.h - ICON_BAR_H
+def test_top_word_is_below():
+    dock, word = compute(WORK, "top")
+    assert dock.y == WORK.y
+    assert word.y == dock.bottom
     assert not overlap(dock, word)
 
 
-def test_compact_after_open_is_icon_bar():
+def test_compact_is_small_gmetrix_cluster():
     dock, word = compute(WORK, "bottom", compact=True)
-    assert dock.h == ICON_BAR_H
-    assert dock.w == WORK.w
-    assert word.h == WORK.h - ICON_BAR_H
-    assert not overlap(dock, word)
+    assert dock.w == CLUSTER_W
+    assert dock.h == CLUSTER_H
+    assert word == WORK
+    assert dock.y == WORK.bottom - CLUSTER_H - 8
 
     left, word_l = compute(WORK, "left", compact=True)
-    assert left.w == ICON_BAR_W
-    assert left.h == ICON_BAR_H
-    assert left.y == WORK.bottom - ICON_BAR_H
-    assert word_l.h == WORK.h - ICON_BAR_H
-    assert word_l.x == WORK.x
-    assert not overlap(left, word_l)
+    assert left.w == CLUSTER_W
+    assert left.h == CLUSTER_H
+    assert left.x == WORK.x + 8
+    assert word_l == WORK
 
-    right, word_r = compute(WORK, "right", compact=True)
-    assert right.x == WORK.right - ICON_BAR_W
-    assert right.h == ICON_BAR_H
-    assert not overlap(right, word_r)
+    right, _ = compute(WORK, "right", compact=True)
+    assert right.x == WORK.right - CLUSTER_W - 8
+
+    top, _ = compute(WORK, "top", compact=True)
+    assert top.y == WORK.y + 8
+
+
+def test_minimized_matches_compact_bottom():
+    dock, word = compute(WORK, "minimized")
+    dock2, word2 = compute(WORK, "bottom", compact=True)
+    assert dock == dock2
+    assert word == word2
 
 
 def test_unknown_state_defaults_to_bottom():

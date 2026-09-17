@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS (logo giữa, ô tài khoản/mật khẩu, hiện/ẩn mật khẩu, nút **Đăng nhập** navy full-width). Màu Canvas LMS. Khi mở Office, thanh icon 48px Trái/Phải/Đáy. Không WebView2, không Office Online.
+Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office, thanh dock là **cụm icon 2 hàng** (menu Trái/Phải/Trên/Dưới/Tháo dock), không chiếm cả màn hình. Không WebView2, không Office Online.
 
 ## Bộ cài tự động
 
