@@ -2,6 +2,10 @@ function templateUrl() {
   return `${window.location.origin}/static/mau-van-ban.docx`;
 }
 
+function dockState() {
+  return sessionStorage.getItem("mos-dock-state") || "bottom";
+}
+
 function openProtocol(uri) {
   const hint = document.getElementById("hint");
   if (hint) hint.hidden = false;
@@ -12,12 +16,34 @@ function openProtocol(uri) {
   setTimeout(() => probe.remove(), 4000);
 }
 
+function placeWordAfterOpen() {
+  const state = dockState();
+  const payload = { type: "mos-place-word", state };
+  try {
+    window.parent.postMessage(payload, window.location.origin);
+  } catch {
+    /* not in iframe */
+  }
+  try {
+    window.chrome?.webview?.postMessage(JSON.stringify(payload));
+  } catch {
+    /* not WebView2 */
+  }
+  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(state)}`, {
+    method: "POST",
+    mode: "cors",
+  }).catch(() => {});
+  openProtocol(`mosdock:place?state=${encodeURIComponent(state)}`);
+}
+
 document.getElementById("btn-word")?.addEventListener("click", () => {
   openProtocol("ms-word:");
+  setTimeout(placeWordAfterOpen, 600);
 });
 
 document.getElementById("btn-doc")?.addEventListener("click", () => {
   openProtocol(`ms-word:nft|u|${templateUrl()}`);
+  setTimeout(placeWordAfterOpen, 600);
 });
 
 document.querySelectorAll("[data-cmd]").forEach((btn) => {

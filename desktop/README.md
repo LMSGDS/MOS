@@ -2,7 +2,11 @@
 
 Cửa sổ **mini-browser TopMost** trên Windows. Mặc định dính **đáy màn hình**. Nút: **Thu nhỏ**, **Đính trái**, **Đính phải**, **Đính đáy**.
 
-Khi đổi trạng thái, MOS Dock **restore nếu Word đang maximize**, rồi `SetWindowPos` để cửa sổ `WINWORD.EXE` lấp phần còn lại — hai cửa sổ không chồng, vùng soạn thảo Word không bị che.
+Sau khi mở Word (`ms-word:`), MOS Dock **chờ cửa sổ `OpusApp` hiện ra**, restore nếu đang maximize, rồi `SetWindowPos` tới **ô còn lại** của vị trí đã chọn — hai cửa sổ không chồng, vùng soạn thảo không bị che.
+
+- Agent local: `http://127.0.0.1:17331/place?state=left|right|bottom|minimized`
+- Protocol: `mosdock:place?state=left` (đăng ký HKCU lần chạy đầu)
+- Nút **Đặt Word** lặp lại thao tác nếu Word mở chậm
 
 Không dùng Office Online. WebView mở `https://mos.gds.edu.vn/dang-nhap?che-do=dock`.
 

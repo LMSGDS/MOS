@@ -17,7 +17,9 @@ Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/et
 
 ## MOS Dock (hành vi GMetrix)
 
-Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định). Khi đổi trạng thái, khung tự tính toán và **resize cửa sổ WINWORD.EXE** để hai cửa sổ không chồng lấp, vùng soạn thảo Word luôn hiện trọn.
+Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định).
+
+Sau khi **Mở Word trên máy**, MOS Dock chờ cửa sổ Word hiện ra rồi **kéo/resize** nó vào ô còn lại của vị trí đã chọn (`SetWindowPos`). Chrome không tự dịch chuyển được cửa sổ WINWORD — cần `MosDock.exe` trên máy Windows (agent `127.0.0.1:17331` hoặc protocol `mosdock:place?state=...`).
 
 | Môi trường | Việc làm |
 | --- | --- |

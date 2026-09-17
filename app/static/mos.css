@@ -213,6 +213,10 @@ body.gmetrix {
   place-items: center;
   color: #64748b;
 }
+.word-sim.is-target {
+  outline: 3px solid #22c55e;
+  outline-offset: -3px;
+}
 .gmetrix-dock {
   display: flex;
   flex-direction: column;

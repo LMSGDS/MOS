@@ -8,8 +8,8 @@
 </head>
 <body class="gmetrix">
   <div id="word-sim" class="word-sim" aria-label="Cửa sổ Microsoft Word">
-    <div class="word-sim-bar">Microsoft Word — Document1</div>
-    <div class="word-sim-page">Vùng soạn thảo Word (không bị khung MOS che)</div>
+    <div id="word-sim-bar" class="word-sim-bar">Microsoft Word — vị trí đã chọn</div>
+    <div class="word-sim-page">Vùng soạn thảo Word sẽ nằm đúng ô này trên màn hình (không chồng khung MOS)</div>
   </div>
   <aside id="dock" class="gmetrix-dock" aria-label="Khung mini-browser MOS">
     <div class="gmetrix-bar">
@@ -18,6 +18,7 @@
       <button type="button" data-dock="left" aria-pressed="false">Đính trái</button>
       <button type="button" data-dock="right" aria-pressed="false">Đính phải</button>
       <button type="button" data-dock="bottom" aria-pressed="true">Đính đáy</button>
+      <button type="button" id="btn-place-word">Đặt Word vào chỗ đã chọn</button>
       <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
     </div>
     <iframe title="Mini-browser MOS" src="/khung/word"></iframe>

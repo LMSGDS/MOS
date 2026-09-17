@@ -51,14 +51,19 @@ def test_gmetrix_home_after_login():
     assert "Thu nhỏ" in r.text
     assert "Đính trái" in r.text
     assert "Đính phải" in r.text
-    assert "Đính đáy" in r.text
+    assert "Đặt Word vào chỗ đã chọn" in r.text
     assert "word-sim" in r.text
     assert "office.com" not in r.text.lower()
     assert "gmetrix.js" in r.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
+    assert "vị trí đã chọn" in inner.text
     assert inner.headers.get("x-frame-options") == "SAMEORIGIN"
+    js = c.get("/static/mos.js").text
+    assert "mos-place-word" in js
+    assert "mosdock:place" in js
+    assert "17331" in js
 
 
 def test_dock_mode_hides_simulated_word():

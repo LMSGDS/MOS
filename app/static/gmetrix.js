@@ -14,27 +14,64 @@ function applyRect(el, r) {
   el.style.height = `${r.h}px`;
 }
 
-async function layout(state) {
+function currentState() {
+  return sessionStorage.getItem("mos-dock-state") || "bottom";
+}
+
+function openHiddenUri(uri) {
+  const probe = document.createElement("iframe");
+  probe.style.display = "none";
+  probe.src = uri;
+  document.body.appendChild(probe);
+  setTimeout(() => probe.remove(), 4000);
+}
+
+function placeWordOnPc(state) {
+  const s = state || currentState();
+  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(s)}`, {
+    method: "POST",
+    mode: "cors",
+  }).catch(() => {});
+  openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}`);
+}
+
+async function applyLayout(state, place) {
   const wa = workArea();
   const url = `/api/layout?state=${encodeURIComponent(state)}&x=${wa.x}&y=${wa.y}&w=${wa.w}&h=${wa.h}`;
   const data = await fetch(url).then((r) => r.json());
   const dock = document.getElementById("dock");
+  const sim = document.getElementById("word-sim");
   applyRect(dock, data.dock);
-  applyRect(document.getElementById("word-sim"), data.word);
+  applyRect(sim, data.word);
   dock.classList.toggle("is-minimized", state === "minimized");
   document.querySelectorAll("[data-dock]").forEach((btn) => {
     btn.setAttribute("aria-pressed", btn.getAttribute("data-dock") === state ? "true" : "false");
   });
   sessionStorage.setItem("mos-dock-state", state);
-}
-
-function currentState() {
-  return sessionStorage.getItem("mos-dock-state") || "bottom";
+  const bar = document.getElementById("word-sim-bar");
+  if (bar) {
+    bar.textContent = `Microsoft Word — vị trí đã chọn (${data.word.x},${data.word.y}) ${data.word.w}×${data.word.h}`;
+  }
+  if (place) {
+    sim.classList.add("is-target");
+    placeWordOnPc(state);
+  }
 }
 
 document.querySelectorAll("[data-dock]").forEach((btn) => {
-  btn.addEventListener("click", () => layout(btn.getAttribute("data-dock")));
+  btn.addEventListener("click", () => applyLayout(btn.getAttribute("data-dock"), true));
 });
 
-window.addEventListener("resize", () => layout(currentState()));
-layout(currentState());
+document.getElementById("btn-place-word")?.addEventListener("click", () => {
+  applyLayout(currentState(), true);
+});
+
+window.addEventListener("message", (ev) => {
+  if (ev.origin !== window.location.origin) return;
+  if (ev.data && ev.data.type === "mos-place-word") {
+    applyLayout(ev.data.state || currentState(), true);
+  }
+});
+
+window.addEventListener("resize", () => applyLayout(currentState(), false));
+applyLayout(currentState(), false);
