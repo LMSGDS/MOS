@@ -5,13 +5,17 @@ import os
 import secrets
 from pathlib import Path
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.admin import router as admin_router
 from app.auth import authenticate
+from app.client_v1 import router as client_v1_router
 from app.kulkul_layout import Rect, compute
 from app.programs import MENU, normalize, resolve
 
@@ -33,10 +37,25 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul4")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul5")
 SESSION_SECRET = _session_secret()
 
-app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    try:
+        from app.db import init_schema
+        from app.seed import seed
+
+        init_schema()
+        seed()
+    except Exception as exc:
+        print("PostgreSQL chưa sẵn sàng:", exc)
+    yield
+
+
+app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None, lifespan=lifespan)
+app.include_router(client_v1_router)
+app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -83,7 +102,16 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "service": "mos"}
+    postgres = False
+    try:
+        from app.db import connect
+
+        with connect() as conn:
+            conn.execute("SELECT 1")
+        postgres = True
+    except Exception:
+        postgres = False
+    return {"ok": True, "service": "mos", "postgres": postgres}
 
 
 def _is_dock(request: Request) -> bool:

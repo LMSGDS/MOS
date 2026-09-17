@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Quản trị MOS-KulKul{% endblock %}
+{% block body %}
+<section class="card hero" style="width:min(960px,100%)">
+  <h1>Bảng điều khiển MOS-KulKul</h1>
+  <p class="lead">Quản trị web — lớp, giáo viên, học sinh, điểm và kỹ năng yếu. Không cần cài app.</p>
+  <div class="program-grid" style="margin-top:12px">
+    <div class="program-tile"><span class="pname">Học sinh<br><strong>{{ stats.students }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Lớp<br><strong>{{ stats.classes }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Bài đã nộp<br><strong>{{ stats.submitted }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ stats.avg }}</strong></span></div>
+  </div>
+
+  <h2 style="margin-top:28px;font-size:18px">Kỹ năng (Objective Domains)</h2>
+  <table class="grid">
+    <thead><tr><th>Kỹ năng</th><th>Số bài</th><th>Điểm TB</th></tr></thead>
+    <tbody>
+      {% for s in skills %}
+      <tr><td>{{ s.skill or "—" }}</td><td>{{ s.n }}</td><td>{{ "%.1f"|format(s.avg_score) }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">Chưa có bài nộp.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px;font-size:18px">Tiến độ theo lớp / giáo viên</h2>
+  <table class="grid">
+    <thead><tr><th>Lớp</th><th>Giáo viên</th><th>Bài nộp</th><th>Điểm TB</th><th>Giờ thực hành</th></tr></thead>
+    <tbody>
+      {% for c in classes_rows %}
+      <tr>
+        <td>{{ c.class_name }}</td>
+        <td>{{ c.teacher or "—" }}</td>
+        <td>{{ c.done }}</td>
+        <td>{{ "%.1f"|format(c.avg_score) }}</td>
+        <td>{{ "%.1f"|format((c.practice_sec or 0) / 3600) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Chưa có lớp.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px;font-size:18px">Lịch sử bài làm</h2>
+  <table class="grid">
+    <thead><tr><th>Học sinh</th><th>Bài</th><th>Chế độ</th><th>Điểm</th><th>Thời gian (s)</th></tr></thead>
+    <tbody>
+      {% for h in history %}
+      <tr>
+        <td>{{ h.student }}</td>
+        <td>{{ h.title }}</td>
+        <td>{{ h.mode }}</td>
+        <td>{{ h.score }}</td>
+        <td>{{ h.duration_sec }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Chưa có dữ liệu telemetry.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

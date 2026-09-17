@@ -33,6 +33,19 @@ def load_users() -> list[dict]:
 
 def find_user(username: str) -> dict | None:
     uname = (username or "").strip().lower()
+    try:
+        from app.db import cursor
+
+        with cursor() as cur:
+            cur.execute(
+                "SELECT id, username, name, role, password_hash FROM users WHERE username = %s",
+                (uname,),
+            )
+            row = cur.fetchone()
+        if row:
+            return dict(row)
+    except Exception:
+        pass
     for user in load_users():
         if user.get("username", "").lower() == uname:
             return user
@@ -49,4 +62,5 @@ def authenticate(username: str, password: str) -> dict | None:
         "username": user["username"],
         "name": user.get("name") or user["username"],
         "role": user.get("role") or "user",
+        "id": user.get("id"),
     }

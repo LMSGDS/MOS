@@ -49,11 +49,13 @@ sealed class MainForm : Form
         AddButton("Đính đáy", "bottom", 460);
         AddButton("Đặt cửa sổ", "place", 570, placeOnly: true);
         AddButton("Mở rộng đề", "expand", 680, placeOnly: true);
+        AddButton("Tải đề", "exam-open", 790, placeOnly: true);
+        AddButton("Nộp bài", "exam-submit", 900, placeOnly: true);
 
         _status.AutoSize = true;
         _status.ForeColor = Color.FromArgb(200, 230, 255);
-        _status.Location = new Point(690, 12);
-        _status.Text = "Office sẽ nhảy vào ô còn lại sau khi mở";
+        _status.Location = new Point(1010, 12);
+        _status.Text = ExamSession.Mode == "testing" ? "Chế độ thi" : "Chế độ luyện tập";
         _bar.Controls.Add(_status);
 
         _web.Dock = DockStyle.Fill;
@@ -232,6 +234,18 @@ sealed class MainForm : Form
         btn.Click += (_, _) =>
         {
             var tag = (string)btn.Tag!;
+            if (tag == "exam-open")
+            {
+                _ = StartExam();
+                return;
+            }
+
+            if (tag == "exam-submit")
+            {
+                _ = SubmitExam();
+                return;
+            }
+
             if (tag == "expand")
             {
                 _compact = false;
@@ -257,6 +271,26 @@ sealed class MainForm : Form
             ApplyDock(waitForWord: true);
         };
         _bar.Controls.Add(btn);
+    }
+
+    async Task StartExam()
+    {
+        _status.Text = "Đang tải đề từ PostgreSQL…";
+        var (ok, msg) = await ExamHub.StartProjectAsync(_app);
+        _compact = true;
+        ApplyDock(waitForWord: true);
+        _status.Text = ok ? msg : ("Lỗi đề: " + msg);
+    }
+
+    async Task SubmitExam()
+    {
+        _status.Text = "Đang nộp bài…";
+        var (ok, msg) = await ExamHub.SubmitAsync(_app);
+        _status.Text = msg;
+        if (!ok)
+        {
+            MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null, bool compact = false)

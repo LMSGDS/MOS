@@ -42,6 +42,8 @@ static class Program
             }
 
             appId = login.SelectedApp;
+            ExamSession.Mode = login.Mode;
+            ExamSession.DisplayName = login.DisplayName;
         }
 
         Application.Run(new MainForm(parsed.State, appId, parsed.Launch, parsed.File));

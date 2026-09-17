@@ -28,7 +28,10 @@ jobs:
           Copy-Item desktop/installer/windows/install.ps1 dist-win/
           $loader = Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Select-Object -First 1
           if (-not $loader) { throw "WebView2Loader.dll missing after publish" }
-          Copy-Item $loader.FullName (Join-Path dist-win "WebView2Loader.dll") -Force
+          $destLoader = Join-Path (Resolve-Path dist-win) "WebView2Loader.dll"
+          if ($loader.FullName -ne $destLoader) {
+            Copy-Item $loader.FullName $destLoader -Force
+          }
           if (-not (Test-Path dist-win\MOS-KulKul.exe)) { throw "MOS-KulKul.exe missing after publish" }
           Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Format-Table FullName, Length
       - name: Compile Inno Setup installer

@@ -68,6 +68,24 @@ static class WordWindow
             uri = spec.Protocol.TrimEnd(':') + ":nft|u|" + documentUrl;
         }
 
+        if (!string.IsNullOrWhiteSpace(documentUrl) && File.Exists(documentUrl))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = documentUrl,
+                    UseShellExecute = true,
+                });
+            }
+            catch
+            {
+                // Office chưa liên kết phần mở rộng
+            }
+
+            return;
+        }
+
         try
         {
             Process.Start(new ProcessStartInfo

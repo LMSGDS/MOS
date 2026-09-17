@@ -79,7 +79,8 @@ button[type="submit"], .primary { background: var(--gds); color: #fff; }
 .linkish { text-align: center; color: var(--gds-dark); margin-top: 8px; }
 .alert { background: #fee2e2; color: #991b1b; padding: 10px 12px; border-radius: 8px; }
 .notice { background: #fef3c7; color: #92400e; padding: 10px 12px; border-radius: 8px; margin: 16px 0; }
-.codebox { background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
+.grid { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+.grid th, .grid td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; }
 .hint { width: min(560px, 100%); color: var(--muted); font-size: 14px; margin-top: 16px; }
 footer { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
 

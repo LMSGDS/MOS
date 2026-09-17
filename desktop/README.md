@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập và chọn **Word / Excel / PowerPoint** ngay trong app, rồi kéo cửa sổ Office đúng ô dock.
+Đăng nhập (JWT) và chọn **Word / Excel / PowerPoint** ngay trong app, chọn **Luyện tập / Thi**, tải đề từ PostgreSQL, mở Office trên máy, nộp bài (COM lưu tệp + store-and-forward telemetry), rồi kéo cửa sổ Office đúng ô dock.
 
 ## Bộ cài tự động
 

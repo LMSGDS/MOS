@@ -11,6 +11,22 @@ bash scripts/run-mos-web.sh
 
 Tài khoản mặc định (đổi ngay khi đưa lên trường): `admin`, `giaovien`, `hocsinh` / `Mos@Gds2026`.
 
+## PostgreSQL
+
+Cổng và client MOS-KulKul dùng **PostgreSQL** (không SQLite): trường → lớp → học sinh, đề, lần làm bài, telemetry JSONB, chấm OpenXML.
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d
+export DATABASE_URL=postgresql://mos:mos@127.0.0.1:5432/mos
+bash scripts/run-mos-web.sh
+```
+
+- Schema: [`app/schema.sql`](app/schema.sql)
+- JWT client: `/api/v1/auth/login`, `/api/v1/projects`, `/api/v1/attempts`
+- Quản trị web: `/quan-tri` (admin / giáo viên / BGH)
+
+systemd `deploy/mos.service` đọc `DATABASE_URL`.
+
 Nút **Mở … trên máy** gọi protocol Office tương ứng. Nút tạo tệp mẫu gọi `ms-*:nft|u|<url file mẫu>`. Máy người dùng cần cài Microsoft 365/Office.
 
 Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/etc/ssl/cloudflare/mos.gds.edu.vn.pem` và `.key`, rồi dùng `deploy/nginx-mos.gds.edu.vn.conf`.

@@ -27,6 +27,9 @@
       <button type="button" id="btn-place-word">{{ program.place_label }}</button>
       <button type="button" id="btn-expand">Mở rộng đề</button>
       <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
+      {% if user and user.role in ['admin', 'teacher', 'leadership'] %}
+      <a class="linkish" href="/quan-tri" style="color:#fff">Quản trị</a>
+      {% endif %}
     </div>
     <iframe title="Mini-browser MOS" src="/khung/office?chuong-trinh={{ program.id }}"></iframe>
   </aside>

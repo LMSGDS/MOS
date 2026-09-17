@@ -105,6 +105,10 @@ class State:
     app = "word"
     dock = "bottom"
     compact = False
+    token = ""
+    mode = "training"
+    attempt_id = ""
+    local_path = ""
 
 
 def apply(launch: bool = False, file_url: str | None = None) -> dict:
@@ -212,9 +216,9 @@ def portal_login(username: str, password: str, app: str) -> tuple[bool, str]:
         {"username": username, "password": password, "chuong_trinh": app}
     ).encode("utf-8")
     req = urllib.request.Request(
-        portal_origin() + "/api/dang-nhap",
+        portal_origin() + "/api/v1/auth/login",
         data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "MOS-KulKul/1.1"},
+        headers={"Content-Type": "application/json", "User-Agent": "MOS-KulKul/1.2"},
         method="POST",
     )
     try:
@@ -228,9 +232,86 @@ def portal_login(username: str, password: str, app: str) -> tuple[bool, str]:
         return False, "Không kết nối được MOS-KulKul: " + str(ex)
     if not data.get("ok"):
         return False, "Tên đăng nhập hoặc mật khẩu không đúng."
-    pid = ((data.get("program") or {}).get("id")) or app
-    State.app = pid
+    pid = data.get("program") or app
+    if isinstance(pid, dict):
+        pid = pid.get("id") or app
+    State.app = str(pid)
+    State.token = str(data.get("token") or "")
     return True, (data.get("user") or {}).get("name") or username
+
+
+def _api(method: str, path: str, data: bytes | None = None, content_type: str | None = None, timeout: int = 20):
+    import urllib.error
+    import urllib.request
+
+    headers = {"User-Agent": "MOS-KulKul/1.2"}
+    if State.token:
+        headers["Authorization"] = "Bearer " + State.token
+    if content_type:
+        headers["Content-Type"] = content_type
+    req = urllib.request.Request(portal_origin() + path, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw = resp.read()
+        ctype = resp.headers.get("Content-Type") or ""
+        if "json" in ctype or raw[:1] == b"{":
+            return json.loads(raw.decode("utf-8"))
+        return raw
+
+
+def exam_open(root=None) -> None:
+    try:
+        data = _api("GET", "/api/v1/projects?program=" + State.app)
+        projects = data.get("projects") or []
+        if not projects:
+            return
+        project = projects[0]
+        pid = project["id"]
+        blob = _api("GET", f"/api/v1/projects/{pid}/file")
+        dest_dir = os.path.expanduser(f"~/Library/Application Support/MOS/KulKul/projects/{pid}")
+        os.makedirs(dest_dir, exist_ok=True)
+        dest = os.path.join(dest_dir, project.get("filename") or (pid + ".bin"))
+        if isinstance(blob, dict):
+            return
+        with open(dest, "wb") as f:
+            f.write(blob)
+        started = _api(
+            "POST",
+            "/api/v1/attempts",
+            json.dumps({"project_id": pid, "mode": State.mode}).encode("utf-8"),
+            "application/json",
+        )
+        State.attempt_id = started.get("attempt_id") or ""
+        State.local_path = dest
+        State.compact = True
+        apply(launch=True, file_url=dest)
+        if root is not None:
+            root.after(0, lambda: None)
+    except Exception:
+        return
+
+
+def exam_submit(root=None) -> None:
+    if not State.attempt_id or not State.local_path or not os.path.isfile(State.local_path):
+        return
+    try:
+        import uuid
+
+        boundary = "----KulKul" + uuid.uuid4().hex
+        filename = os.path.basename(State.local_path)
+        with open(State.local_path, "rb") as f:
+            payload = f.read()
+        body = (
+            f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
+            "Content-Type: application/octet-stream\r\n\r\n"
+        ).encode("utf-8") + payload + f"\r\n--{boundary}--\r\n".encode("utf-8")
+        _api(
+            "POST",
+            f"/api/v1/attempts/{State.attempt_id}/submit",
+            body,
+            f"multipart/form-data; boundary={boundary}",
+        )
+    except Exception:
+        return
 
 
 def show_login() -> bool:
@@ -243,7 +324,7 @@ def show_login() -> bool:
     result = {"ok": False}
     root = tk.Tk()
     root.title("MOS-KulKul")
-    root.geometry("560x420")
+    root.geometry("560x500")
     root.configure(bg="#f4f8fc")
     root.resizable(False, False)
 
@@ -292,7 +373,18 @@ def show_login() -> bool:
     pw = tk.Entry(form, width=36, show="*")
     pw.grid(row=3, column=0)
 
+    mode_var = tk.StringVar(value="training")
+    modes = tk.Frame(root, bg="#f4f8fc")
+    modes.pack(pady=8)
+    tk.Radiobutton(
+        modes, text="Luyện tập (Training)", variable=mode_var, value="training", bg="#f4f8fc"
+    ).pack(side="left", padx=8)
+    tk.Radiobutton(
+        modes, text="Thi (Testing)", variable=mode_var, value="testing", bg="#f4f8fc"
+    ).pack(side="left", padx=8)
+
     def submit(_event=None):
+        State.mode = mode_var.get() or "training"
         ok, msg = portal_login(user.get().strip(), pw.get(), State.app)
         if not ok:
             messagebox.showerror("MOS-KulKul", msg)
@@ -362,6 +454,8 @@ def show_bar():
         tk.Button(bar, text=label, command=lambda s=st: click(state=s)).pack(side="left", padx=3)
     tk.Button(bar, text="Đặt cửa sổ", command=lambda: click(launch=False)).pack(side="left", padx=3)
     tk.Button(bar, text="Mở rộng đề", command=lambda: click(expand=True)).pack(side="left", padx=3)
+    tk.Button(bar, text="Tải đề", command=lambda: threading.Thread(target=lambda: exam_open(root), daemon=True).start()).pack(side="left", padx=3)
+    tk.Button(bar, text="Nộp bài", command=lambda: threading.Thread(target=lambda: exam_submit(root), daemon=True).start()).pack(side="left", padx=3)
     State.compact = True
     layout_bar()
     root.mainloop()

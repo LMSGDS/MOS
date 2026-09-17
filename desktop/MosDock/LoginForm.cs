@@ -13,6 +13,7 @@ sealed class LoginForm : Form
     string _app;
 
     public string SelectedApp => _app;
+    public string Mode { get; private set; } = "training";
     public string DisplayName { get; private set; } = "";
 
     public LoginForm(string? initialApp)
@@ -23,7 +24,7 @@ sealed class LoginForm : Form
         MaximizeBox = false;
         MinimizeBox = true;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(640, 520);
+        ClientSize = new Size(640, 580);
         BackColor = Color.FromArgb(244, 248, 252);
         Font = new Font("Segoe UI", 11f);
 
@@ -59,15 +60,41 @@ sealed class LoginForm : Form
         _pass.UseSystemPasswordChar = true;
         AddField("Mật khẩu", _pass, 268);
 
+        var modeBox = new GroupBox
+        {
+            Text = "Chế độ",
+            Location = new Point(28, 338),
+            Size = new Size(580, 52),
+            ForeColor = Color.FromArgb(15, 23, 42),
+        };
+        var train = new RadioButton
+        {
+            Text = "Luyện tập (Training)",
+            Location = new Point(16, 20),
+            AutoSize = true,
+            Checked = true,
+        };
+        var test = new RadioButton
+        {
+            Text = "Thi (Testing)",
+            Location = new Point(280, 20),
+            AutoSize = true,
+        };
+        train.CheckedChanged += (_, _) => { if (train.Checked) Mode = "training"; };
+        test.CheckedChanged += (_, _) => { if (test.Checked) Mode = "testing"; };
+        modeBox.Controls.Add(train);
+        modeBox.Controls.Add(test);
+        Controls.Add(modeBox);
+
         _error.AutoSize = false;
         _error.Size = new Size(580, 28);
-        _error.Location = new Point(28, 338);
+        _error.Location = new Point(28, 398);
         _error.ForeColor = Color.FromArgb(153, 27, 27);
         Controls.Add(_error);
 
         _submit.Text = "Đăng nhập";
         _submit.Size = new Size(580, 44);
-        _submit.Location = new Point(28, 372);
+        _submit.Location = new Point(28, 430);
         _submit.FlatStyle = FlatStyle.Flat;
         _submit.BackColor = Color.FromArgb(0, 142, 226);
         _submit.ForeColor = Color.White;
@@ -80,7 +107,7 @@ sealed class LoginForm : Form
         {
             Text = "Cần cài đặt MOS-KulKul? https://mos.gds.edu.vn/cai-dat",
             AutoSize = true,
-            Location = new Point(28, 430),
+            Location = new Point(28, 486),
             LinkColor = Color.FromArgb(0, 107, 176),
         };
         hint.LinkClicked += (_, _) =>
@@ -166,7 +193,7 @@ sealed class LoginForm : Form
         _submit.Enabled = false;
         try
         {
-            var (ok, err, name, app) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, _app);
+            var (ok, err, name, app, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, _app);
             if (!ok)
             {
                 _error.Text = err ?? "Không đăng nhập được.";

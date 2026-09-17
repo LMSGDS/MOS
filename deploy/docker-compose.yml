@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mos
+      POSTGRES_PASSWORD: mos
+      POSTGRES_DB: mos
+    ports:
+      - "5432:5432"
+    volumes:
+      - mos_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mos -d mos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mos_pg:
