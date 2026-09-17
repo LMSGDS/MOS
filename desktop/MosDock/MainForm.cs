@@ -11,6 +11,7 @@ sealed class MainForm : Form
     LocalAgent? _agent;
     string _state;
     string _app;
+    bool _compact;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
 
@@ -46,6 +47,7 @@ sealed class MainForm : Form
         AddButton("Đính phải", "right", 350);
         AddButton("Đính đáy", "bottom", 460);
         AddButton("Đặt cửa sổ", "place", 570, placeOnly: true);
+        AddButton("Mở rộng đề", "expand", 680, placeOnly: true);
 
         _status.AutoSize = true;
         _status.ForeColor = Color.FromArgb(200, 230, 255);
@@ -72,6 +74,7 @@ sealed class MainForm : Form
 
             if (_launchOnStart)
             {
+                _compact = true;
                 WordWindow.Launch(_app, _fileOnStart);
             }
 
@@ -87,7 +90,8 @@ sealed class MainForm : Form
                     ExtractField(raw, "state") ?? _state,
                     ExtractField(raw, "app"),
                     launch,
-                    ExtractField(raw, "file"));
+                    ExtractField(raw, "file"),
+                    launch);
             };
             _web.CoreWebView2.NavigationStarting += (_, e) =>
             {
@@ -160,9 +164,27 @@ sealed class MainForm : Form
         btn.FlatAppearance.BorderSize = 0;
         btn.Click += (_, _) =>
         {
+            var tag = (string)btn.Tag!;
+            if (tag == "expand")
+            {
+                _compact = false;
+                if (_state == "minimized")
+                {
+                    _state = "bottom";
+                }
+
+                ApplyDock(waitForWord: true);
+                return;
+            }
+
+            if (tag == "minimized" || tag == "place")
+            {
+                _compact = true;
+            }
+
             if (!placeOnly)
             {
-                _state = (string)btn.Tag!;
+                _state = tag;
             }
 
             ApplyDock(waitForWord: true);
@@ -170,7 +192,7 @@ sealed class MainForm : Form
         _bar.Controls.Add(btn);
     }
 
-    void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null)
+    void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null, bool compact = false)
     {
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right" or "minimized" or "bottom")
@@ -181,6 +203,11 @@ sealed class MainForm : Form
         if (!string.IsNullOrWhiteSpace(app))
         {
             _app = OfficeApp.Resolve(app).Id;
+        }
+
+        if (launch || compact || state == "minimized")
+        {
+            _compact = true;
         }
 
         if (launch)
@@ -220,10 +247,16 @@ sealed class MainForm : Form
     {
         var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var (dock, word) = LayoutMath.Compute(work, _state);
+        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
         TopMost = true;
-        _web.Visible = _state != "minimized";
+        var controlsOnly = _compact || _state == "minimized";
+        _web.Visible = !controlsOnly;
+        _bar.Dock = controlsOnly ? DockStyle.Fill : DockStyle.Top;
+        if (!controlsOnly)
+        {
+            _bar.Height = 40;
+        }
         _status.Text = $"{OfficeApp.Resolve(_app).Id} → ({word.X},{word.Y}) {word.W}×{word.H}";
         if (waitForWord)
         {
@@ -244,7 +277,7 @@ sealed class MainForm : Form
 
         var wa = Screen.FromHandle(Handle).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var (_, word) = LayoutMath.Compute(work, _state);
+        var (_, word) = LayoutMath.Compute(work, _state, _compact);
         WordWindow.Apply(word, _app);
         TopMost = true;
     }

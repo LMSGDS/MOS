@@ -50,6 +50,17 @@ function openOfficeOnPc(file) {
   const app = currentApp();
   const state = dockState();
   sessionStorage.setItem("mos-app", app);
+  const payload = { type: "mos-place-word", open: true, state, app, file: file || "" };
+  try {
+    window.parent.postMessage(payload, window.location.origin);
+  } catch {
+    /* not in iframe */
+  }
+  try {
+    window.chrome?.webview?.postMessage(JSON.stringify(payload));
+  } catch {
+    /* not WebView2 */
+  }
   if (onWindows()) {
     mosdockOpen(app, state, file);
     return;

@@ -10,34 +10,36 @@ public static class LayoutMath
 {
     public const double BottomRatio = 0.28;
     public const double SideRatio = 0.30;
-    public const int MinimizedHeight = 48;
+    public const int ControlsH = 96;
+    public const int ControlsW = 248;
     public const int MinWord = 400;
 
-    public static (Rect Dock, Rect Word) Compute(Rect work, string state)
+    public static (Rect Dock, Rect Word) Compute(Rect work, string state, bool compact = false)
     {
         state = (state ?? "bottom").ToLowerInvariant();
+        compact = compact || state == "minimized";
         Rect dock;
         Rect word;
         if (state == "left")
         {
-            var dockW = Math.Max(280, (int)(work.W * SideRatio));
+            var dockW = compact ? ControlsW : Math.Max(280, (int)(work.W * SideRatio));
             dock = new Rect(work.X, work.Y, dockW, work.H);
             word = new Rect(dock.Right, work.Y, work.W - dockW, work.H);
         }
         else if (state == "right")
         {
-            var dockW = Math.Max(280, (int)(work.W * SideRatio));
+            var dockW = compact ? ControlsW : Math.Max(280, (int)(work.W * SideRatio));
             dock = new Rect(work.Right - dockW, work.Y, dockW, work.H);
             word = new Rect(work.X, work.Y, work.W - dockW, work.H);
         }
         else if (state == "minimized")
         {
-            dock = new Rect(work.X, work.Bottom - MinimizedHeight, work.W, MinimizedHeight);
-            word = new Rect(work.X, work.Y, work.W, work.H - MinimizedHeight);
+            dock = new Rect(work.X, work.Bottom - ControlsH, work.W, ControlsH);
+            word = new Rect(work.X, work.Y, work.W, work.H - ControlsH);
         }
         else
         {
-            var dockH = Math.Max(180, (int)(work.H * BottomRatio));
+            var dockH = compact ? ControlsH : Math.Max(180, (int)(work.H * BottomRatio));
             dock = new Rect(work.X, work.Bottom - dockH, work.W, dockH);
             word = new Rect(work.X, work.Y, work.W, work.H - dockH);
         }

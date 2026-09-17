@@ -5,7 +5,8 @@ from dataclasses import dataclass
 
 BOTTOM_RATIO = 0.28
 SIDE_RATIO = 0.30
-MINIMIZED_HEIGHT = 48
+CONTROLS_H = 96
+CONTROLS_W = 248
 MIN_WORD = 400
 
 
@@ -33,22 +34,23 @@ def _clamp_word(word: Rect, work: Rect) -> Rect:
     return Rect(x, y, w, h)
 
 
-def compute(work: Rect, state: str) -> tuple[Rect, Rect]:
-    """Trả về (khung_dock, cua_so_word) trên vùng làm việc, không giao nhau."""
+def compute(work: Rect, state: str, compact: bool = False) -> tuple[Rect, Rect]:
+    """Trả về (khung_dock, cua_so_word). compact = chỉ thanh điều khiển, vừa đủ nút."""
     state = (state or "bottom").lower()
+    compact = compact or state == "minimized"
     if state == "left":
-        dock_w = max(280, int(work.w * SIDE_RATIO))
+        dock_w = CONTROLS_W if compact else max(280, int(work.w * SIDE_RATIO))
         dock = Rect(work.x, work.y, dock_w, work.h)
         word = Rect(dock.right, work.y, work.w - dock_w, work.h)
     elif state == "right":
-        dock_w = max(280, int(work.w * SIDE_RATIO))
+        dock_w = CONTROLS_W if compact else max(280, int(work.w * SIDE_RATIO))
         dock = Rect(work.right - dock_w, work.y, dock_w, work.h)
         word = Rect(work.x, work.y, work.w - dock_w, work.h)
     elif state == "minimized":
-        dock = Rect(work.x, work.bottom - MINIMIZED_HEIGHT, work.w, MINIMIZED_HEIGHT)
-        word = Rect(work.x, work.y, work.w, work.h - MINIMIZED_HEIGHT)
-    else:  # bottom — mặc định
-        dock_h = max(180, int(work.h * BOTTOM_RATIO))
+        dock = Rect(work.x, work.bottom - CONTROLS_H, work.w, CONTROLS_H)
+        word = Rect(work.x, work.y, work.w, work.h - CONTROLS_H)
+    else:  # bottom
+        dock_h = CONTROLS_H if compact else max(180, int(work.h * BOTTOM_RATIO))
         dock = Rect(work.x, work.bottom - dock_h, work.w, dock_h)
         word = Rect(work.x, work.y, work.w, work.h - dock_h)
     return dock, _clamp_word(word, work)

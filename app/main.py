@@ -92,10 +92,18 @@ def _is_dock(request: Request) -> bool:
 
 
 @app.get("/api/layout")
-def api_layout(state: str = "bottom", x: int = 0, y: int = 0, w: int = 1920, h: int = 1040):
-    dock, word = compute(Rect(x, y, w, h), state)
+def api_layout(
+    state: str = "bottom",
+    x: int = 0,
+    y: int = 0,
+    w: int = 1920,
+    h: int = 1040,
+    compact: bool = False,
+):
+    dock, word = compute(Rect(x, y, w, h), state, compact=compact)
     return {
         "state": state,
+        "compact": compact or state == "minimized",
         "dock": {"x": dock.x, "y": dock.y, "w": dock.w, "h": dock.h},
         "word": {"x": word.x, "y": word.y, "w": word.w, "h": word.h},
     }

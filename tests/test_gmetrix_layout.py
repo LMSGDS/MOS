@@ -30,9 +30,20 @@ def test_right_word_is_to_the_left():
 
 def test_minimized_is_thin_bottom_bar():
     dock, word = compute(WORK, "minimized")
-    assert dock.h == 48
-    assert word.h == WORK.h - 48
+    assert dock.h == 96
+    assert word.h == WORK.h - 96
     assert not overlap(dock, word)
+
+
+def test_compact_after_open_is_controls_only():
+    dock, word = compute(WORK, "bottom", compact=True)
+    assert dock.h == 96
+    assert word.h == WORK.h - 96
+    assert not overlap(dock, word)
+    left, word_l = compute(WORK, "left", compact=True)
+    assert left.w == 248
+    assert word_l.x == 248
+    assert not overlap(left, word_l)
 
 
 def test_unknown_state_defaults_to_bottom():

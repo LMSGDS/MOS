@@ -338,6 +338,14 @@ body.gmetrix {
   background: #fff;
   min-height: 0;
 }
-.gmetrix-dock.is-minimized iframe {
+.gmetrix-dock.is-minimized iframe,
+.gmetrix-dock.is-compact iframe {
   display: none;
+}
+.gmetrix-dock.is-compact .gmetrix-bar {
+  flex: 1;
+  align-content: center;
+}
+body.exam-running .word-sim-page {
+  font-weight: 700;
 }
