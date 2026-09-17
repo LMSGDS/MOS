@@ -18,55 +18,80 @@ sealed class LoginForm : Form
         MaximizeBox = false;
         MinimizeBox = true;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(440, 390);
-        BackColor = Color.White;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        AutoScaleDimensions = new SizeF(96f, 96f);
         Font = Ui.BodyFont;
+        BackColor = Color.White;
+        Padding = new Padding(32, 28, 32, 24);
+        ClientSize = new Size(460, 460);
 
-        Controls.Add(new Label
+        var root = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 8,
+            BackColor = Color.White,
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        var title = new Label
         {
             Text = "MOS-KulKul",
             Font = Ui.TitleFont,
-            AutoSize = true,
-            Location = new Point(36, 28),
             ForeColor = Ui.Navy,
-        });
-        Controls.Add(new Label
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 8),
+        };
+        var lead = new Label
         {
-            Text = "Đăng nhập bằng tài khoản nhà trường.\nBài MOS mở trên Word, Excel hoặc PowerPoint đã cài trên máy.",
-            AutoSize = false,
-            Size = new Size(368, 48),
-            Location = new Point(36, 72),
+            Text = "Đăng nhập tài khoản nhà trường",
+            Font = Ui.BodyFont,
             ForeColor = Ui.Muted,
-        });
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 22),
+        };
 
-        AddField("Tài khoản", _user, 132);
+        _user.BorderStyle = BorderStyle.FixedSingle;
         _pass.UseSystemPasswordChar = true;
-        AddField("Mật khẩu", _pass, 204);
+        _pass.BorderStyle = BorderStyle.FixedSingle;
+        _user.Dock = DockStyle.Top;
+        _pass.Dock = DockStyle.Top;
+        _user.Height = 32;
+        _pass.Height = 32;
 
         _error.AutoSize = false;
-        _error.Size = new Size(368, 24);
-        _error.Location = new Point(36, 276);
+        _error.Height = 24;
+        _error.Dock = DockStyle.Fill;
         _error.ForeColor = Color.FromArgb(153, 27, 27);
-        Controls.Add(_error);
+        _error.TextAlign = ContentAlignment.MiddleLeft;
+        _error.Margin = new Padding(0, 8, 0, 8);
 
         _submit.Text = "Đăng nhập";
-        _submit.Size = new Size(368, 44);
-        _submit.Location = new Point(36, 304);
+        _submit.Height = 44;
+        _submit.Dock = DockStyle.Top;
         _submit.FlatStyle = FlatStyle.Flat;
         _submit.BackColor = Ui.Blue;
         _submit.ForeColor = Color.White;
         _submit.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
         _submit.FlatAppearance.BorderSize = 0;
+        _submit.Margin = new Padding(0, 4, 0, 12);
         _submit.Click += async (_, _) => await DoLogin();
         AcceptButton = _submit;
-        Controls.Add(_submit);
 
         var hint = new LinkLabel
         {
             Text = "Cài MOS-KulKul trên máy",
             AutoSize = true,
-            Location = new Point(36, 356),
             LinkColor = Ui.Blue,
+            Margin = new Padding(0, 4, 0, 0),
         };
         hint.LinkClicked += (_, _) =>
         {
@@ -79,24 +104,40 @@ sealed class LoginForm : Form
                 // ignore
             }
         };
-        Controls.Add(hint);
+
+        root.Controls.Add(title, 0, 0);
+        root.Controls.Add(lead, 0, 1);
+        root.Controls.Add(Field("Tài khoản", _user), 0, 2);
+        root.Controls.Add(Field("Mật khẩu", _pass), 0, 3);
+        root.Controls.Add(_error, 0, 4);
+        root.Controls.Add(_submit, 0, 6);
+        root.Controls.Add(hint, 0, 7);
+        Controls.Add(root);
         TryLoadLastUser();
     }
 
-    void AddField(string caption, TextBox box, int y)
+    static Panel Field(string caption, TextBox box)
     {
-        Controls.Add(new Label
+        var wrap = new Panel
+        {
+            Height = 64,
+            Dock = DockStyle.Top,
+            Margin = new Padding(0, 0, 0, 12),
+        };
+        var label = new Label
         {
             Text = caption,
             AutoSize = true,
-            Location = new Point(36, y),
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             ForeColor = Ui.Text,
-        });
-        box.Location = new Point(36, y + 22);
-        box.Size = new Size(368, 28);
-        box.BorderStyle = BorderStyle.FixedSingle;
-        Controls.Add(box);
+            Location = new Point(0, 0),
+        };
+        box.Location = new Point(0, 24);
+        box.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        wrap.Controls.Add(label);
+        wrap.Controls.Add(box);
+        wrap.Resize += (_, _) => box.Width = Math.Max(120, wrap.ClientSize.Width);
+        return wrap;
     }
 
     static string LastUserPath => Path.Combine(ExamSession.DataDir, "last-user.txt");
