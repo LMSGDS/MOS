@@ -21,68 +21,60 @@ sealed class LoginForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96f, 96f);
         Font = Ui.BodyFont;
-        BackColor = Color.White;
-        Padding = new Padding(32, 28, 32, 24);
-        ClientSize = new Size(460, 460);
+        BackColor = Ui.Page;
+        ClientSize = new Size(480, 520);
 
-        var root = new TableLayoutPanel
+        var nav = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 52,
+            BackColor = Ui.Nav,
+        };
+        nav.Controls.Add(new Label
+        {
+            Text = "MOS-KulKul",
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 13f, FontStyle.Bold),
+            AutoSize = true,
+            Location = new Point(24, 15),
+            UseMnemonic = false,
+        });
+
+        var card = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 8,
+            RowCount = 7,
             BackColor = Color.White,
+            Padding = new Padding(32, 28, 32, 24),
         };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (var i = 0; i < 6; i++)
+        {
+            card.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
 
-        var title = new Label
-        {
-            Text = "MOS-KulKul",
-            Font = Ui.TitleFont,
-            ForeColor = Ui.Navy,
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 8),
-        };
-        var lead = new Label
-        {
-            Text = "Đăng nhập tài khoản nhà trường",
-            Font = Ui.BodyFont,
-            ForeColor = Ui.Muted,
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 22),
-        };
+        card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         _user.BorderStyle = BorderStyle.FixedSingle;
         _pass.UseSystemPasswordChar = true;
         _pass.BorderStyle = BorderStyle.FixedSingle;
         _user.Dock = DockStyle.Top;
         _pass.Dock = DockStyle.Top;
-        _user.Height = 32;
-        _pass.Height = 32;
+        _user.Height = 34;
+        _pass.Height = 34;
 
-        _error.AutoSize = false;
-        _error.Height = 24;
-        _error.Dock = DockStyle.Fill;
-        _error.ForeColor = Color.FromArgb(153, 27, 27);
-        _error.TextAlign = ContentAlignment.MiddleLeft;
+        _error.AutoSize = true;
+        _error.MaximumSize = new Size(400, 0);
+        _error.ForeColor = Ui.Danger;
         _error.Margin = new Padding(0, 8, 0, 8);
+        _error.UseMnemonic = false;
 
-        _submit.Text = "Đăng nhập";
-        _submit.Height = 44;
+        _submit = Ui.PrimaryBtn("Đăng nhập", 160);
         _submit.Dock = DockStyle.Top;
-        _submit.FlatStyle = FlatStyle.Flat;
-        _submit.BackColor = Ui.Blue;
-        _submit.ForeColor = Color.White;
-        _submit.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
-        _submit.FlatAppearance.BorderSize = 0;
-        _submit.Margin = new Padding(0, 4, 0, 12);
+        _submit.Height = 42;
+        _submit.AutoSize = false;
+        _submit.Margin = new Padding(0, 8, 0, 16);
         _submit.Click += async (_, _) => await DoLogin();
         AcceptButton = _submit;
 
@@ -90,8 +82,9 @@ sealed class LoginForm : Form
         {
             Text = "Cài MOS-KulKul trên máy",
             AutoSize = true,
-            LinkColor = Ui.Blue,
+            LinkColor = Ui.Primary,
             Margin = new Padding(0, 4, 0, 0),
+            UseMnemonic = false,
         };
         hint.LinkClicked += (_, _) =>
         {
@@ -105,14 +98,16 @@ sealed class LoginForm : Form
             }
         };
 
-        root.Controls.Add(title, 0, 0);
-        root.Controls.Add(lead, 0, 1);
-        root.Controls.Add(Field("Tài khoản", _user), 0, 2);
-        root.Controls.Add(Field("Mật khẩu", _pass), 0, 3);
-        root.Controls.Add(_error, 0, 4);
-        root.Controls.Add(_submit, 0, 6);
-        root.Controls.Add(hint, 0, 7);
-        Controls.Add(root);
+        card.Controls.Add(Ui.Title("Đăng nhập"), 0, 0);
+        card.Controls.Add(Ui.Subtitle("Dùng tài khoản nhà trường. Bài MOS mở trên Office đã cài trên máy.", 400), 0, 1);
+        card.Controls.Add(Field("Tài khoản", _user), 0, 2);
+        card.Controls.Add(Field("Mật khẩu", _pass), 0, 3);
+        card.Controls.Add(_error, 0, 4);
+        card.Controls.Add(_submit, 0, 5);
+        card.Controls.Add(hint, 0, 6);
+
+        Controls.Add(card);
+        Controls.Add(nav);
         TryLoadLastUser();
     }
 
@@ -120,9 +115,9 @@ sealed class LoginForm : Form
     {
         var wrap = new Panel
         {
-            Height = 64,
+            Height = 70,
             Dock = DockStyle.Top,
-            Margin = new Padding(0, 0, 0, 12),
+            Margin = new Padding(0, 0, 0, 8),
         };
         var label = new Label
         {
@@ -130,13 +125,13 @@ sealed class LoginForm : Form
             AutoSize = true,
             Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
             ForeColor = Ui.Text,
-            Location = new Point(0, 0),
+            Dock = DockStyle.Top,
+            Height = 22,
+            UseMnemonic = false,
         };
-        box.Location = new Point(0, 24);
-        box.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        wrap.Controls.Add(label);
+        box.Dock = DockStyle.Top;
         wrap.Controls.Add(box);
-        wrap.Resize += (_, _) => box.Width = Math.Max(120, wrap.ClientSize.Width);
+        wrap.Controls.Add(label);
         return wrap;
     }
 
