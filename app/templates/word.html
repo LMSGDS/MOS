@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ program.short }} trong khung MOS</title>
-  <link rel="stylesheet" href="/static/mos.css" />
+  <link rel="stylesheet" href="/static/mos.css?v={{ asset_v }}" />
 </head>
 <body class="word-frame" data-app="{{ program.id }}">
   <div class="ribbon">
@@ -29,6 +29,6 @@
   <p class="hint" id="hint" hidden>
     Chọn MOS Dock khi trình duyệt hỏi mở <code>mosdock:</code>. Plugin Windows/macOS mở {{ program.name }} rồi kéo cửa sổ đúng ô còn lại.
   </p>
-  <script src="/static/mos.js"></script>
+  <script src="/static/mos.js?v={{ asset_v }}"></script>
 </body>
 </html>

@@ -33,6 +33,7 @@ def _session_secret() -> str:
     return value
 
 
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul2")
 SESSION_SECRET = _session_secret()
 
 app = FastAPI(title="MOS GDS", docs_url=None, redoc_url=None)
@@ -73,6 +74,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "host": request.headers.get("host", "mos.gds.edu.vn"),
         "program": current_program(request),
         "programs": MENU,
+        "asset_v": ASSET_V,
     }
     if extra:
         data.update(extra)
