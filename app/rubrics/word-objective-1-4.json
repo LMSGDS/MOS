@@ -1,0 +1,117 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-1-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.1.0",
+  "title": "Word Objective 1.4 — Inspect documents for issues",
+  "program": "word",
+  "objective": "1.4",
+  "max_score": 100,
+  "capabilities": [
+    "word.comments",
+    "word.revisions",
+    "word.hidden_text"
+  ],
+  "criteria": [
+    {
+      "id": "W14-C01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Xóa hết comment trong tài liệu.",
+      "predicate": { "type": "comments_absent" },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Không còn comment.",
+        "fail": "Vẫn còn comment.",
+        "unverified": "Chưa đọc được comment.",
+        "error": "Không đọc được comments.xml."
+      },
+      "help_steps": [
+        "Tab **Review**, nhóm **Comments**.",
+        "Bấm **Delete** > **Delete All Comments in Document**.",
+        "**Save** tệp."
+      ]
+    },
+    {
+      "id": "W14-R01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Accept All Changes và tắt Track Changes.",
+      "predicate": { "type": "revisions_cleared" },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã chấp nhận hết thay đổi, Track Changes tắt.",
+        "fail": "Vẫn còn ins/del hoặc Track Changes đang bật.",
+        "unverified": "Chưa đọc được revision.",
+        "error": "Không đọc được markup."
+      },
+      "help_steps": [
+        "Tab **Review**, nhóm **Tracking**.",
+        "Bấm **Accept** > **Accept All Changes**.",
+        "Tắt **Track Changes** rồi **Save**."
+      ]
+    },
+    {
+      "id": "W14-H01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Hiện dấu định dạng, xóa hoặc bỏ ẩn Hidden text.",
+      "predicate": { "type": "hidden_text_absent" },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Không còn Hidden text (vanish).",
+        "fail": "Vẫn còn Hidden text.",
+        "unverified": "Chưa đọc được vanish.",
+        "error": "Không đọc được run properties."
+      },
+      "help_steps": [
+        "Tab **Home**, nhóm **Paragraph**, bấm **Show/Hide ¶**.",
+        "Chọn đoạn chấm chấm Hidden, **Ctrl+D** (**Font**).",
+        "Bỏ tick **Hidden**, hoặc xóa đoạn đó, rồi **Save**."
+      ]
+    },
+    {
+      "id": "W14-I01",
+      "objective": "1.4",
+      "kind": "action_sequence",
+      "weight": 15,
+      "prompt": "Chạy Inspect Document và gỡ thông tin ẩn / thuộc tính cá nhân.",
+      "predicate": { "type": "inspect_document" },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã Inspect Document.",
+        "fail": "Chưa chạy Inspect Document.",
+        "unverified": "Chưa thu được bằng chứng Document Inspector. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Inspect Document."
+      },
+      "help_steps": [
+        "Tab **File** > **Info**.",
+        "Bấm **Check for Issues** > **Inspect Document**.",
+        "**Inspect**, **Remove All** mục Document Properties and Personal Information nếu đề yêu cầu."
+      ]
+    },
+    {
+      "id": "W14-X01",
+      "objective": "1.4",
+      "kind": "action_sequence",
+      "weight": 15,
+      "prompt": "Chạy Check Compatibility (và Accessibility Checker nếu đề yêu cầu).",
+      "predicate": { "type": "compatibility_check" },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã chạy Compatibility Checker.",
+        "fail": "Chưa chạy Compatibility Checker.",
+        "unverified": "Chưa thu được bằng chứng Compatibility/Accessibility. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được bộ kiểm tra."
+      },
+      "help_steps": [
+        "Tab **File** > **Info** > **Check for Issues**.",
+        "Chọn **Check Compatibility**.",
+        "Nếu đề yêu cầu: **Check Accessibility**, thêm **Alt Text** cho ảnh thiếu mô tả."
+      ]
+    }
+  ]
+}

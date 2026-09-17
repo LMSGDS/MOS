@@ -12,6 +12,12 @@ ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "app" / "static"
 WORD11 = ROOT / "data" / "projects" / "word-objective-1-1" / "Word_1-1.docx"
 WORD11_RUBRIC = ROOT / "app" / "rubrics" / "word-objective-1-1.json"
+WORD12 = ROOT / "data" / "projects" / "word-objective-1-2" / "Word_1-2.docx"
+WORD12_RUBRIC = ROOT / "app" / "rubrics" / "word-objective-1-2.json"
+WORD13 = ROOT / "data" / "projects" / "word-objective-1-3" / "Word_1-3.docx"
+WORD13_RUBRIC = ROOT / "app" / "rubrics" / "word-objective-1-3.json"
+WORD14 = ROOT / "data" / "projects" / "word-objective-1-4" / "Word_1-4.docx"
+WORD14_RUBRIC = ROOT / "app" / "rubrics" / "word-objective-1-4.json"
 
 
 def seed() -> None:
@@ -74,6 +80,9 @@ def seed() -> None:
                 (student["id"],),
             )
         word11_rubric = load_rubric(WORD11_RUBRIC) if WORD11_RUBRIC.is_file() else {}
+        word12_rubric = load_rubric(WORD12_RUBRIC) if WORD12_RUBRIC.is_file() else {}
+        word13_rubric = load_rubric(WORD13_RUBRIC) if WORD13_RUBRIC.is_file() else {}
+        word14_rubric = load_rubric(WORD14_RUBRIC) if WORD14_RUBRIC.is_file() else {}
         projects = [
             {
                 "id": "word-objective-1-1",
@@ -94,6 +103,60 @@ def seed() -> None:
                 ],
                 "rubric": word11_rubric or {"rubric_version": "1.0.0"},
                 "source_sha256": sha256_file(WORD11) if WORD11.is_file() else None,
+            },
+            {
+                "id": "word-objective-1-2",
+                "title": "Word 1.2 — Format documents",
+                "program": "word",
+                "skill_domain": "Format documents",
+                "filename": "Word_1-2.docx",
+                "file_path": str(WORD12),
+                "rubric_version": word12_rubric.get("rubric_version") or "1.0.0",
+                "steps": [
+                    "Mở Word_1-2.docx trên Microsoft Word đã cài trên máy.",
+                    "Design: Page Color, Watermark Example Only, Page Borders.",
+                    "Insert Header: tiêu đề tài liệu, số trang; bật Different First Page.",
+                    "Design > Style Sets: áp bộ làm Heading 1 cỡ 15 pt.",
+                    "Lưu. Luyện tập: Kiểm tra nhiệm vụ.",
+                ],
+                "rubric": word12_rubric or {"rubric_version": "1.0.0"},
+                "source_sha256": sha256_file(WORD12) if WORD12.is_file() else None,
+            },
+            {
+                "id": "word-objective-1-3",
+                "title": "Word 1.3 — Save and share documents",
+                "program": "word",
+                "skill_domain": "Save and share documents",
+                "filename": "Word_1-3.docx",
+                "file_path": str(WORD13),
+                "rubric_version": word13_rubric.get("rubric_version") or "1.0.0",
+                "steps": [
+                    "Mở Word_1-3.docx trên Microsoft Word đã cài trên máy.",
+                    "File > Info: Title Simple Room Design; Tags color; style; Status Draft.",
+                    "Save As một bản PDF hoặc Word 97-2003 (nộp lại .docx gốc).",
+                    "File > Print xem khổ giấy; File > Share (có thể hủy gửi).",
+                    "Lưu .docx. Print/Share chưa tự chấm nếu chưa có bộ ghi nhận thao tác.",
+                ],
+                "rubric": word13_rubric or {"rubric_version": "1.0.0"},
+                "source_sha256": sha256_file(WORD13) if WORD13.is_file() else None,
+            },
+            {
+                "id": "word-objective-1-4",
+                "title": "Word 1.4 — Inspect documents for issues",
+                "program": "word",
+                "skill_domain": "Inspect documents for issues",
+                "filename": "Word_1-4.docx",
+                "file_path": str(WORD14),
+                "rubric_version": word14_rubric.get("rubric_version") or "1.0.0",
+                "steps": [
+                    "Mở Word_1-4.docx trên Microsoft Word đã cài trên máy.",
+                    "Review: xóa hết Comments; Accept All Changes; tắt Track Changes.",
+                    "Show/Hide ¶, bỏ Hidden text.",
+                    "File > Info > Check for Issues: Inspect Document, Check Compatibility, Check Accessibility.",
+                    "Lưu. Inspector/Compatibility chưa tự chấm nếu chưa có bộ ghi nhận thao tác.",
+                ],
+                "rubric": word14_rubric or {"rubric_version": "1.0.0"},
+                "source_sha256": sha256_file(WORD14) if WORD14.is_file() else None,
             },
             {
                 "id": "word-mail-merge",

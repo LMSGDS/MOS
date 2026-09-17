@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office: cụm icon dock 2 hàng. **Luyện tập** mở khung Hướng dẫn trên dock (đề bài, bước đánh số in đậm, nút AAA đổi cỡ chữ, bóng đèn Hiện/Ẩn hướng dẫn); **Thi** ẩn hướng dẫn. Không WebView2, không Office Online.
+Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office: cụm icon dock 2 hàng. **Luyện tập** mở khung Hướng dẫn trên dock (đề bài, bước đánh số in đậm, nút AAA đổi cỡ chữ, bóng đèn Hiện/Ẩn hướng dẫn); **Thi** ẩn hướng dẫn. Word Objective 1 (1.1–1.4) có đề + chấm Open XML. Không WebView2, không Office Online.
 
 ## Bộ cài tự động
 

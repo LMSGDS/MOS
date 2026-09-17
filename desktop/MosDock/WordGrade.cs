@@ -10,6 +10,18 @@ sealed class WordFacts
     public Dictionary<string, BookmarkFact> Bookmarks { get; } = new(StringComparer.Ordinal);
     public List<HyperlinkFact> InternalHyperlinks { get; } = [];
     public List<HyperlinkFact> ExternalHyperlinks { get; } = [];
+    public string PageBackground { get; set; } = "";
+    public List<string> Watermarks { get; } = [];
+    public bool PageBorder { get; set; }
+    public bool FirstPageHeader { get; set; }
+    public List<string> HeaderTexts { get; } = [];
+    public List<string> HeaderInstructions { get; } = [];
+    public Dictionary<string, string> Core { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public int CommentCount { get; set; }
+    public int RevisionCount { get; set; }
+    public bool TrackRevisions { get; set; }
+    public int VanishCount { get; set; }
+    public string Heading1Sz { get; set; } = "";
 }
 
 sealed class BookmarkFact
@@ -31,6 +43,9 @@ static class WordXml
 {
     static readonly XNamespace W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
     static readonly XNamespace R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    static readonly XNamespace CP = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
+    static readonly XNamespace DC = "http://purl.org/dc/elements/1.1/";
+    static readonly XNamespace VML = "urn:schemas-microsoft-com:vml";
 
     public static string Norm(string? text) =>
         string.Join(" ", (text ?? "").Replace('\u00a0', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -187,6 +202,7 @@ static class WordXml
                 }
             }
 
+            FillManage(facts, zip, root);
             return facts;
         }
         catch (InvalidDataException)
@@ -197,6 +213,106 @@ static class WordXml
         {
             return new WordFacts { Ok = false, Error = "bad_xml" };
         }
+    }
+
+    static XElement? LoadPart(ZipArchive zip, string name)
+    {
+        var entry = zip.GetEntry(name);
+        if (entry is null)
+        {
+            return null;
+        }
+
+        using var stream = entry.Open();
+        return XDocument.Load(stream).Root;
+    }
+
+    static void FillManage(WordFacts facts, ZipArchive zip, XElement root)
+    {
+        var bg = root.Element(W + "background");
+        facts.PageBackground = ((string?)bg?.Attribute(W + "color") ?? "").ToUpperInvariant();
+        foreach (var sect in root.Descendants(W + "sectPr"))
+        {
+            if (sect.Element(W + "pgBorders") is not null)
+            {
+                facts.PageBorder = true;
+            }
+
+            if (sect.Element(W + "titlePg") is not null)
+            {
+                facts.FirstPageHeader = true;
+            }
+
+            foreach (var refEl in sect.Elements(W + "headerReference").Concat(sect.Elements(W + "footerReference")))
+            {
+                if ((string?)refEl.Attribute(W + "type") == "first")
+                {
+                    facts.FirstPageHeader = true;
+                }
+            }
+        }
+
+        foreach (var entry in zip.Entries)
+        {
+            var name = entry.FullName.Replace('\\', '/');
+            if (!name.StartsWith("word/header", StringComparison.Ordinal) && !name.StartsWith("word/footer", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            using var stream = entry.Open();
+            var node = XDocument.Load(stream).Root;
+            if (node is null)
+            {
+                continue;
+            }
+
+            var text = Norm(string.Concat(node.Descendants(W + "t").Select(t => t.Value)));
+            if (text.Length > 0)
+            {
+                facts.HeaderTexts.Add(text);
+            }
+
+            foreach (var instr in node.Descendants(W + "instrText"))
+            {
+                var value = (instr.Value ?? "").Trim();
+                if (value.Length > 0)
+                {
+                    facts.HeaderInstructions.Add(value);
+                }
+            }
+
+            foreach (var shape in node.Descendants(VML + "textpath"))
+            {
+                var mark = (string?)shape.Attribute("string") ?? "";
+                if (mark.Length > 0)
+                {
+                    facts.Watermarks.Add(mark);
+                }
+            }
+        }
+
+        var core = LoadPart(zip, "docProps/core.xml");
+        if (core is not null)
+        {
+            facts.Core["title"] = Norm(core.Element(DC + "title")?.Value);
+            facts.Core["keywords"] = Norm(core.Element(CP + "keywords")?.Value);
+            facts.Core["contentStatus"] = Norm(core.Element(CP + "contentStatus")?.Value);
+            facts.Core["creator"] = Norm(core.Element(DC + "creator")?.Value);
+        }
+
+        var comments = LoadPart(zip, "word/comments.xml");
+        facts.CommentCount = comments?.Descendants(W + "comment").Count() ?? 0;
+        facts.CommentCount += root.Descendants(W + "commentReference").Count();
+        facts.RevisionCount = root.Descendants(W + "ins").Count() + root.Descendants(W + "del").Count();
+        facts.VanishCount = root.Descendants(W + "vanish").Count();
+
+        var settings = LoadPart(zip, "word/settings.xml");
+        facts.TrackRevisions = settings?.Element(W + "trackRevisions") is not null;
+
+        var styles = LoadPart(zip, "word/styles.xml");
+        var heading1 = styles?.Elements(W + "style").FirstOrDefault(s => (string?)s.Attribute(W + "styleId") == "Heading1");
+        facts.Heading1Sz = (string?)heading1?.Element(W + "rPr")?.Element(W + "sz")?.Attribute(W + "val") ?? "";
     }
 }
 
@@ -228,24 +344,39 @@ static class WordGrade
                 continue;
             }
 
-            var pred = item.Predicate.Type ?? "";
-            if (pred == "bookmark_range")
-            {
-                results.Add(Bookmark(facts, item));
-            }
-            else if (pred == "internal_hyperlink")
-            {
-                results.Add(Hyperlink(facts, item));
-            }
-            else
-            {
-                results.Add(new LocalCriterion(item.Id, "error", 0, weight, "unknown_predicate"));
-            }
+            results.Add(GradeArtifact(facts, item));
         }
 
         var verified = results.Sum(r => r.Earned);
         var pending = results.Where(r => r.Status == "unverified").Sum(r => r.Possible);
         return (verified, pending, results);
+    }
+
+    static LocalCriterion GradeArtifact(WordFacts facts, JsonCriterion item)
+    {
+        return (item.Predicate.Type ?? "") switch
+        {
+            "bookmark_range" => Bookmark(facts, item),
+            "internal_hyperlink" => Hyperlink(facts, item),
+            "page_background" => HexMatch(facts.PageBackground, item.Predicate.Color, item, "Đã đặt màu nền trang.", "Chưa đúng màu nền trang."),
+            "watermark_text" => ContainsList(facts.Watermarks, item.Predicate.Text, item, "Watermark đúng.", "Chưa thấy watermark."),
+            "page_border" => Flag(facts.PageBorder, item, "Đã có Page Borders.", "Chưa có Page Borders."),
+            "header_contains" => ContainsList(facts.HeaderTexts, item.Predicate.Text, item, "Header đúng.", "Header chưa có nội dung yêu cầu."),
+            "header_instruction" => Instr(facts.HeaderInstructions, item.Predicate.Text ?? "PAGE", item),
+            "first_page_header" => Flag(
+                facts.FirstPageHeader && (facts.HeaderTexts.Count > 0 || facts.Watermarks.Count > 0 || facts.HeaderInstructions.Count > 0),
+                item,
+                "Đã bật Different First Page.",
+                "Chưa bật Different First Page."),
+            "style_size" => string.Equals(facts.Heading1Sz, item.Predicate.Sz, StringComparison.Ordinal)
+                ? Pass(item, "Heading 1 đúng cỡ.")
+                : Fail(item, "Heading 1 chưa đúng cỡ style set."),
+            "core_property" => Core(facts, item),
+            "comments_absent" => Flag(facts.CommentCount == 0, item, "Đã xóa comment.", "Vẫn còn comment."),
+            "revisions_cleared" => Flag(facts.RevisionCount == 0 && !facts.TrackRevisions, item, "Đã chấp nhận thay đổi.", "Vẫn còn Track Changes."),
+            "hidden_text_absent" => Flag(facts.VanishCount == 0, item, "Đã bỏ Hidden text.", "Vẫn còn Hidden text."),
+            _ => new LocalCriterion(item.Id, "error", 0, item.Weight, "unknown_predicate"),
+        };
     }
 
     static LocalCriterion Bookmark(WordFacts facts, JsonCriterion item)
@@ -281,6 +412,51 @@ static class WordGrade
 
         return new LocalCriterion(item.Id, "fail", 0, item.Weight, item.Feedback.Fail ?? "Liên kết sai đích.");
     }
+
+    static LocalCriterion Pass(JsonCriterion item, string fallback) =>
+        new(item.Id, "pass", item.Weight, item.Weight, item.Feedback.Pass ?? fallback);
+
+    static LocalCriterion Fail(JsonCriterion item, string fallback) =>
+        new(item.Id, "fail", 0, item.Weight, item.Feedback.Fail ?? fallback);
+
+    static LocalCriterion Flag(bool ok, JsonCriterion item, string pass, string fail) =>
+        ok ? Pass(item, pass) : Fail(item, fail);
+
+    static LocalCriterion HexMatch(string got, string? expected, JsonCriterion item, string pass, string fail)
+    {
+        static string Hex(string? value) =>
+            string.Concat((value ?? "").ToUpperInvariant().Where(Uri.IsHexDigit));
+        return string.Equals(Hex(got), Hex(expected), StringComparison.Ordinal)
+            ? Pass(item, pass)
+            : Fail(item, fail);
+    }
+
+    static LocalCriterion ContainsList(IEnumerable<string> items, string? needle, JsonCriterion item, string pass, string fail)
+    {
+        needle = WordXml.Norm(needle);
+        if (needle.Length == 0)
+        {
+            return Fail(item, fail);
+        }
+
+        return items.Any(v => WordXml.Same(v, needle) || WordXml.Norm(v).Contains(needle, StringComparison.OrdinalIgnoreCase))
+            ? Pass(item, pass)
+            : Fail(item, fail);
+    }
+
+    static LocalCriterion Instr(IEnumerable<string> items, string needle, JsonCriterion item) =>
+        items.Any(v => (v ?? "").Contains(needle, StringComparison.OrdinalIgnoreCase))
+            ? Pass(item, "Header có trường PAGE.")
+            : Fail(item, "Chưa thấy trường PAGE.");
+
+    static LocalCriterion Core(WordFacts facts, JsonCriterion item)
+    {
+        var name = item.Predicate.Name ?? "";
+        facts.Core.TryGetValue(name, out var got);
+        return WordXml.Same(got, item.Predicate.Text)
+            ? Pass(item, "Thuộc tính tài liệu đúng.")
+            : Fail(item, "Thuộc tính tài liệu chưa đúng.");
+    }
 }
 
 sealed class JsonRubric
@@ -312,6 +488,8 @@ sealed class JsonPredicate
     public string? Name { get; set; }
     public string? Text { get; set; }
     public string? Heading { get; set; }
+    public string? Color { get; set; }
+    public string? Sz { get; set; }
 }
 
 sealed class JsonFeedback
