@@ -1,7 +1,8 @@
 namespace MosDock;
 
 /// <summary>
-/// Màu và kiểu gần với Canvas LMS (Instructure): nav #394B58, primary #0374B5, nền #F5F5F5.
+/// Canvas LMS (Instructure) tokens: nav #394B58, primary #0374B5, page #F5F5F5, text #2D3B45.
+/// Layout uses Dock stacking and measured text — never overlapping Location for titles.
 /// </summary>
 static class Ui
 {
@@ -9,7 +10,7 @@ static class Ui
     public static readonly Color NavDark = Color.FromArgb(43, 57, 67);
     public static readonly Color Primary = Color.FromArgb(3, 116, 181);
     public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
-    public static readonly Color Page = Color.FromArgb(245, 245, 245);
+    public static readonly Color PageBg = Color.FromArgb(245, 245, 245);
     public static readonly Color Card = Color.White;
     public static readonly Color Text = Color.FromArgb(45, 59, 69);
     public static readonly Color Muted = Color.FromArgb(107, 119, 128);
@@ -19,89 +20,133 @@ static class Ui
     public static readonly Color Word = Color.FromArgb(43, 87, 154);
     public static readonly Color Excel = Color.FromArgb(33, 115, 70);
     public static readonly Color Ppt = Color.FromArgb(183, 71, 42);
+    public static readonly Color Warning = Color.FromArgb(189, 107, 0);
 
-    // aliases used by older call sites
     public static Color Navy => Nav;
     public static Color Blue => Primary;
     public static Color Teal => Success;
-    public static Color Orange => Color.FromArgb(189, 107, 0);
+    public static Color Orange => Warning;
 
-    public static Font TitleFont => new("Segoe UI", 20f, FontStyle.Bold);
+    public static Font TitleFont => new("Segoe UI", 22f, FontStyle.Bold);
     public static Font HeadFont => new("Segoe UI", 13f, FontStyle.Bold);
     public static Font BodyFont => new("Segoe UI", 10f);
     public static Font SmallFont => new("Segoe UI", 9f);
+    public static Font NavFont => new("Segoe UI", 13f, FontStyle.Bold);
+    public static Font BtnFont => new("Segoe UI", 10f, FontStyle.Bold);
 
-    public static Label Title(string text) => new()
-    {
-        Text = text,
-        Font = TitleFont,
-        ForeColor = Text,
-        AutoSize = true,
-        Margin = new Padding(0, 0, 0, 6),
-        UseMnemonic = false,
-    };
+    static readonly TextFormatFlags WrapFlags =
+        TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
 
-    public static Label Subtitle(string text, int maxWidth = 680) => new()
+    public static int MeasureH(string text, Font font, int width)
     {
-        Text = text,
-        Font = BodyFont,
-        ForeColor = Muted,
-        AutoSize = true,
-        MaximumSize = new Size(maxWidth, 0),
-        Margin = new Padding(0, 0, 0, 16),
-        UseMnemonic = false,
-    };
+        width = Math.Max(24, width);
+        return TextRenderer.MeasureText(text ?? "", font, new Size(width, int.MaxValue), WrapFlags).Height;
+    }
+
+    public static int MeasureW(string text, Font font)
+    {
+        return TextRenderer.MeasureText(text ?? "", font, new Size(int.MaxValue, 0), TextFormatFlags.SingleLine).Width;
+    }
+
+    public static void BindWrap(Label label, int extra = 8)
+    {
+        void Fit(object? _, EventArgs e)
+        {
+            var parent = label.Parent;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var w = parent.ClientSize.Width - label.Margin.Horizontal - label.Padding.Horizontal;
+            if (w < 24)
+            {
+                return;
+            }
+
+            var h = MeasureH(label.Text, label.Font, w) + label.Padding.Vertical + extra;
+            if (label.Height != h)
+            {
+                label.Height = h;
+            }
+        }
+
+        label.AutoSize = false;
+        label.UseMnemonic = false;
+        label.ParentChanged += (_, _) =>
+        {
+            if (label.Parent == null)
+            {
+                return;
+            }
+
+            label.Parent.Resize -= Fit;
+            label.Parent.Resize += Fit;
+            label.HandleCreated -= Fit;
+            label.HandleCreated += Fit;
+            Fit(null, EventArgs.Empty);
+        };
+        if (label.Parent != null)
+        {
+            label.Parent.Resize -= Fit;
+            label.Parent.Resize += Fit;
+            Fit(null, EventArgs.Empty);
+        }
+    }
+
+    public static Label Wrap(string text, Font font, Color color, int extra = 10)
+    {
+        var label = new Label
+        {
+            Text = text,
+            Font = font,
+            ForeColor = color,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+        };
+        BindWrap(label, extra);
+        return label;
+    }
 
     public static Button PrimaryBtn(string text, int minWidth = 128)
     {
+        var w = Math.Max(minWidth, MeasureW(text, BtnFont) + 36);
         var btn = new Button
         {
             Text = text,
-            AutoSize = true,
-            MinimumSize = new Size(minWidth, 36),
-            Padding = new Padding(14, 6, 14, 6),
+            AutoSize = false,
+            Size = new Size(w, 38),
             FlatStyle = FlatStyle.Flat,
             BackColor = Primary,
             ForeColor = Color.White,
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Font = BtnFont,
             Cursor = Cursors.Hand,
             UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleCenter,
         };
         btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = PrimaryDark;
         return btn;
     }
 
-    public static Button SecondaryBtn(string text, int minWidth = 128)
+    public static Button NavBtn(string text, int minWidth = 120)
     {
         var btn = PrimaryBtn(text, minWidth);
         btn.BackColor = NavDark;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 44, 52);
+        btn.Height = 36;
         return btn;
     }
 
-    public static Button DangerBtn(string text, int minWidth = 110)
+    public static Button GhostBtn(string text, int minWidth = 120)
     {
-        var btn = PrimaryBtn(text, minWidth);
-        btn.BackColor = NavDark;
-        return btn;
-    }
-
-    public static Button Primary(string text, Color color, int w = 220, int h = 40)
-    {
-        var btn = PrimaryBtn(text, w);
-        btn.BackColor = color;
-        btn.MinimumSize = new Size(w, h);
-        btn.AutoSize = false;
-        btn.Size = new Size(w, h);
-        return btn;
-    }
-
-    public static Button Ghost(string text, int w = 120, int h = 32)
-    {
+        var w = Math.Max(minWidth, MeasureW(text, SmallFont) + 28);
         var btn = new Button
         {
             Text = text,
-            AutoSize = true,
-            MinimumSize = new Size(w, h),
+            AutoSize = false,
+            Size = new Size(w, 32),
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.White,
             ForeColor = Primary,
@@ -113,130 +158,166 @@ static class Ui
         return btn;
     }
 
-    public static TableLayoutPanel Page(string title, string subtitle, Control body)
+    public static Panel StackPage(string title, string subtitle, Control body)
     {
-        var page = new TableLayoutPanel
+        var page = new Panel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 3,
-            BackColor = Page,
-            Padding = new Padding(8, 4, 8, 8),
+            BackColor = PageBg,
         };
-        page.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        page.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        page.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        page.Controls.Add(Title(title), 0, 0);
-        page.Controls.Add(Subtitle(subtitle), 0, 1);
         body.Dock = DockStyle.Fill;
-        page.Controls.Add(body, 0, 2);
+        var lead = Wrap(subtitle, BodyFont, Muted, 16);
+        var head = Wrap(title, TitleFont, Text, 8);
+        page.Controls.Add(body);
+        page.Controls.Add(lead);
+        page.Controls.Add(head);
         return page;
     }
 
     public static Panel Tile(string title, string lead, Color accent, Action onClick)
     {
-        var card = new Panel
+        const int innerW = 244;
+        var titleH = MeasureH(title, HeadFont, innerW);
+        var leadH = MeasureH(lead, BodyFont, innerW);
+        var cardH = 8 + 16 + titleH + 8 + leadH + 18;
+
+        var shell = new Panel
         {
-            Width = 300,
-            Height = 188,
-            BackColor = Card,
+            Size = new Size(280, cardH),
+            BackColor = Line,
+            Padding = new Padding(1),
             Margin = new Padding(0, 0, 16, 16),
             Cursor = Cursors.Hand,
-            Padding = new Padding(0),
         };
-        var accentBar = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 6,
-            BackColor = accent,
-        };
-        var inner = new TableLayoutPanel
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = accent, Cursor = Cursors.Hand };
+        var inner = new Panel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            Padding = new Padding(18, 14, 18, 14),
             BackColor = Card,
+            Padding = new Padding(18, 14, 18, 14),
+            Cursor = Cursors.Hand,
         };
-        inner.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        inner.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var h = new Label
         {
             Text = title,
             Font = HeadFont,
             ForeColor = Text,
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 8),
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = titleH + 8,
             UseMnemonic = false,
+            Cursor = Cursors.Hand,
         };
         var p = new Label
         {
             Text = lead,
             Font = BodyFont,
             ForeColor = Muted,
-            AutoSize = true,
-            MaximumSize = new Size(254, 0),
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = leadH + 4,
             UseMnemonic = false,
+            Cursor = Cursors.Hand,
         };
-        inner.Controls.Add(h, 0, 0);
-        inner.Controls.Add(p, 0, 1);
+        inner.Controls.Add(p);
+        inner.Controls.Add(h);
         card.Controls.Add(inner);
-        card.Controls.Add(accentBar);
-        void click(object? _, EventArgs e) => onClick();
-        card.Click += click;
-        inner.Click += click;
-        h.Click += click;
-        p.Click += click;
-        accentBar.Click += click;
-        h.Cursor = p.Cursor = inner.Cursor = Cursors.Hand;
-        return card;
+        card.Controls.Add(bar);
+        shell.Controls.Add(card);
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, card, bar, inner, h, p })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+        }
+
+        shell.MouseEnter += (_, _) => card.BackColor = inner.BackColor = Color.FromArgb(250, 252, 253);
+        shell.MouseLeave += (_, _) => card.BackColor = inner.BackColor = Card;
+        return shell;
     }
 
     public static Panel ListCard(string title, string detail, Control? action = null)
     {
-        var card = new TableLayoutPanel
+        var card = new Panel
         {
-            Width = 840,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            ColumnCount = action is null ? 1 : 2,
-            RowCount = 2,
-            BackColor = Card,
-            Padding = new Padding(16, 12, 16, 12),
+            Width = 720,
+            Height = 88,
+            BackColor = Line,
+            Padding = new Padding(1),
             Margin = new Padding(0, 0, 0, 10),
+            Tag = "card",
         };
-        card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 12) };
         if (action is not null)
         {
-            card.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            action.Anchor = AnchorStyles.Right;
-            action.Margin = new Padding(8, 4, 0, 4);
-            card.Controls.Add(action, 1, 0);
-            card.SetRowSpan(action, 2);
+            var side = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = Math.Max(136, action.Width + 8),
+                BackColor = Card,
+                Padding = new Padding(8, 0, 0, 0),
+            };
+            action.Location = new Point(8, 4);
+            side.Controls.Add(action);
+            inner.Controls.Add(side);
         }
 
-        card.Controls.Add(new Label
-        {
-            Text = title,
-            Font = HeadFont,
-            ForeColor = Text,
-            AutoSize = true,
-            MaximumSize = new Size(560, 0),
-            UseMnemonic = false,
-            Margin = new Padding(0, 0, 12, 4),
-        }, 0, 0);
-        card.Controls.Add(new Label
+        var copy = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var d = new Label
         {
             Text = detail,
             Font = SmallFont,
             ForeColor = Muted,
-            AutoSize = true,
-            MaximumSize = new Size(560, 0),
+            AutoSize = false,
+            Dock = DockStyle.Top,
             UseMnemonic = false,
-            Margin = new Padding(0, 0, 12, 0),
-        }, 0, 1);
+        };
+        var t = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+        };
+        BindWrap(d, 4);
+        BindWrap(t, 6);
+        copy.Controls.Add(d);
+        copy.Controls.Add(t);
+        inner.Controls.Add(copy);
+        card.Controls.Add(inner);
+
+        void Fit(object? _, EventArgs e)
+        {
+            var actionW = action is null ? 0 : Math.Max(136, action.Width + 24);
+            var tw = Math.Max(160, card.ClientSize.Width - 36 - actionW);
+            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 36;
+            var ah = action is null ? 0 : action.Height + 28;
+            var next = Math.Max(72, Math.Max(th, ah));
+            if (card.Height != next)
+            {
+                card.Height = next;
+            }
+        }
+
+        card.Resize += Fit;
+        Fit(null, EventArgs.Empty);
         return card;
+    }
+
+    public static void FitCards(FlowLayoutPanel list)
+    {
+        var w = Math.Max(360, list.ClientSize.Width - 28);
+        foreach (Control child in list.Controls)
+        {
+            if (Equals(child.Tag, "card"))
+            {
+                child.Width = w;
+            }
+        }
     }
 
     public static string AppName(string id) => id switch

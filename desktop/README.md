@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập trên **Windows**: trang chủ giống luồng SMS (Bài mới → chương trình → Luyện tập/Thi), **Tiếp tục bài**, **Bài đã nộp**. Khi vào bài, khung nhiệm vụ nằm bên trái, Word/Excel/PowerPoint chiếm phần còn lại. Luyện tập có **Kiểm tra nhiệm vụ**. Không WebView2, không Office Online. macOS để sau.
+Đăng nhập trên **Windows**: giao diện Canvas LMS (nav `#394B58`, nút `#0374B5`, nền `#F5F5F5`). Chữ xếp chồng bằng Dock + đo `TextRenderer` — tiêu đề không đè phụ đề, nút **Đăng xuất** đủ rộng. Trang chủ: **Bài mới** / **Tiếp tục bài** / **Bài đã nộp**. Khung bài thi bên trái, Office bên phải. Luyện tập có **Kiểm tra nhiệm vụ**. Không WebView2, không Office Online.
 
 ## Bộ cài tự động
 

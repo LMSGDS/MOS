@@ -58,9 +58,9 @@ sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96f, 96f);
-        ClientSize = new Size(1040, 680);
-        MinimumSize = new Size(880, 560);
-        BackColor = Ui.Page;
+        ClientSize = new Size(1080, 700);
+        MinimumSize = new Size(960, 600);
+        BackColor = Ui.PageBg;
         Font = Ui.BodyFont;
 
         BuildHeader();
@@ -71,7 +71,7 @@ sealed class MainForm : Form
         BuildExam();
 
         _body.Dock = DockStyle.Fill;
-        _body.BackColor = Ui.Page;
+        _body.BackColor = Ui.PageBg;
         _body.Padding = new Padding(28, 20, 28, 24);
         _body.Controls.Add(_home);
         _body.Controls.Add(_catalog);
@@ -120,132 +120,122 @@ sealed class MainForm : Form
     void BuildHeader()
     {
         _header.Dock = DockStyle.Top;
-        _header.Height = 56;
+        _header.Height = 72;
         _header.BackColor = Ui.Nav;
-        _header.Padding = new Padding(16, 10, 16, 10);
-
-        var bar = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 1,
-            BackColor = Ui.Nav,
-        };
-        bar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        bar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        bar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-
-        _back.Text = "Trang chủ";
-        _back.AutoSize = true;
-        _back.MinimumSize = new Size(108, 32);
-        _back.Padding = new Padding(10, 4, 10, 4);
-        _back.FlatStyle = FlatStyle.Flat;
-        _back.BackColor = Ui.NavDark;
-        _back.ForeColor = Color.White;
-        _back.FlatAppearance.BorderSize = 0;
-        _back.Visible = false;
-        _back.Margin = new Padding(0, 0, 12, 0);
-        _back.UseMnemonic = false;
-        _back.Click += (_, _) => ShowHome();
-
-        _crumb.Text = "MOS-KulKul";
-        _crumb.ForeColor = Color.White;
-        _crumb.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
-        _crumb.AutoSize = true;
-        _crumb.TextAlign = ContentAlignment.MiddleLeft;
-        _crumb.Anchor = AnchorStyles.Left;
-        _crumb.UseMnemonic = false;
-
-        var left = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            WrapContents = false,
-            BackColor = Ui.Nav,
-            FlowDirection = FlowDirection.LeftToRight,
-        };
-        left.Controls.Add(_back);
-        left.Controls.Add(_crumb);
-
-        _user.AutoSize = true;
-        _user.ForeColor = Color.White;
-        _user.Text = ExamSession.DisplayName;
-        _user.TextAlign = ContentAlignment.MiddleRight;
-        _user.Anchor = AnchorStyles.Right;
-        _user.Margin = new Padding(0, 6, 12, 0);
-        _user.UseMnemonic = false;
+        _header.Padding = new Padding(16, 14, 16, 14);
 
         _signOut.Text = "Đăng xuất";
-        _signOut.AutoSize = true;
-        _signOut.MinimumSize = new Size(118, 32);
-        _signOut.Padding = new Padding(12, 4, 12, 4);
+        _signOut.AutoSize = false;
+        _signOut.Size = new Size(Math.Max(148, Ui.MeasureW("Đăng xuất", Ui.BtnFont) + 32), 40);
+        _signOut.Dock = DockStyle.Right;
         _signOut.FlatStyle = FlatStyle.Flat;
         _signOut.BackColor = Ui.NavDark;
         _signOut.ForeColor = Color.White;
+        _signOut.Font = Ui.BtnFont;
         _signOut.FlatAppearance.BorderSize = 0;
         _signOut.UseMnemonic = false;
+        _signOut.TextAlign = ContentAlignment.MiddleCenter;
         _signOut.Click += (_, _) =>
         {
             SignOutRequested = true;
             Close();
         };
 
-        var right = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            WrapContents = false,
-            FlowDirection = FlowDirection.LeftToRight,
-            BackColor = Ui.Nav,
-            Anchor = AnchorStyles.Right,
-        };
-        right.Controls.Add(_user);
-        right.Controls.Add(_signOut);
+        _user.AutoSize = false;
+        _user.Dock = DockStyle.Right;
+        _user.Width = 220;
+        _user.ForeColor = Color.White;
+        _user.Text = ExamSession.DisplayName;
+        _user.TextAlign = ContentAlignment.MiddleRight;
+        _user.AutoEllipsis = true;
+        _user.Padding = new Padding(0, 0, 12, 0);
+        _user.UseMnemonic = false;
 
-        bar.Controls.Add(left, 0, 0);
-        bar.Controls.Add(new Panel { BackColor = Ui.Nav, Dock = DockStyle.Fill }, 1, 0);
-        bar.Controls.Add(right, 2, 0);
-        _header.Controls.Add(bar);
+        _back.Text = "Trang chủ";
+        _back.AutoSize = false;
+        _back.Size = new Size(0, 40);
+        _back.Dock = DockStyle.Left;
+        _back.FlatStyle = FlatStyle.Flat;
+        _back.BackColor = Ui.NavDark;
+        _back.ForeColor = Color.White;
+        _back.Font = Ui.BtnFont;
+        _back.FlatAppearance.BorderSize = 0;
+        _back.Visible = false;
+        _back.UseMnemonic = false;
+        _back.TextAlign = ContentAlignment.MiddleCenter;
+        _back.Margin = new Padding(0, 0, 12, 0);
+        _back.Click += (_, _) => ShowHome();
+
+        _crumb.Text = "MOS-KulKul";
+        _crumb.ForeColor = Color.White;
+        _crumb.Font = Ui.NavFont;
+        _crumb.AutoSize = false;
+        _crumb.Dock = DockStyle.Fill;
+        _crumb.TextAlign = ContentAlignment.MiddleLeft;
+        _crumb.AutoEllipsis = true;
+        _crumb.Padding = new Padding(8, 0, 8, 0);
+        _crumb.UseMnemonic = false;
+
+        _header.Controls.Add(_crumb);
+        _header.Controls.Add(_back);
+        _header.Controls.Add(_user);
+        _header.Controls.Add(_signOut);
     }
 
     void BuildHome()
     {
         _home.Dock = DockStyle.Fill;
-        _home.BackColor = Ui.Page;
+        _home.BackColor = Ui.PageBg;
         var tiles = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             WrapContents = true,
             AutoScroll = true,
-            BackColor = Ui.Page,
+            BackColor = Ui.PageBg,
             Padding = new Padding(0),
         };
-        tiles.Controls.Add(Ui.Tile("Bài mới", "Chọn Word, Excel hoặc PowerPoint, rồi Luyện tập hoặc Thi.", Ui.Primary, ShowCatalog));
-        tiles.Controls.Add(Ui.Tile("Tiếp tục bài", "Mở bài đang làm dở, không tạo lần làm mới.", Ui.Success, () => _ = ShowResume()));
-        tiles.Controls.Add(Ui.Tile("Bài đã nộp", "Xem điểm đã xác minh và bài đã gửi lên máy chủ.", Ui.Orange, () => _ = ShowCompleted()));
-        _home.Controls.Add(Ui.Page(
+        tiles.Controls.Add(Ui.Tile(
+            "Bài mới",
+            "Chọn Word, Excel hoặc PowerPoint, rồi Luyện tập hoặc Thi.",
+            Ui.Primary,
+            ShowCatalog));
+        tiles.Controls.Add(Ui.Tile(
+            "Tiếp tục bài",
+            "Mở bài đang làm dở, không tạo lần làm mới.",
+            Ui.Success,
+            () => _ = ShowResume()));
+        tiles.Controls.Add(Ui.Tile(
+            "Bài đã nộp",
+            "Xem điểm đã xác minh và bài đã gửi lên máy chủ.",
+            Ui.Warning,
+            () => _ = ShowCompleted()));
+        _home.Controls.Add(Ui.StackPage(
             "Trang chủ",
-            "Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.",
+            "Chọn một ô bên dưới. Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.",
             tiles));
     }
 
     void BuildCatalog()
     {
         _catalog.Dock = DockStyle.Fill;
-        _catalog.BackColor = Ui.Page;
+        _catalog.BackColor = Ui.PageBg;
         _products.Dock = DockStyle.Top;
-        _products.Height = 210;
+        _products.AutoSize = true;
+        _products.AutoSizeMode = AutoSizeMode.GrowAndShrink;
         _products.WrapContents = true;
-        _products.BackColor = Ui.Page;
-        _products.Controls.Add(Ui.Tile("Word", "Microsoft Word trên máy", Ui.Word, () => _ = LoadCatalog("word")));
-        _products.Controls.Add(Ui.Tile("Excel", "Microsoft Excel trên máy", Ui.Excel, () => _ = LoadCatalog("excel")));
-        _products.Controls.Add(Ui.Tile("PowerPoint", "Microsoft PowerPoint trên máy", Ui.Ppt, () => _ = LoadCatalog("powerpoint")));
+        _products.BackColor = Ui.PageBg;
+        _products.Controls.Add(Ui.Tile("Word", "Microsoft Word trên máy — mở ứng dụng đã cài.", Ui.Word, () => _ = LoadCatalog("word")));
+        _products.Controls.Add(Ui.Tile("Excel", "Microsoft Excel trên máy — mở ứng dụng đã cài.", Ui.Excel, () => _ = LoadCatalog("excel")));
+        _products.Controls.Add(Ui.Tile("PowerPoint", "Microsoft PowerPoint trên máy — mở ứng dụng đã cài.", Ui.Ppt, () => _ = LoadCatalog("powerpoint")));
         _tests.Dock = DockStyle.Fill;
         _tests.AutoScroll = true;
         _tests.WrapContents = true;
-        _tests.BackColor = Ui.Page;
-        var body = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Page };
+        _tests.BackColor = Ui.PageBg;
+        _tests.Resize += (_, _) => Ui.FitCards(_tests);
+        var body = new Panel { Dock = DockStyle.Fill, BackColor = Ui.PageBg };
         body.Controls.Add(_tests);
         body.Controls.Add(_products);
-        _catalog.Controls.Add(Ui.Page(
+        _catalog.Controls.Add(Ui.StackPage(
             "Bài mới",
             "Chọn chương trình, chọn đề, rồi Luyện tập hoặc Thi.",
             body));
@@ -254,11 +244,12 @@ sealed class MainForm : Form
     void BuildListPage(Panel page, FlowLayoutPanel list, string title, string lead)
     {
         page.Dock = DockStyle.Fill;
-        page.BackColor = Ui.Page;
+        page.BackColor = Ui.PageBg;
         list.WrapContents = true;
         list.AutoScroll = true;
-        list.BackColor = Ui.Page;
-        page.Controls.Add(Ui.Page(title, lead, list));
+        list.BackColor = Ui.PageBg;
+        list.Resize += (_, _) => Ui.FitCards(list);
+        page.Controls.Add(Ui.StackPage(title, lead, list));
     }
 
     void BuildExam()
@@ -269,15 +260,15 @@ sealed class MainForm : Form
         _exam.Visible = false;
 
         _examTitle.Dock = DockStyle.Top;
-        _examTitle.Height = 56;
         _examTitle.Font = Ui.HeadFont;
         _examTitle.ForeColor = Ui.Text;
-        _examTitle.AutoEllipsis = true;
+        _examTitle.UseMnemonic = false;
+        Ui.BindWrap(_examTitle, 8);
 
         _examMeta.Dock = DockStyle.Top;
-        _examMeta.Height = 32;
         _examMeta.ForeColor = Ui.Muted;
-        _examMeta.AutoEllipsis = true;
+        _examMeta.UseMnemonic = false;
+        Ui.BindWrap(_examMeta, 8);
 
         _tasks.Dock = DockStyle.Fill;
         _tasks.View = System.Windows.Forms.View.Details;
@@ -291,14 +282,16 @@ sealed class MainForm : Form
         var actions = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 148,
+            Height = 220,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             Padding = new Padding(0, 8, 0, 0),
         };
         _examStatus.AutoSize = false;
-        _examStatus.Size = new Size(220, 52);
+        _examStatus.Size = new Size(300, 56);
         _examStatus.ForeColor = Ui.Text;
+        _examStatus.UseMnemonic = false;
+        Ui.BindWrap(_examStatus, 8);
         _checkBtn.Text = "Kiểm tra nhiệm vụ";
         StyleExamBtn(_checkBtn, Ui.Primary);
         _checkBtn.Click += async (_, _) => await CheckTasks();
@@ -321,6 +314,15 @@ sealed class MainForm : Form
         actions.Controls.Add(_submitBtn);
         actions.Controls.Add(_saveBtn);
         actions.Controls.Add(_compactBtn);
+        _exam.Resize += (_, _) =>
+        {
+            var w = Math.Max(200, _exam.ClientSize.Width - 36);
+            _examStatus.Width = w;
+            foreach (var btn in new[] { _checkBtn, _submitBtn, _saveBtn, _compactBtn })
+            {
+                btn.Width = w;
+            }
+        };
 
         _exam.Controls.Add(_tasks);
         _exam.Controls.Add(actions);
@@ -330,14 +332,16 @@ sealed class MainForm : Form
 
     static void StyleExamBtn(Button btn, Color color)
     {
-        btn.Size = new Size(200, 32);
-        btn.Margin = new Padding(0, 0, 0, 6);
+        btn.AutoSize = false;
+        btn.Size = new Size(Math.Max(220, Ui.MeasureW(btn.Text, Ui.BtnFont) + 28), 40);
+        btn.Margin = new Padding(0, 0, 0, 8);
         btn.FlatStyle = FlatStyle.Flat;
         btn.BackColor = color;
         btn.ForeColor = Color.White;
+        btn.Font = Ui.BtnFont;
         btn.FlatAppearance.BorderSize = 0;
-        btn.TextAlign = ContentAlignment.MiddleLeft;
-        btn.Padding = new Padding(10, 0, 0, 0);
+        btn.TextAlign = ContentAlignment.MiddleCenter;
+        btn.UseMnemonic = false;
     }
 
     void ShowPage(HubPage view, string title)
@@ -351,6 +355,7 @@ sealed class MainForm : Form
         _resume.Visible = view == HubPage.Resume;
         _done.Visible = view == HubPage.Done;
         _back.Visible = view is HubPage.Catalog or HubPage.Resume or HubPage.Done;
+        _back.Width = _back.Visible ? Math.Max(132, Ui.MeasureW("Trang chủ", Ui.BtnFont) + 24) : 0;
         _crumb.Text = title;
         _header.Visible = !exam || !_docking;
         if (!exam && _docking)
@@ -434,6 +439,7 @@ sealed class MainForm : Form
             (string.IsNullOrWhiteSpace(project.Skill) ? Ui.AppName(project.Program) : project.Skill) + " · " + mins + " phút",
             actions);
         card.Width = Math.Max(640, _tests.ClientSize.Width - 24);
+        Ui.FitCards(_tests);
         return card;
     }
 
@@ -483,6 +489,8 @@ sealed class MainForm : Form
         {
             list.Controls.Add(AttemptCard(row, running));
         }
+
+        Ui.FitCards(list);
     }
 
     Panel AttemptCard(MosAttempt attempt, bool resume)
