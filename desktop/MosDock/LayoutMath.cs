@@ -13,6 +13,8 @@ public static class LayoutMath
     public const int ClusterMargin = 8;
     public const int HelpW = 320;
     public const int HelpH = 360;
+    public const int SummaryW = 780;
+    public const int SummaryH = 560;
     public const int ExpandedSideW = 340;
     public const int MinWord = 400;
 

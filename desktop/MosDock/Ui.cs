@@ -32,6 +32,58 @@ static class Ui
     public static Color Teal => Success;
     public static Color Orange => Warning;
 
+    public static void ApplyWindowIcon(Form form)
+    {
+        try
+        {
+            var ico = Path.Combine(AppContext.BaseDirectory, "Assets", "kulkul.ico");
+            if (!File.Exists(ico))
+            {
+                ico = Path.Combine(AppContext.BaseDirectory, "kulkul.ico");
+            }
+
+            if (File.Exists(ico))
+            {
+                form.Icon = new Icon(ico);
+                return;
+            }
+
+            var exe = Application.ExecutablePath;
+            if (!string.IsNullOrWhiteSpace(exe) && File.Exists(exe))
+            {
+                form.Icon = Icon.ExtractAssociatedIcon(exe);
+            }
+        }
+        catch
+        {
+            // default WinForms icon
+        }
+    }
+
+    public static Image? BrandMark(int size = 72)
+    {
+        try
+        {
+            var png = Path.Combine(AppContext.BaseDirectory, "Assets", "kulkul.png");
+            if (!File.Exists(png))
+            {
+                png = Path.Combine(AppContext.BaseDirectory, "kulkul.png");
+            }
+
+            if (!File.Exists(png))
+            {
+                return null;
+            }
+
+            using var src = Image.FromFile(png);
+            return new Bitmap(src, new Size(size, size));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static Font TitleFont => new("Segoe UI", 22f, FontStyle.Bold);
     public static Font HeadFont => new("Segoe UI", 13f, FontStyle.Bold);
     public static Font BodyFont => new("Segoe UI", 10f);
