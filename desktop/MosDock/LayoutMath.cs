@@ -22,13 +22,13 @@ public static class LayoutMath
         Rect word;
         if (state == "left")
         {
-            var dockW = compact ? ControlsW : Math.Max(280, (int)(work.W * SideRatio));
+            var dockW = compact ? ControlsW : Math.Max(360, Math.Min(420, (int)(work.W * 0.24)));
             dock = new Rect(work.X, work.Y, dockW, work.H);
             word = new Rect(dock.Right, work.Y, work.W - dockW, work.H);
         }
         else if (state == "right")
         {
-            var dockW = compact ? ControlsW : Math.Max(280, (int)(work.W * SideRatio));
+            var dockW = compact ? ControlsW : Math.Max(360, Math.Min(420, (int)(work.W * 0.24)));
             dock = new Rect(work.Right - dockW, work.Y, dockW, work.H);
             word = new Rect(work.X, work.Y, work.W - dockW, work.H);
         }

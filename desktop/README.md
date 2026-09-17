@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập (JWT) trên **Windows trước**: cửa sổ đề bình thường (danh sách MOS, Luyện tập/Thi), rồi mới dock TopMost khi mở Word/Excel/PowerPoint trên máy. Luyện tập có **Kiểm tra nhiệm vụ** — chấm bookmark/hyperlink từ tệp đã lưu. Không WebView2, không Office Online. macOS để sau.
+Đăng nhập trên **Windows**: trang chủ giống luồng SMS (Bài mới → chương trình → Luyện tập/Thi), **Tiếp tục bài**, **Bài đã nộp**. Khi vào bài, khung nhiệm vụ nằm bên trái, Word/Excel/PowerPoint chiếm phần còn lại. Luyện tập có **Kiểm tra nhiệm vụ**. Không WebView2, không Office Online. macOS để sau.
 
 ## Bộ cài tự động
 

@@ -7,97 +7,55 @@ sealed class LoginForm : Form
     readonly TextBox _user = new();
     readonly TextBox _pass = new();
     readonly Label _error = new();
-    readonly Label _chosen = new();
     readonly Button _submit = new();
-    readonly List<Button> _tiles = [];
-    string _app;
 
-    public string SelectedApp => _app;
-    public string Mode { get; private set; } = "training";
     public string DisplayName { get; private set; } = "";
 
-    public LoginForm(string? initialApp)
+    public LoginForm()
     {
-        _app = OfficeApp.Resolve(initialApp).Id;
         Text = "MOS-KulKul";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = true;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(640, 580);
-        BackColor = Color.FromArgb(244, 248, 252);
-        Font = new Font("Segoe UI", 11f);
+        ClientSize = new Size(440, 390);
+        BackColor = Color.White;
+        Font = Ui.BodyFont;
 
-        var title = new Label
+        Controls.Add(new Label
         {
             Text = "MOS-KulKul",
-            Font = new Font("Segoe UI", 22f, FontStyle.Bold),
+            Font = Ui.TitleFont,
             AutoSize = true,
-            Location = new Point(28, 20),
-        };
-        var lead = new Label
+            Location = new Point(36, 28),
+            ForeColor = Ui.Navy,
+        });
+        Controls.Add(new Label
         {
-            Text = "Chọn Microsoft Word, Excel hoặc PowerPoint rồi đăng nhập trên máy — không dùng Office Online.",
+            Text = "Đăng nhập bằng tài khoản nhà trường.\nBài MOS mở trên Word, Excel hoặc PowerPoint đã cài trên máy.",
             AutoSize = false,
-            Size = new Size(580, 48),
-            Location = new Point(28, 62),
-            ForeColor = Color.FromArgb(71, 85, 105),
-        };
-        Controls.Add(title);
-        Controls.Add(lead);
+            Size = new Size(368, 48),
+            Location = new Point(36, 72),
+            ForeColor = Ui.Muted,
+        });
 
-        AddTile("Word", "word", Color.FromArgb(43, 87, 154), 28);
-        AddTile("Excel", "excel", Color.FromArgb(33, 115, 70), 226);
-        AddTile("PowerPoint", "powerpoint", Color.FromArgb(210, 71, 38), 424);
-        RefreshTiles();
-
-        _chosen.AutoSize = true;
-        _chosen.Location = new Point(28, 168);
-        _chosen.ForeColor = Color.FromArgb(15, 23, 42);
-        Controls.Add(_chosen);
-
-        AddField("Tài khoản", _user, 198);
+        AddField("Tài khoản", _user, 132);
         _pass.UseSystemPasswordChar = true;
-        AddField("Mật khẩu", _pass, 268);
-
-        var modeBox = new GroupBox
-        {
-            Text = "Chế độ",
-            Location = new Point(28, 338),
-            Size = new Size(580, 52),
-            ForeColor = Color.FromArgb(15, 23, 42),
-        };
-        var train = new RadioButton
-        {
-            Text = "Luyện tập (Training)",
-            Location = new Point(16, 20),
-            AutoSize = true,
-            Checked = true,
-        };
-        var test = new RadioButton
-        {
-            Text = "Thi (Testing)",
-            Location = new Point(280, 20),
-            AutoSize = true,
-        };
-        train.CheckedChanged += (_, _) => { if (train.Checked) Mode = "training"; };
-        test.CheckedChanged += (_, _) => { if (test.Checked) Mode = "testing"; };
-        modeBox.Controls.Add(train);
-        modeBox.Controls.Add(test);
-        Controls.Add(modeBox);
+        AddField("Mật khẩu", _pass, 204);
 
         _error.AutoSize = false;
-        _error.Size = new Size(580, 28);
-        _error.Location = new Point(28, 398);
+        _error.Size = new Size(368, 24);
+        _error.Location = new Point(36, 276);
         _error.ForeColor = Color.FromArgb(153, 27, 27);
         Controls.Add(_error);
 
         _submit.Text = "Đăng nhập";
-        _submit.Size = new Size(580, 44);
-        _submit.Location = new Point(28, 430);
+        _submit.Size = new Size(368, 44);
+        _submit.Location = new Point(36, 304);
         _submit.FlatStyle = FlatStyle.Flat;
-        _submit.BackColor = Color.FromArgb(0, 142, 226);
+        _submit.BackColor = Ui.Blue;
         _submit.ForeColor = Color.White;
+        _submit.Font = new Font("Segoe UI", 11f, FontStyle.Bold);
         _submit.FlatAppearance.BorderSize = 0;
         _submit.Click += async (_, _) => await DoLogin();
         AcceptButton = _submit;
@@ -105,10 +63,10 @@ sealed class LoginForm : Form
 
         var hint = new LinkLabel
         {
-            Text = "Cần cài đặt MOS-KulKul? https://mos.gds.edu.vn/cai-dat",
+            Text = "Cài MOS-KulKul trên máy",
             AutoSize = true,
-            Location = new Point(28, 486),
-            LinkColor = Color.FromArgb(0, 107, 176),
+            Location = new Point(36, 356),
+            LinkColor = Ui.Blue,
         };
         hint.LinkClicked += (_, _) =>
         {
@@ -123,68 +81,21 @@ sealed class LoginForm : Form
         };
         Controls.Add(hint);
         TryLoadLastUser();
-        UpdateChosen();
-    }
-
-    void AddTile(string label, string id, Color color, int x)
-    {
-        var btn = new Button
-        {
-            Text = "  " + label,
-            Tag = id,
-            Location = new Point(x, 114),
-            Size = new Size(188, 44),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.White,
-            ForeColor = color,
-            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
-            TextAlign = ContentAlignment.MiddleLeft,
-        };
-        btn.FlatAppearance.BorderColor = color;
-        btn.Click += (_, _) =>
-        {
-            _app = id;
-            RefreshTiles();
-            UpdateChosen();
-        };
-        _tiles.Add(btn);
-        Controls.Add(btn);
-    }
-
-    void RefreshTiles()
-    {
-        foreach (var btn in _tiles)
-        {
-            var id = (string)btn.Tag!;
-            var on = id == _app;
-            btn.FlatAppearance.BorderSize = on ? 3 : 1;
-            btn.BackColor = on ? Color.FromArgb(232, 245, 253) : Color.White;
-        }
-    }
-
-    void UpdateChosen()
-    {
-        var name = _app switch
-        {
-            "excel" => "Microsoft Excel",
-            "powerpoint" => "Microsoft PowerPoint",
-            _ => "Microsoft Word",
-        };
-        _chosen.Text = "Chương trình đã chọn: " + name;
     }
 
     void AddField(string caption, TextBox box, int y)
     {
-        var label = new Label
+        Controls.Add(new Label
         {
             Text = caption,
             AutoSize = true,
-            Location = new Point(28, y),
-            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-        };
-        box.Location = new Point(28, y + 22);
-        box.Size = new Size(580, 32);
-        Controls.Add(label);
+            Location = new Point(36, y),
+            Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+            ForeColor = Ui.Text,
+        });
+        box.Location = new Point(36, y + 22);
+        box.Size = new Size(368, 28);
+        box.BorderStyle = BorderStyle.FixedSingle;
         Controls.Add(box);
     }
 
@@ -229,14 +140,13 @@ sealed class LoginForm : Form
         _submit.Enabled = false;
         try
         {
-            var (ok, err, name, app, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, _app);
+            var (ok, err, name, _, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, "word");
             if (!ok)
             {
-                _error.Text = err ?? "Không đăng nhập được.";
+                _error.Text = err ?? "Tên đăng nhập hoặc mật khẩu không đúng.";
                 return;
             }
 
-            _app = app;
             DisplayName = name;
             TrySaveLastUser(_user.Text.Trim());
             DialogResult = DialogResult.OK;

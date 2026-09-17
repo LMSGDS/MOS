@@ -390,7 +390,7 @@ def v1_attempts(request: Request):
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
                        a.verified_score, a.pending_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title
+                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 ORDER BY a.started_at DESC
                 LIMIT 100
@@ -401,7 +401,7 @@ def v1_attempts(request: Request):
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
                        a.verified_score, a.pending_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title
+                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 WHERE a.user_id = %s
                 ORDER BY a.started_at DESC

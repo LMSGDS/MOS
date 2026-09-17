@@ -1,147 +1,84 @@
 namespace MosDock;
 
 /// <summary>
-/// MOS-KulKul trên PC: đề từ PostgreSQL, mở Word/Excel/PowerPoint trên máy, dock TopMost.
-/// Không nhúng website, không dùng Office Online.
+/// MOS-KulKul: trang chủ kiểu GMetrix SMS — Bài mới / Tiếp tục / Đã nộp, rồi mới vào khung bài thi.
 /// </summary>
 sealed class MainForm : Form
 {
-    readonly FlowLayoutPanel _bar = new();
+    readonly Panel _header = new();
+    readonly Label _crumb = new();
+    readonly Label _user = new();
+    readonly Button _back = new();
+    readonly Button _signOut = new();
+    readonly Panel _body = new();
+    readonly Panel _home = new();
+    readonly Panel _catalog = new();
+    readonly FlowLayoutPanel _products = new();
+    readonly FlowLayoutPanel _tests = new();
+    readonly Panel _resume = new();
+    readonly FlowLayoutPanel _resumeList = new();
+    readonly Panel _done = new();
+    readonly FlowLayoutPanel _doneList = new();
     readonly Panel _exam = new();
-    readonly ComboBox _projects = new();
-    readonly TextBox _steps = new();
-    readonly Label _meta = new();
-    readonly Label _score = new();
-    readonly System.Windows.Forms.Timer _keepWord = new();
-    readonly Button _openBtn = new();
-    readonly Button _submitBtn = new();
+    readonly Label _examTitle = new();
+    readonly Label _examMeta = new();
+    readonly ListView _tasks = new();
+    readonly Label _examStatus = new();
     readonly Button _checkBtn = new();
-    readonly ListBox _results = new();
+    readonly Button _submitBtn = new();
+    readonly Button _saveBtn = new();
+    readonly Button _compactBtn = new();
+    readonly System.Windows.Forms.Timer _keepWord = new();
     LocalAgent? _agent;
-    string _state;
-    string _app;
+    string _state = "left";
+    string _app = "word";
     bool _compact;
     bool _docking;
     Rectangle? _savedWorkspace;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
     IReadOnlyList<MosProject> _items = [];
+    enum HubPage { Home, Catalog, Resume, Done, Exam }
+    HubPage _view = HubPage.Home;
+
+    public bool SignOutRequested { get; private set; }
 
     public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null)
     {
-        _state = string.IsNullOrWhiteSpace(initialState) ? "bottom" : initialState.ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(initialState))
+        {
+            _state = initialState.ToLowerInvariant();
+        }
+
         _app = OfficeApp.Resolve(initialApp).Id;
         _launchOnStart = launchOnStart;
         _fileOnStart = fileOnStart;
         Text = "MOS-KulKul";
         FormBorderStyle = FormBorderStyle.Sizable;
-        TopMost = false;
-        ShowInTaskbar = true;
-        MinimizeBox = true;
-        MaximizeBox = true;
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(980, 640);
-        MinimumSize = new Size(720, 420);
-        BackColor = Color.FromArgb(30, 79, 115);
-        Font = new Font("Segoe UI", 10f);
+        MinimumSize = new Size(820, 520);
+        BackColor = Ui.Page;
+        Font = Ui.BodyFont;
 
-        _bar.Height = 44;
-        _bar.Dock = DockStyle.Top;
-        _bar.WrapContents = false;
-        _bar.Padding = new Padding(6, 6, 6, 4);
-        _bar.BackColor = Color.FromArgb(30, 79, 115);
+        BuildHeader();
+        BuildHome();
+        BuildCatalog();
+        BuildListPage(_resume, _resumeList, "Bài đang làm dở — chọn một bài để tiếp tục trên Office máy.");
+        BuildListPage(_done, _doneList, "Bài đã nộp. Điểm hiển thị phần đã xác minh; Find/Go To có thể còn chưa xác minh.");
+        BuildExam();
 
-        _bar.Controls.Add(MakeLabel("MOS-KulKul  " + (ExamSession.DisplayName ?? "")));
-        AddAppButton("Word", "word", Color.FromArgb(43, 87, 154));
-        AddAppButton("Excel", "excel", Color.FromArgb(33, 115, 70));
-        AddAppButton("PPT", "powerpoint", Color.FromArgb(210, 71, 38));
-        AddDockButton("Thu nhỏ", "minimized");
-        AddDockButton("Trái", "left");
-        AddDockButton("Phải", "right");
-        AddDockButton("Đáy", "bottom");
-        AddDockButton("Đặt cửa sổ", "place", placeOnly: true);
-        AddDockButton("Mở rộng đề", "expand", placeOnly: true);
-        AddDockButton("Cửa sổ đề", "workspace", placeOnly: true);
-        var checkBar = new Button
-        {
-            Text = "Kiểm tra nhiệm vụ",
-            AutoSize = true,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(124, 58, 237),
-            ForeColor = Color.White,
-            Margin = new Padding(8, 2, 2, 2),
-        };
-        checkBar.FlatAppearance.BorderSize = 0;
-        checkBar.Click += async (_, _) => await CheckTasks();
-        _bar.Controls.Add(checkBar);
-
-        _exam.Dock = DockStyle.Fill;
-        _exam.BackColor = Color.FromArgb(244, 248, 252);
-        _exam.Padding = new Padding(12, 8, 12, 8);
-
-        _meta.AutoSize = false;
-        _meta.Dock = DockStyle.Top;
-        _meta.Height = 22;
-        _meta.ForeColor = Color.FromArgb(15, 23, 42);
-        _meta.Text = ModeText();
-
-        var row = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            Height = 36,
-            WrapContents = false,
-            BackColor = Color.FromArgb(244, 248, 252),
-        };
-        var pickLbl = new Label
-        {
-            Text = "Đề MOS",
-            AutoSize = true,
-            Margin = new Padding(0, 8, 8, 0),
-            ForeColor = Color.FromArgb(15, 23, 42),
-        };
-        _projects.DropDownStyle = ComboBoxStyle.DropDownList;
-        _projects.Width = 280;
-        _projects.Margin = new Padding(0, 4, 8, 0);
-        _projects.SelectedIndexChanged += (_, _) => ShowSelected();
-        StyleAction(_openBtn, "Mở đề trên máy", Color.FromArgb(0, 142, 226));
-        _openBtn.Click += async (_, _) => await StartExam();
-        StyleAction(_submitBtn, "Nộp bài", Color.FromArgb(15, 118, 110));
-        _submitBtn.Click += async (_, _) => await SubmitExam();
-        StyleAction(_checkBtn, "Kiểm tra nhiệm vụ", Color.FromArgb(124, 58, 237));
-        _checkBtn.Click += async (_, _) => await CheckTasks();
-        row.Controls.Add(pickLbl);
-        row.Controls.Add(_projects);
-        row.Controls.Add(_openBtn);
-        row.Controls.Add(_checkBtn);
-        row.Controls.Add(_submitBtn);
-
-        _steps.Multiline = true;
-        _steps.ReadOnly = true;
-        _steps.Dock = DockStyle.Fill;
-        _steps.BorderStyle = BorderStyle.FixedSingle;
-        _steps.BackColor = Color.White;
-        _steps.ScrollBars = ScrollBars.Vertical;
-
-        _results.Dock = DockStyle.Bottom;
-        _results.Height = 160;
-        _results.IntegralHeight = false;
-        _results.Font = new Font("Consolas", 9f);
-        _results.HorizontalScrollbar = true;
-
-        _score.AutoSize = false;
-        _score.Dock = DockStyle.Bottom;
-        _score.Height = 24;
-        _score.ForeColor = Color.FromArgb(0, 107, 176);
-        _score.Text = "Chưa mở đề.";
-
-        _exam.Controls.Add(_steps);
-        _exam.Controls.Add(_results);
-        _exam.Controls.Add(_score);
-        _exam.Controls.Add(row);
-        _exam.Controls.Add(_meta);
+        _body.Dock = DockStyle.Fill;
+        _body.BackColor = Ui.Page;
+        _body.Padding = new Padding(28, 16, 28, 24);
+        _body.Controls.Add(_home);
+        _body.Controls.Add(_catalog);
+        _body.Controls.Add(_resume);
+        _body.Controls.Add(_done);
 
         Controls.Add(_exam);
-        Controls.Add(_bar);
+        Controls.Add(_body);
+        Controls.Add(_header);
 
         Load += async (_, _) =>
         {
@@ -150,22 +87,19 @@ sealed class MainForm : Form
             {
                 _agent = new LocalAgent(this, OnPlaceRequest);
             }
-            catch (Exception ex)
+            catch
             {
-                _score.Text = "Agent local lỗi: " + ex.Message;
+                // agent optional
             }
 
+            ShowHome();
             if (_launchOnStart)
             {
                 WordWindow.Launch(_app, _fileOnStart);
+                ShowExamUi();
                 EnterDock(compact: true);
             }
-            else
-            {
-                ShowWorkspace();
-            }
 
-            await LoadProjects();
             try
             {
                 await OfflineQueue.FlushAsync();
@@ -177,211 +111,555 @@ sealed class MainForm : Form
         };
 
         FormClosed += (_, _) => _agent?.Dispose();
-
         _keepWord.Interval = 700;
         _keepWord.Tick += (_, _) => ApplyWordOnly();
     }
 
-    static string ModeText() =>
-        (ExamSession.Mode == "testing" ? "Chế độ thi" : "Chế độ luyện tập")
-        + " · Office trên máy, không dùng Office Online";
-
-    Label MakeLabel(string text) => new()
+    void BuildHeader()
     {
-        Text = text,
-        ForeColor = Color.White,
-        AutoSize = true,
-        Margin = new Padding(4, 8, 12, 0),
-        Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-    };
+        _header.Dock = DockStyle.Top;
+        _header.Height = 56;
+        _header.BackColor = Ui.Navy;
 
-    static void StyleAction(Button btn, string text, Color color)
+        _back.Text = "← Trang chủ";
+        _back.Size = new Size(120, 28);
+        _back.Location = new Point(16, 14);
+        _back.FlatStyle = FlatStyle.Flat;
+        _back.BackColor = Color.FromArgb(11, 58, 99);
+        _back.ForeColor = Color.White;
+        _back.FlatAppearance.BorderSize = 0;
+        _back.Visible = false;
+        _back.Click += (_, _) => ShowHome();
+
+        _crumb.Text = "MOS-KulKul";
+        _crumb.ForeColor = Color.White;
+        _crumb.Font = new Font("Segoe UI", 13f, FontStyle.Bold);
+        _crumb.AutoSize = true;
+        _crumb.Location = new Point(150, 16);
+
+        _user.AutoSize = true;
+        _user.ForeColor = Color.FromArgb(191, 219, 254);
+        _user.Location = new Point(620, 18);
+        _user.Text = ExamSession.DisplayName;
+
+        _signOut.Text = "Đăng xuất";
+        _signOut.Size = new Size(100, 28);
+        _signOut.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        _signOut.FlatStyle = FlatStyle.Flat;
+        _signOut.BackColor = Color.FromArgb(11, 58, 99);
+        _signOut.ForeColor = Color.White;
+        _signOut.FlatAppearance.BorderSize = 0;
+        _signOut.Click += (_, _) =>
+        {
+            SignOutRequested = true;
+            Close();
+        };
+
+        _header.Resize += (_, _) =>
+        {
+            _signOut.Location = new Point(_header.Width - 116, 14);
+            _user.Location = new Point(Math.Max(300, _signOut.Left - 12 - _user.PreferredSize.Width), 18);
+        };
+        _header.Controls.Add(_back);
+        _header.Controls.Add(_crumb);
+        _header.Controls.Add(_user);
+        _header.Controls.Add(_signOut);
+    }
+
+    void BuildHome()
     {
-        btn.Text = text;
-        btn.AutoSize = true;
+        _home.Dock = DockStyle.Fill;
+        _home.BackColor = Ui.Page;
+        var intro = new Label
+        {
+            Text = "Trang chủ",
+            Font = Ui.TitleFont,
+            ForeColor = Ui.Text,
+            AutoSize = true,
+            Location = new Point(8, 8),
+        };
+        var lead = new Label
+        {
+            Text = "Chọn một ô. Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.",
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Muted,
+            AutoSize = false,
+            Location = new Point(8, 52),
+            Size = new Size(860, 28),
+        };
+        var tiles = new FlowLayoutPanel
+        {
+            Location = new Point(0, 96),
+            Size = new Size(900, 400),
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+            BackColor = Ui.Page,
+        };
+        tiles.Controls.Add(Ui.Tile("Bài mới", "Chọn Word, Excel hoặc PowerPoint, rồi Luyện tập hoặc Thi.", Ui.Blue, ShowCatalog));
+        tiles.Controls.Add(Ui.Tile("Tiếp tục bài", "Mở bài đang làm dở, không tạo lần làm mới.", Ui.Teal, () => _ = ShowResume()));
+        tiles.Controls.Add(Ui.Tile("Bài đã nộp", "Xem điểm đã xác minh và bài đã gửi lên máy chủ.", Ui.Orange, () => _ = ShowCompleted()));
+        _home.Controls.Add(intro);
+        _home.Controls.Add(lead);
+        _home.Controls.Add(tiles);
+        _home.Resize += (_, _) => tiles.Width = Math.Max(300, _home.ClientSize.Width - 8);
+    }
+
+    void BuildCatalog()
+    {
+        _catalog.Dock = DockStyle.Fill;
+        _catalog.BackColor = Ui.Page;
+        var intro = new Label
+        {
+            Text = "Bài mới",
+            Font = Ui.TitleFont,
+            ForeColor = Ui.Text,
+            AutoSize = true,
+            Location = new Point(8, 8),
+        };
+        var lead = new Label
+        {
+            Text = "1. Chọn chương trình   2. Chọn đề   3. Luyện tập hoặc Thi",
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Muted,
+            AutoSize = true,
+            Location = new Point(8, 52),
+        };
+        _products.Location = new Point(0, 88);
+        _products.Size = new Size(900, 188);
+        _products.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        _products.BackColor = Ui.Page;
+        _products.Controls.Add(Ui.Tile("Word", "Microsoft Word trên máy", Ui.Word, () => _ = LoadCatalog("word")));
+        _products.Controls.Add(Ui.Tile("Excel", "Microsoft Excel trên máy", Ui.Excel, () => _ = LoadCatalog("excel")));
+        _products.Controls.Add(Ui.Tile("PowerPoint", "Microsoft PowerPoint trên máy", Ui.Ppt, () => _ = LoadCatalog("powerpoint")));
+
+        _tests.Location = new Point(0, 284);
+        _tests.Size = new Size(900, 260);
+        _tests.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        _tests.AutoScroll = true;
+        _tests.BackColor = Ui.Page;
+        _catalog.Controls.Add(intro);
+        _catalog.Controls.Add(lead);
+        _catalog.Controls.Add(_products);
+        _catalog.Controls.Add(_tests);
+        _catalog.Resize += (_, _) =>
+        {
+            _products.Width = Math.Max(300, _catalog.ClientSize.Width - 8);
+            _tests.Width = _products.Width;
+            _tests.Height = Math.Max(120, _catalog.ClientSize.Height - _tests.Top - 8);
+        };
+    }
+
+    void BuildListPage(Panel page, FlowLayoutPanel list, string lead)
+    {
+        page.Dock = DockStyle.Fill;
+        page.BackColor = Ui.Page;
+        list.Dock = DockStyle.Fill;
+        list.AutoScroll = true;
+        list.BackColor = Ui.Page;
+        list.Padding = new Padding(0, 8, 0, 8);
+        page.Controls.Add(list);
+        page.Controls.Add(new Label
+        {
+            Text = lead,
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Muted,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = 36,
+            Padding = new Padding(8, 8, 8, 0),
+        });
+    }
+
+    void BuildExam()
+    {
+        _exam.Dock = DockStyle.Fill;
+        _exam.BackColor = Color.FromArgb(248, 250, 252);
+        _exam.Padding = new Padding(16);
+        _exam.Visible = false;
+
+        _examTitle.Dock = DockStyle.Top;
+        _examTitle.Height = 48;
+        _examTitle.Font = Ui.HeadFont;
+        _examTitle.ForeColor = Ui.Text;
+
+        _examMeta.Dock = DockStyle.Top;
+        _examMeta.Height = 24;
+        _examMeta.ForeColor = Ui.Muted;
+
+        _tasks.Dock = DockStyle.Fill;
+        _tasks.View = System.Windows.Forms.View.Details;
+        _tasks.FullRowSelect = true;
+        _tasks.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+        _tasks.Columns.Add("Nhiệm vụ", 240);
+        _tasks.Columns.Add("Kết quả", 90);
+        _tasks.BorderStyle = BorderStyle.FixedSingle;
+        _tasks.BackColor = Color.White;
+
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 148,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+        _examStatus.AutoSize = false;
+        _examStatus.Size = new Size(200, 48);
+        _examStatus.ForeColor = Ui.Navy;
+        _checkBtn.Text = "Kiểm tra nhiệm vụ";
+        StyleExamBtn(_checkBtn, Color.FromArgb(124, 58, 237));
+        _checkBtn.Click += async (_, _) => await CheckTasks();
+        _submitBtn.Text = "Nộp bài";
+        StyleExamBtn(_submitBtn, Ui.Teal);
+        _submitBtn.Click += async (_, _) => await SubmitExam();
+        _saveBtn.Text = "Lưu và về trang chủ";
+        StyleExamBtn(_saveBtn, Ui.Navy);
+        _saveBtn.Click += (_, _) => SaveAndHome();
+        _compactBtn.Text = "Thu gọn khung";
+        StyleExamBtn(_compactBtn, Ui.Blue);
+        _compactBtn.Click += (_, _) =>
+        {
+            _compact = !_compact;
+            _compactBtn.Text = _compact ? "Hiện nhiệm vụ" : "Thu gọn khung";
+            EnterDock(_compact);
+        };
+        actions.Controls.Add(_examStatus);
+        actions.Controls.Add(_checkBtn);
+        actions.Controls.Add(_submitBtn);
+        actions.Controls.Add(_saveBtn);
+        actions.Controls.Add(_compactBtn);
+
+        _exam.Controls.Add(_tasks);
+        _exam.Controls.Add(actions);
+        _exam.Controls.Add(_examMeta);
+        _exam.Controls.Add(_examTitle);
+    }
+
+    static void StyleExamBtn(Button btn, Color color)
+    {
+        btn.Size = new Size(200, 32);
+        btn.Margin = new Padding(0, 0, 0, 6);
         btn.FlatStyle = FlatStyle.Flat;
         btn.BackColor = color;
         btn.ForeColor = Color.White;
         btn.FlatAppearance.BorderSize = 0;
-        btn.Margin = new Padding(0, 2, 8, 0);
-        btn.Padding = new Padding(10, 4, 10, 4);
+        btn.TextAlign = ContentAlignment.MiddleLeft;
+        btn.Padding = new Padding(10, 0, 0, 0);
     }
 
-    void AddAppButton(string text, string id, Color color)
+    void ShowPage(HubPage view, string title)
     {
-        var btn = new Button
+        _view = view;
+        var exam = view == HubPage.Exam;
+        _body.Visible = !exam;
+        _exam.Visible = exam;
+        _home.Visible = view == HubPage.Home;
+        _catalog.Visible = view == HubPage.Catalog;
+        _resume.Visible = view == HubPage.Resume;
+        _done.Visible = view == HubPage.Done;
+        _back.Visible = view is HubPage.Catalog or HubPage.Resume or HubPage.Done;
+        _crumb.Text = title;
+        _crumb.Location = new Point(_back.Visible ? 150 : 20, 16);
+        _header.Visible = !exam || !_docking;
+        if (!exam && _docking)
         {
-            Text = text,
-            Tag = id,
+            LeaveDock();
+        }
+    }
+
+    void ShowHome()
+    {
+        ShowPage(HubPage.Home, "MOS-KulKul");
+    }
+
+    void ShowCatalog()
+    {
+        _tests.Controls.Clear();
+        _tests.Controls.Add(new Label
+        {
+            Text = "Chọn Word, Excel hoặc PowerPoint ở trên để xem đề.",
             AutoSize = true,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = id == _app ? color : Color.FromArgb(15, 50, 80),
-            ForeColor = Color.White,
-            Margin = new Padding(2, 2, 2, 2),
-        };
-        btn.FlatAppearance.BorderSize = 0;
-        btn.Click += async (_, _) =>
-        {
-            _app = id;
-            foreach (Control c in _bar.Controls)
-            {
-                if (c is Button b && b.Tag is string tag && tag is "word" or "excel" or "powerpoint")
-                {
-                    var on = tag == _app;
-                    b.BackColor = on
-                        ? (tag == "excel" ? Color.FromArgb(33, 115, 70)
-                            : tag == "powerpoint" ? Color.FromArgb(210, 71, 38)
-                            : Color.FromArgb(43, 87, 154))
-                        : Color.FromArgb(15, 50, 80);
-                }
-            }
-
-            await LoadProjects();
-        };
-        _bar.Controls.Add(btn);
+            ForeColor = Ui.Muted,
+            Margin = new Padding(12),
+        });
+        ShowPage(HubPage.Catalog, "Bài mới");
     }
 
-    void AddDockButton(string text, string state, bool placeOnly = false)
+    async Task LoadCatalog(string program)
     {
-        var btn = new Button
+        _app = program;
+        _tests.Controls.Clear();
+        _tests.Controls.Add(new Label
         {
-            Text = text,
-            Tag = state,
+            Text = "Đang tải đề " + Ui.AppName(program) + "…",
             AutoSize = true,
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(0, 142, 226),
-            ForeColor = Color.White,
-            Margin = new Padding(2, 2, 2, 2),
-        };
-        btn.FlatAppearance.BorderSize = 0;
-        btn.Click += (_, _) =>
-        {
-            var tag = (string)btn.Tag!;
-            if (tag == "workspace")
-            {
-                ShowWorkspace();
-                return;
-            }
-
-            if (tag == "expand")
-            {
-                _compact = false;
-                if (_state == "minimized")
-                {
-                    _state = "bottom";
-                }
-
-                EnterDock(compact: false);
-                return;
-            }
-
-            if (tag == "minimized" || tag == "place")
-            {
-                _compact = true;
-            }
-
-            if (!placeOnly)
-            {
-                _state = tag;
-            }
-
-            EnterDock(compact: _compact);
-            return;
-        };
-        _bar.Controls.Add(btn);
-    }
-
-    async Task LoadProjects()
-    {
-        _meta.Text = OfficeApp.Resolve(_app).Id.ToUpperInvariant() + " · " + ModeText();
+            ForeColor = Ui.Muted,
+            Margin = new Padding(12),
+        });
         try
         {
-            _items = await ExamHub.ListProjectsAsync(_app);
+            _items = await ExamHub.ListProjectsAsync(program);
         }
         catch (Exception ex)
         {
-            _items = [];
-            _score.Text = "Không tải được đề: " + ex.Message;
-        }
-
-        _projects.Items.Clear();
-        foreach (var p in _items)
-        {
-            _projects.Items.Add(p.Title);
-        }
-
-        if (_projects.Items.Count > 0)
-        {
-            _projects.SelectedIndex = 0;
-        }
-
-        ShowSelected();
-    }
-
-    void ShowSelected()
-    {
-        if (_projects.SelectedIndex < 0 || _projects.SelectedIndex >= _items.Count)
-        {
-            _steps.Text = "Chưa có đề cho chương trình này.";
+            _tests.Controls.Clear();
+            _tests.Controls.Add(new Label { Text = "Không tải được đề: " + ex.Message, AutoSize = true, ForeColor = Color.Firebrick, Margin = new Padding(12) });
             return;
         }
 
-        var p = _items[_projects.SelectedIndex];
+        _tests.Controls.Clear();
+        if (_items.Count == 0)
+        {
+            _tests.Controls.Add(new Label { Text = "Chưa có đề cho chương trình này.", AutoSize = true, ForeColor = Ui.Muted, Margin = new Padding(12) });
+            return;
+        }
 
-        var mins = Math.Max(1, p.TimeLimitSec / 60);
-        _checkBtn.Visible = ExamSession.Mode != "testing";
-        _steps.Text =
-            p.Title + Environment.NewLine
-            + "Kỹ năng: " + (string.IsNullOrWhiteSpace(p.Skill) ? "—" : p.Skill)
-            + " · Thời gian: " + mins + " phút"
-            + (string.IsNullOrWhiteSpace(p.RubricVersion) ? "" : " · Rubric " + p.RubricVersion)
-            + Environment.NewLine + Environment.NewLine
-            + "Hướng dẫn:" + Environment.NewLine
-            + string.Join(Environment.NewLine, p.Steps.Select((s, i) => $"{i + 1}. {s}"));
+        foreach (var project in _items)
+        {
+            _tests.Controls.Add(TestCard(project));
+        }
     }
 
-    async Task StartExam()
+    Panel TestCard(MosProject project)
     {
-        var id = _projects.SelectedIndex >= 0 && _projects.SelectedIndex < _items.Count
-            ? _items[_projects.SelectedIndex].Id
-            : null;
-        _score.Text = "Đang tải đề và mở Office trên máy…";
-        var (ok, msg) = await ExamHub.StartProjectAsync(_app, id);
-        _score.Text = ok ? "Đã mở: " + msg : "Lỗi đề: " + msg;
-        if (ok)
+        var card = new Panel
         {
-            EnterDock(compact: true);
+            Width = 860,
+            Height = 92,
+            BackColor = Color.White,
+            Margin = new Padding(8, 6, 8, 6),
+            Padding = new Padding(16),
+        };
+        card.Controls.Add(new Label
+        {
+            Text = project.Title,
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            ForeColor = Ui.Text,
+            AutoSize = false,
+            Location = new Point(16, 12),
+            Size = new Size(520, 24),
+        });
+        var mins = Math.Max(1, project.TimeLimitSec / 60);
+        card.Controls.Add(new Label
+        {
+            Text = (string.IsNullOrWhiteSpace(project.Skill) ? Ui.AppName(project.Program) : project.Skill) + " · " + mins + " phút",
+            ForeColor = Ui.Muted,
+            AutoSize = true,
+            Location = new Point(16, 40),
+        });
+        var train = Ui.Primary("Luyện tập", Ui.Blue, 120, 36);
+        train.Location = new Point(560, 28);
+        train.Click += async (_, _) => await ConfirmStart(project, "training");
+        var test = Ui.Primary("Thi", Ui.Orange, 100, 36);
+        test.Location = new Point(692, 28);
+        test.Click += async (_, _) => await ConfirmStart(project, "testing");
+        card.Controls.Add(train);
+        card.Controls.Add(test);
+        card.Resize += (_, _) =>
+        {
+            card.Width = Math.Max(480, _tests.ClientSize.Width - 36);
+            test.Left = card.Width - 120;
+            train.Left = test.Left - 132;
+        };
+        return card;
+    }
+
+    async Task ShowResume()
+    {
+        ShowPage(HubPage.Resume, "Tiếp tục bài");
+        await FillAttempts(_resumeList, running: true);
+    }
+
+    async Task ShowCompleted()
+    {
+        ShowPage(HubPage.Done, "Bài đã nộp");
+        await FillAttempts(_doneList, running: false);
+    }
+
+    async Task FillAttempts(FlowLayoutPanel list, bool running)
+    {
+        list.Controls.Clear();
+        list.Controls.Add(new Label { Text = "Đang tải…", AutoSize = true, ForeColor = Ui.Muted, Margin = new Padding(12) });
+        IReadOnlyList<MosAttempt> rows;
+        try
+        {
+            rows = await ExamHub.ListAttemptsAsync();
+        }
+        catch (Exception ex)
+        {
+            list.Controls.Clear();
+            list.Controls.Add(new Label { Text = "Không tải được: " + ex.Message, AutoSize = true, ForeColor = Color.Firebrick, Margin = new Padding(12) });
+            return;
+        }
+
+        var filtered = rows.Where(a => running ? a.Status is "running" : a.Status is not "running").ToList();
+        list.Controls.Clear();
+        if (filtered.Count == 0)
+        {
+            list.Controls.Add(new Label
+            {
+                Text = running ? "Không có bài đang làm dở." : "Chưa nộp bài nào.",
+                AutoSize = true,
+                ForeColor = Ui.Muted,
+                Margin = new Padding(12),
+            });
+            return;
+        }
+
+        foreach (var row in filtered)
+        {
+            list.Controls.Add(AttemptCard(row, running));
+        }
+    }
+
+    Panel AttemptCard(MosAttempt attempt, bool resume)
+    {
+        var card = new Panel
+        {
+            Width = 860,
+            Height = 80,
+            BackColor = Color.White,
+            Margin = new Padding(8, 6, 8, 6),
+        };
+        card.Controls.Add(new Label
+        {
+            Text = attempt.Title,
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            Location = new Point(16, 12),
+            AutoSize = true,
+        });
+        var detail = resume
+            ? $"{Ui.AppName(attempt.Program)} · {Ui.ModeLabel(attempt.Mode)} · {attempt.StartedAt}"
+            : $"{Ui.ModeLabel(attempt.Mode)} · {attempt.StartedAt} · {(attempt.Score is { } s ? $"{s}/{attempt.MaxScore} đã xác minh" : "chưa có điểm")}";
+        card.Controls.Add(new Label
+        {
+            Text = detail,
+            ForeColor = Ui.Muted,
+            Location = new Point(16, 42),
+            AutoSize = true,
+        });
+        if (resume)
+        {
+            var go = Ui.Primary("Tiếp tục", Ui.Teal, 120, 36);
+            go.Location = new Point(700, 22);
+            go.Click += async (_, _) =>
+            {
+                var (ok, msg) = await ExamHub.ResumeAttemptAsync(attempt);
+                if (!ok)
+                {
+                    MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                _app = attempt.Program;
+                ShowExamUi();
+                EnterDock(compact: false);
+            };
+            card.Controls.Add(go);
+        }
+
+        return card;
+    }
+
+    async Task ConfirmStart(MosProject project, string mode)
+    {
+        var modeText = mode == "testing"
+            ? "Thi: ẩn điểm và gợi ý cho đến khi nộp bài."
+            : "Luyện tập: có Kiểm tra nhiệm vụ sau mỗi bước.";
+        var ask = MessageBox.Show(
+            "Mở «" + project.Title + "» trên " + Ui.AppName(project.Program) + " đã cài trên máy?\n\n" + modeText,
+            "Bắt đầu bài MOS",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Question);
+        if (ask != DialogResult.OK)
+        {
+            return;
+        }
+
+        Cursor = Cursors.WaitCursor;
+        var (ok, msg) = await ExamHub.StartProjectAsync(project.Program, project.Id, mode);
+        Cursor = Cursors.Default;
+        if (!ok)
+        {
+            MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _app = project.Program;
+        ShowExamUi();
+        EnterDock(compact: false);
+    }
+
+    void ShowExamUi()
+    {
+        _examTitle.Text = ExamSession.ProjectTitle ?? "Bài MOS";
+        _examMeta.Text = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
+            + (ExamSession.Mode == "testing" ? " · điểm ẩn đến khi nộp" : " · có kiểm tra nhiệm vụ");
+        _checkBtn.Visible = ExamSession.Mode != "testing";
+        _examStatus.Text = "Làm bài trên cửa sổ Office bên cạnh. Khung này giữ danh sách nhiệm vụ.";
+        _tasks.Items.Clear();
+        var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
+            ? criteria.Select(c => (c.Id, string.IsNullOrWhiteSpace(c.Prompt) ? c.Id : c.Prompt)).ToList()
+            : ExamSession.Steps.Select((s, i) => ($"{i + 1}", s)).ToList();
+        if (lines.Count == 0)
+        {
+            _tasks.Items.Add(new ListViewItem(["Chưa có danh sách nhiệm vụ.", ""]));
         }
         else
         {
-            MessageBox.Show(_score.Text, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            foreach (var (id, text) in lines)
+            {
+                _tasks.Items.Add(new ListViewItem([text, "—"]) { Tag = id });
+            }
         }
+
+        if (_tasks.Columns.Count >= 1)
+        {
+            _tasks.Columns[0].Width = Math.Max(180, _exam.ClientSize.Width - 140);
+        }
+
+        ShowPage(HubPage.Exam, "Bài thi");
     }
 
     async Task CheckTasks()
     {
         if (ExamSession.Mode == "testing")
         {
-            _score.Text = "Chế độ thi ẩn điểm luyện tập. Nộp bài khi xong.";
+            _examStatus.Text = "Chế độ thi ẩn kết quả. Nộp bài khi xong.";
             return;
         }
 
-        ShowWorkspace();
-        _score.Text = "Đang lưu tài liệu bài thi và chấm nhiệm vụ…";
+        _examStatus.Text = "Đang lưu đúng tài liệu bài thi và chấm…";
         var (ok, summary, criteria) = await ExamHub.CheckTasksAsync(_app);
-        _score.Text = summary;
-        _results.Items.Clear();
-        foreach (var c in criteria)
+        _examStatus.Text = summary;
+        foreach (ListViewItem item in _tasks.Items)
         {
-            var mark = c.Status switch
+            var id = item.Tag as string;
+            var hit = criteria.FirstOrDefault(c => c.Id == id);
+            if (string.IsNullOrEmpty(hit.Id) && criteria.Count == _tasks.Items.Count)
             {
-                "pass" => "ĐẠT",
-                "fail" => "CHƯA ĐẠT",
-                "unverified" => "CHƯA XN",
-                "error" => "LỖI",
-                _ => c.Status.ToUpperInvariant(),
+                hit = criteria[_tasks.Items.IndexOf(item)];
+            }
+
+            if (string.IsNullOrEmpty(hit.Id))
+            {
+                continue;
+            }
+
+            item.SubItems[1].Text = hit.Status switch
+            {
+                "pass" => "Đạt",
+                "fail" => "Chưa đạt",
+                "unverified" => "Chưa XN",
+                "error" => "Lỗi",
+                _ => hit.Status,
             };
-            _results.Items.Add($"{c.Id} [{mark}] {c.Earned}/{c.Possible} — {c.Message}");
+            item.ForeColor = hit.Status switch
+            {
+                "pass" => Ui.Teal,
+                "fail" => Color.FromArgb(153, 27, 27),
+                "unverified" => Ui.Muted,
+                _ => Ui.Text,
+            };
         }
 
         if (!ok)
@@ -392,22 +670,28 @@ sealed class MainForm : Form
 
     async Task SubmitExam()
     {
-        _score.Text = "Đang lưu và nộp bài…";
+        _examStatus.Text = "Đang lưu và nộp bài…";
         var (ok, msg) = await ExamHub.SubmitAsync(_app);
-        _score.Text = msg;
         if (!ok)
         {
+            _examStatus.Text = msg;
             MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
         }
-        else
-        {
-            ShowWorkspace();
-        }
+
+        MessageBox.Show("Đã nộp bài.\n\n" + msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        ExamSession.ClearExam();
+        await ShowCompleted();
+    }
+
+    void SaveAndHome()
+    {
+        ExamHub.SaveInPlace(_app);
+        ShowHome();
     }
 
     void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null, bool compact = false)
     {
-        state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right" or "minimized" or "bottom")
         {
             _state = state;
@@ -416,12 +700,6 @@ sealed class MainForm : Form
         if (!string.IsNullOrWhiteSpace(app))
         {
             _app = OfficeApp.Resolve(app).Id;
-            _ = LoadProjects();
-        }
-
-        if (launch || compact || state == "minimized")
-        {
-            _compact = true;
         }
 
         if (launch)
@@ -429,29 +707,25 @@ sealed class MainForm : Form
             WordWindow.Launch(_app, file);
         }
 
-        EnterDock(compact: _compact);
+        ShowExamUi();
+        EnterDock(compact || state == "minimized");
     }
 
-    void ShowWorkspace()
+    void LeaveDock()
     {
         var switching = _docking;
         _docking = false;
         _compact = false;
         _keepWord.Stop();
-        if (switching)
-        {
-            Hide();
-        }
-
+        _header.Visible = true;
+        _body.Visible = true;
+        _exam.Visible = false;
         TopMost = false;
         FormBorderStyle = FormBorderStyle.Sizable;
         MinimizeBox = true;
         MaximizeBox = true;
         ControlBox = true;
         Text = "MOS-KulKul";
-        _exam.Visible = true;
-        _bar.Dock = DockStyle.Top;
-        _bar.Height = 44;
         if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
         {
             Bounds = saved;
@@ -481,6 +755,10 @@ sealed class MainForm : Form
 
         _docking = true;
         _compact = compact;
+        _view = HubPage.Exam;
+        _body.Visible = false;
+        _exam.Visible = true;
+        _header.Visible = false;
         FormBorderStyle = FormBorderStyle.None;
         ControlBox = false;
         TopMost = true;
@@ -509,12 +787,12 @@ sealed class MainForm : Form
         var (dock, word) = LayoutMath.Compute(work, _state, _compact);
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
         TopMost = true;
-        var controlsOnly = _compact || _state == "minimized";
-        _exam.Visible = !controlsOnly;
-        _bar.Dock = controlsOnly ? DockStyle.Fill : DockStyle.Top;
-        if (!controlsOnly)
+        _tasks.Visible = !_compact;
+        _examTitle.Visible = !_compact;
+        _examMeta.Visible = !_compact;
+        if (_tasks.Visible && _tasks.Columns.Count >= 1)
         {
-            _bar.Height = 44;
+            _tasks.Columns[0].Width = Math.Max(160, _exam.ClientSize.Width - 120);
         }
 
         if (waitForWord)

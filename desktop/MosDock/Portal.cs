@@ -25,7 +25,7 @@ static class Portal
             UseCookies = true,
         };
         var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "MOS-KulKul/1.3");
+        http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "MOS-KulKul/1.4");
         return http;
     }
 

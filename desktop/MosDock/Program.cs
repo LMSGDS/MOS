@@ -1,5 +1,4 @@
 using System.Net.Http;
-using System.Runtime.InteropServices;
 
 namespace MosDock;
 
@@ -24,25 +23,35 @@ static class Program
         using var mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word", parsed.Launch, parsed.File);
+            ForwardToRunningInstance(parsed.State ?? "left", parsed.App ?? "word", parsed.Launch, parsed.File);
             return;
         }
 
         ApplicationConfiguration.Initialize();
-        string appId = parsed.App ?? "word";
-        using (var login = new LoginForm(appId))
+        var first = true;
+        while (true)
         {
+            using var login = new LoginForm();
             if (login.ShowDialog() != DialogResult.OK)
             {
                 return;
             }
 
-            appId = login.SelectedApp;
-            ExamSession.Mode = login.Mode;
             ExamSession.DisplayName = login.DisplayName;
+            using var main = new MainForm(
+                parsed.State ?? "left",
+                parsed.App ?? "word",
+                first && parsed.Launch,
+                first ? parsed.File : null);
+            first = false;
+            Application.Run(main);
+            Portal.Token = null;
+            ExamSession.ClearExam();
+            if (!main.SignOutRequested)
+            {
+                return;
+            }
         }
-
-        Application.Run(new MainForm(parsed.State, appId, parsed.Launch, parsed.File));
     }
 
     static void ShowError(Exception ex)

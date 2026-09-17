@@ -99,7 +99,9 @@ def test_projects_download_attempt_telemetry_submit(client):
     assert score["score"] >= 0
     assert score["max_score"] == 100
     history = client.get("/api/v1/attempts", headers=headers).json()
-    assert any(a["id"] == attempt_id and a["status"] == "submitted" for a in history["attempts"])
+    hit = next(a for a in history["attempts"] if a["id"] == attempt_id)
+    assert hit["status"] == "submitted"
+    assert hit["program"] == "word"
 
 
 def test_admin_dashboard_staff_only(client):
