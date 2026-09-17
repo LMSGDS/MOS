@@ -11,10 +11,11 @@ static class WordWindow
     const uint SWP_SHOWWINDOW = 0x0040;
     const int SW_RESTORE = 9;
 
-    public static bool Apply(Rect word)
+    public static bool Apply(Rect word, string? app = null)
     {
+        var spec = OfficeApp.Resolve(app);
         var moved = false;
-        foreach (var hwnd in FindWordMainWindows())
+        foreach (var hwnd in FindMainWindows(spec))
         {
             ShowWindow(hwnd, SW_RESTORE);
             SetWindowPos(
@@ -32,16 +33,16 @@ static class WordWindow
     }
 
     /// <summary>
-    /// Word mở chậm (splash). Lặp cho đến khi có cửa sổ OpusApp rồi đặt đúng vị trí đã chọn.
+    /// Office mở chậm (splash). Lặp cho đến khi có cửa sổ chính rồi đặt đúng vị trí đã chọn.
     /// </summary>
-    public static void ApplySoon(Rect word, int timeoutMs = 12000)
+    public static void ApplySoon(Rect word, string? app = null, int timeoutMs = 12000)
     {
         _ = Task.Run(async () =>
         {
             var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
             while (DateTime.UtcNow < until)
             {
-                if (Apply(word))
+                if (Apply(word, app))
                 {
                     return;
                 }
@@ -49,14 +50,14 @@ static class WordWindow
                 await Task.Delay(250);
             }
 
-            Apply(word);
+            Apply(word, app);
         });
     }
 
-    static IEnumerable<IntPtr> FindWordMainWindows()
+    static IEnumerable<IntPtr> FindMainWindows(OfficeApp spec)
     {
         var pids = new HashSet<int>();
-        foreach (var proc in Process.GetProcessesByName("WINWORD"))
+        foreach (var proc in Process.GetProcessesByName(spec.Process))
         {
             try
             {
@@ -84,7 +85,7 @@ static class WordWindow
 
             var cls = new StringBuilder(64);
             GetClassName(hWnd, cls, cls.Capacity);
-            if (cls.ToString() == "OpusApp")
+            if (cls.ToString() == spec.ClassName)
             {
                 found.Add(hWnd);
             }
@@ -102,7 +103,7 @@ static class WordWindow
             yield break;
         }
 
-        foreach (var proc in Process.GetProcessesByName("WINWORD"))
+        foreach (var proc in Process.GetProcessesByName(spec.Process))
         {
             IntPtr hwnd;
             try

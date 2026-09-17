@@ -13,11 +13,11 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth import authenticate
 from app.gmetrix_layout import Rect, compute
+from app.programs import MENU, normalize, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
 STATIC = ROOT / "app" / "static"
-DOCX = STATIC / "mau-van-ban.docx"
 
 def _session_secret() -> str:
     env = os.environ.get("MOS_SESSION_SECRET")
@@ -60,6 +60,25 @@ def current_user(request: Request) -> dict | None:
     return user if isinstance(user, dict) else None
 
 
+def current_program(request: Request) -> dict:
+    q = request.query_params.get("chuong-trinh") or request.query_params.get("app")
+    if q:
+        request.session["chuong_trinh"] = normalize(q)
+    return resolve(request.session.get("chuong_trinh"))
+
+
+def _ctx(request: Request, extra: dict | None = None) -> dict:
+    data = {
+        "user": current_user(request),
+        "host": request.headers.get("host", "mos.gds.edu.vn"),
+        "program": current_program(request),
+        "programs": MENU,
+    }
+    if extra:
+        data.update(extra)
+    return data
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True, "service": "mos"}
@@ -88,19 +107,16 @@ def home(request: Request):
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
     template = "dock_content.html" if _is_dock(request) else "gmetrix.html"
-    return TEMPLATES.TemplateResponse(
-        request,
-        template,
-        {"user": user, "host": request.headers.get("host", "mos.gds.edu.vn")},
-    )
+    return TEMPLATES.TemplateResponse(request, template, _ctx(request))
 
 
 @app.get("/khung/word", response_class=HTMLResponse)
-def word_frame(request: Request):
+@app.get("/khung/office", response_class=HTMLResponse)
+def office_frame(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
-    return TEMPLATES.TemplateResponse(request, "word.html", {"user": user})
+    return TEMPLATES.TemplateResponse(request, "word.html", _ctx(request))
 
 
 @app.get("/dang-nhap", response_class=HTMLResponse)
@@ -108,23 +124,32 @@ def login_form(request: Request, loi: str | None = None):
     che_do = request.query_params.get("che-do")
     if che_do:
         request.session["che_do"] = che_do
+    program = current_program(request)
     if current_user(request):
         dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
+        dest += f"{'&' if '?' in dest else '?'}chuong-trinh={program['id']}"
         return RedirectResponse(dest, status_code=303)
     return TEMPLATES.TemplateResponse(
         request,
         "login.html",
-        {"error": loi},
+        _ctx(request, {"error": loi}),
     )
 
 
 @app.post("/dang-nhap")
-def login(request: Request, username: str = Form(...), password: str = Form(...)):
+def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    chuong_trinh: str = Form("word"),
+):
+    request.session["chuong_trinh"] = normalize(chuong_trinh)
     user = authenticate(username, password)
     if not user:
         return RedirectResponse("/dang-nhap?loi=sai", status_code=303)
     request.session["user"] = user
     dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
+    dest += f"{'&' if '?' in dest else '?'}chuong-trinh={normalize(chuong_trinh)}"
     return RedirectResponse(dest, status_code=303)
 
 
@@ -135,12 +160,15 @@ def logout(request: Request):
 
 
 @app.get("/files/mau-van-ban.docx")
+@app.get("/files/mau")
 def download_template(request: Request):
     if not current_user(request):
         return RedirectResponse("/dang-nhap", status_code=303)
+    program = current_program(request)
+    path = STATIC / program["template"]
     return FileResponse(
-        DOCX,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        filename="mau-van-ban-mos.docx",
+        path,
+        media_type=program["mime"],
+        filename=program["download"],
         headers={"Cache-Control": "no-store"},
     )

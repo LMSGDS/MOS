@@ -6,6 +6,12 @@ def test_login_page():
     r = c.get("/dang-nhap")
     assert r.status_code == 200
     assert "Đăng nhập MOS" in r.text
+    assert "program-menu" in r.text
+    assert r.text.index("program-menu") < r.text.index("card login")
+    assert "Microsoft Word" in r.text
+    assert "Microsoft Excel" in r.text
+    assert "Microsoft PowerPoint" in r.text
+    assert "login.js" in r.text
 
 
 def test_home_requires_login():
@@ -15,11 +21,16 @@ def test_home_requires_login():
     assert "/dang-nhap" in r.headers["location"]
 
 
-def test_template_docx():
+def test_template_office_files():
     c = TestClient(app)
-    r = c.get("/static/mau-van-ban.docx")
-    assert r.status_code == 200
-    assert r.content[:2] == b"PK"
+    for path in (
+        "/static/mau-van-ban.docx",
+        "/static/mau-bang-tinh.xlsx",
+        "/static/mau-bai-trinh-bay.pptx",
+    ):
+        r = c.get(path)
+        assert r.status_code == 200
+        assert r.content[:2] == b"PK"
 
 
 def test_layout_api_bottom_no_overlap():
@@ -64,6 +75,24 @@ def test_gmetrix_home_after_login():
     assert "mos-place-word" in js
     assert "mosdock:place" in js
     assert "17331" in js
+    assert "ms-excel:" in js or "data-protocol" in inner.text
+
+
+def test_login_excel_then_open_excel():
+    c = TestClient(app)
+    r = c.post(
+        "/dang-nhap",
+        data={"username": "giaovien", "password": "Mos@Gds2026", "chuong_trinh": "excel"},
+        follow_redirects=True,
+    )
+    assert r.status_code == 200
+    assert "Microsoft Excel" in r.text
+    assert "Mở Excel trên máy" in c.get("/khung/office").text
+    assert "office.com" not in r.text.lower()
+    ppt = c.get("/?chuong-trinh=powerpoint")
+    assert ppt.status_code == 200
+    assert "Microsoft PowerPoint" in ppt.text
+    assert "Mở PowerPoint trên máy" in c.get("/khung/office").text
 
 
 def test_dock_mode_hides_simulated_word():

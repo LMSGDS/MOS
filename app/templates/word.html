@@ -3,33 +3,33 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Word trong khung MOS</title>
+  <title>{{ program.short }} trong khung MOS</title>
   <link rel="stylesheet" href="/static/mos.css" />
 </head>
-<body class="word-frame">
+<body class="word-frame" data-app="{{ program.id }}">
   <div class="ribbon">
-    <button type="button" id="btn-word" class="rib primary">Mở Word trên máy</button>
-    <button type="button" id="btn-doc" class="rib">Tạo văn bản Word (máy)</button>
+    <button type="button" id="btn-word" class="rib primary" data-protocol="{{ program.protocol }}">{{ program.open_label }}</button>
+    <button type="button" id="btn-doc" class="rib" data-template="{{ program.template }}">{{ program.new_label }}</button>
     <button type="button" data-cmd="bold" class="rib">B</button>
     <button type="button" data-cmd="italic" class="rib"><i>I</i></button>
     <button type="button" data-cmd="underline" class="rib"><u>U</u></button>
-    <button type="button" id="btn-save-html" class="rib">Tải bản soạn (.doc)</button>
+    <button type="button" id="btn-save-html" class="rib">Tải bản soạn</button>
   </div>
   <p class="note">
-    Word desktop không chạy bên trong Chrome/Firefox — Microsoft chỉ cho nhúng qua Office Online (không dùng).
-    Nút xanh mở <strong>Word trên máy</strong>, rồi MOS Dock <strong>kéo cửa sổ Word tới vị trí đã chọn</strong>
-    (đáy / trái / phải) để không che vùng soạn thảo. Cần <code>MosDock.exe</code> trên Windows.
+    {{ program.name }} desktop không chạy bên trong Chrome/Firefox — không dùng Office Online.
+    Nút xanh mở <strong>{{ program.short }} trên máy</strong>, rồi MOS Dock kéo cửa sổ tới vị trí đã chọn.
+    Cần <code>MosDock.exe</code> trên Windows.
   </p>
   <div class="paper-wrap">
-    <div id="page" class="paper" contenteditable="true" role="textbox" aria-label="Trang soạn thảo MOS">
-      <p><strong>MOS · GDS</strong></p>
-      <p>Soạn trong khung trình duyệt (không kết nối Office Online). Khi cần Word thật, bấm «Mở Word trên máy».</p>
+    <div id="page" class="paper paper-{{ program.paper_kind }}" contenteditable="true" role="textbox" aria-label="Trang soạn thảo MOS">
+      <p><strong>MOS · GDS · {{ program.name }}</strong></p>
+      <p>Soạn trong khung trình duyệt (không kết nối Office Online). Khi cần ứng dụng thật, bấm «{{ program.open_label }}».</p>
       <p></p>
     </div>
   </div>
   <p class="hint" id="hint" hidden>
-    Chọn Microsoft Word khi trình duyệt hỏi mở <code>ms-word:</code>.
-    Cửa sổ Word sẽ được đưa vào ô còn lại trên màn hình (vị trí dock đã chọn).
+    Chọn {{ program.name }} khi trình duyệt hỏi mở <code>{{ program.protocol }}</code>.
+    Cửa sổ sẽ được đưa vào ô còn lại trên màn hình (vị trí dock đã chọn).
   </p>
   <script src="/static/mos.js"></script>
 </body>

@@ -81,6 +81,88 @@ button[type="submit"], .primary { background: var(--gds); color: #fff; }
 .hint { width: min(560px, 100%); color: var(--muted); font-size: 14px; margin-top: 16px; }
 footer { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
 
+body.login-page main {
+  gap: 28px;
+}
+@media (min-width: 980px) {
+  body.login-page main {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 36px;
+  }
+}
+.program-menu {
+  width: min(920px, 100%);
+  padding: 8px 4px 4px;
+}
+@media (min-width: 980px) {
+  .program-menu { width: min(440px, 100%); }
+}
+.program-kicker {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gds-dark);
+}
+.program-menu h2 { margin: 0 0 8px; font-size: 24px; }
+.program-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+@media (max-width: 640px) {
+  .program-grid { grid-template-columns: 1fr; }
+}
+.program-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 18px 12px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.program-tile .glyph {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 22px;
+}
+.program-tile .pname { font-weight: 800; font-size: 13px; text-align: center; line-height: 1.3; }
+.program-tile[aria-pressed="true"] {
+  border-color: #008EE2;
+  box-shadow: 0 0 0 3px rgba(0, 142, 226, 0.25);
+}
+.program-tile.word[aria-pressed="true"] { border-color: #2b579a; }
+.program-tile.excel[aria-pressed="true"] { border-color: #217346; }
+.program-tile.powerpoint[aria-pressed="true"] { border-color: #d24726; }
+.program-switch { display: flex; gap: 6px; margin-right: auto; }
+.program-mini {
+  color: #fff;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.15);
+}
+.program-mini[aria-current="page"] { background: #fff; color: #0f172a; }
+.word-sim.app-excel .word-sim-bar { background: #217346; }
+.word-sim.app-powerpoint .word-sim-bar { background: #d24726; }
+
 body.shell, body.shell html { height: 100%; }
 body.shell {
   background: #1e4f73;

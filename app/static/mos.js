@@ -1,9 +1,14 @@
 function templateUrl() {
-  return `${window.location.origin}/static/mau-van-ban.docx`;
+  const file = document.getElementById("btn-doc")?.getAttribute("data-template") || "mau-van-ban.docx";
+  return `${window.location.origin}/static/${file}`;
 }
 
 function dockState() {
   return sessionStorage.getItem("mos-dock-state") || "bottom";
+}
+
+function currentApp() {
+  return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
 function openProtocol(uri) {
@@ -16,9 +21,11 @@ function openProtocol(uri) {
   setTimeout(() => probe.remove(), 4000);
 }
 
-function placeWordAfterOpen() {
+function placeOfficeAfterOpen() {
   const state = dockState();
-  const payload = { type: "mos-place-word", state };
+  const app = currentApp();
+  sessionStorage.setItem("mos-app", app);
+  const payload = { type: "mos-place-word", state, app };
   try {
     window.parent.postMessage(payload, window.location.origin);
   } catch {
@@ -29,21 +36,23 @@ function placeWordAfterOpen() {
   } catch {
     /* not WebView2 */
   }
-  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(state)}`, {
+  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(state)}&app=${encodeURIComponent(app)}`, {
     method: "POST",
     mode: "cors",
   }).catch(() => {});
-  openProtocol(`mosdock:place?state=${encodeURIComponent(state)}`);
+  openProtocol(`mosdock:place?state=${encodeURIComponent(state)}&app=${encodeURIComponent(app)}`);
 }
 
 document.getElementById("btn-word")?.addEventListener("click", () => {
-  openProtocol("ms-word:");
-  setTimeout(placeWordAfterOpen, 600);
+  const proto = document.getElementById("btn-word").getAttribute("data-protocol") || "ms-word:";
+  openProtocol(proto);
+  setTimeout(placeOfficeAfterOpen, 600);
 });
 
 document.getElementById("btn-doc")?.addEventListener("click", () => {
-  openProtocol(`ms-word:nft|u|${templateUrl()}`);
-  setTimeout(placeWordAfterOpen, 600);
+  const proto = (document.getElementById("btn-word")?.getAttribute("data-protocol") || "ms-word:").replace(/:$/, "");
+  openProtocol(`${proto}:nft|u|${templateUrl()}`);
+  setTimeout(placeOfficeAfterOpen, 600);
 });
 
 document.querySelectorAll("[data-cmd]").forEach((btn) => {

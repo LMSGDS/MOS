@@ -11,10 +11,10 @@ sealed class LocalAgent : IDisposable
 {
     public const int Port = 17331;
     readonly HttpListener _http = new();
-    readonly Action<string> _onPlace;
+    readonly Action<string, string> _onPlace;
     readonly Control _ui;
 
-    public LocalAgent(Control ui, Action<string> onPlace)
+    public LocalAgent(Control ui, Action<string, string> onPlace)
     {
         _ui = ui;
         _onPlace = onPlace;
@@ -74,8 +74,9 @@ sealed class LocalAgent : IDisposable
             if (path == "/place")
             {
                 var state = req.QueryString["state"] ?? "bottom";
-                _ui.BeginInvoke(() => _onPlace(state));
-                await WriteJson(res, 200, $$"""{"ok":true,"state":"{{Sanitize(state)}}","placed":true}""");
+                var app = req.QueryString["app"] ?? "word";
+                _ui.BeginInvoke(() => _onPlace(state, app));
+                await WriteJson(res, 200, $$"""{"ok":true,"state":"{{Sanitize(state)}}","app":"{{OfficeApp.Resolve(app).Id}}","placed":true}""");
                 return;
             }
 

@@ -10,12 +10,14 @@ sealed class MainForm : Form
     readonly Label _status = new();
     LocalAgent? _agent;
     string _state;
+    string _app;
 
     const string Portal = "https://mos.gds.edu.vn/dang-nhap?che-do=dock";
 
-    public MainForm(string? initialState)
+    public MainForm(string? initialState, string? initialApp = null)
     {
         _state = string.IsNullOrWhiteSpace(initialState) ? "bottom" : initialState.ToLowerInvariant();
+        _app = OfficeApp.Resolve(initialApp).Id;
         Text = "MOS Dock";
         FormBorderStyle = FormBorderStyle.None;
         TopMost = true;
@@ -39,12 +41,12 @@ sealed class MainForm : Form
         AddButton("Đính trái", "left", 240);
         AddButton("Đính phải", "right", 350);
         AddButton("Đính đáy", "bottom", 460);
-        AddButton("Đặt Word", "place", 570, placeOnly: true);
+        AddButton("Đặt cửa sổ", "place", 570, placeOnly: true);
 
         _status.AutoSize = true;
         _status.ForeColor = Color.FromArgb(200, 230, 255);
-        _status.Location = new Point(680, 12);
-        _status.Text = "Word sẽ nhảy vào ô còn lại sau khi mở";
+        _status.Location = new Point(690, 12);
+        _status.Text = "Office sẽ nhảy vào ô còn lại sau khi mở";
         _bar.Controls.Add(_status);
 
         _web.Dock = DockStyle.Fill;
@@ -70,13 +72,28 @@ sealed class MainForm : Form
             _web.CoreWebView2.WebMessageReceived += (_, e) =>
             {
                 var raw = e.TryGetWebMessageAsString();
-                OnPlaceRequest(ExtractState(raw) ?? _state);
+                OnPlaceRequest(ExtractField(raw, "state") ?? _state, ExtractField(raw, "app"));
             };
             _web.CoreWebView2.NavigationStarting += (_, e) =>
             {
                 if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase)
+                    || e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase)
+                    || e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase)
                     || e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase))
                 {
+                    if (e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _app = "excel";
+                    }
+                    else if (e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _app = "powerpoint";
+                    }
+                    else if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _app = "word";
+                    }
+
                     ApplyDock(waitForWord: true);
                 }
             };
@@ -115,7 +132,7 @@ sealed class MainForm : Form
         _bar.Controls.Add(btn);
     }
 
-    void OnPlaceRequest(string state)
+    void OnPlaceRequest(string state, string? app = null)
     {
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right" or "minimized" or "bottom")
@@ -123,21 +140,26 @@ sealed class MainForm : Form
             _state = state;
         }
 
+        if (!string.IsNullOrWhiteSpace(app))
+        {
+            _app = OfficeApp.Resolve(app).Id;
+        }
+
         ApplyDock(waitForWord: true);
     }
 
-    static string? ExtractState(string? raw)
+    static string? ExtractField(string? raw, string field)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
         }
 
-        var key = "\"state\"";
+        var key = $"\"{field}\"";
         var i = raw.IndexOf(key, StringComparison.OrdinalIgnoreCase);
         if (i < 0)
         {
-            return raw.Trim();
+            return field == "state" ? raw.Trim() : null;
         }
 
         var colon = raw.IndexOf(':', i + key.Length);
@@ -159,14 +181,14 @@ sealed class MainForm : Form
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
         TopMost = true;
         _web.Visible = _state != "minimized";
-        _status.Text = $"Word → ({word.X},{word.Y}) {word.W}×{word.H}";
+        _status.Text = $"{OfficeApp.Resolve(_app).Id} → ({word.X},{word.Y}) {word.W}×{word.H}";
         if (waitForWord)
         {
-            WordWindow.ApplySoon(word);
+            WordWindow.ApplySoon(word, _app);
         }
         else
         {
-            WordWindow.Apply(word);
+            WordWindow.Apply(word, _app);
         }
     }
 
@@ -180,7 +202,7 @@ sealed class MainForm : Form
         var wa = Screen.FromHandle(Handle).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
         var (_, word) = LayoutMath.Compute(work, _state);
-        WordWindow.Apply(word);
+        WordWindow.Apply(word, _app);
         TopMost = true;
     }
 }

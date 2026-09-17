@@ -26,13 +26,19 @@ function openHiddenUri(uri) {
   setTimeout(() => probe.remove(), 4000);
 }
 
+function currentApp() {
+  return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
+}
+
 function placeWordOnPc(state) {
   const s = state || currentState();
-  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(s)}`, {
+  const app = currentApp();
+  sessionStorage.setItem("mos-app", app);
+  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}`, {
     method: "POST",
     mode: "cors",
   }).catch(() => {});
-  openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}`);
+  openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}`);
 }
 
 async function applyLayout(state, place) {
@@ -50,7 +56,8 @@ async function applyLayout(state, place) {
   sessionStorage.setItem("mos-dock-state", state);
   const bar = document.getElementById("word-sim-bar");
   if (bar) {
-    bar.textContent = `Microsoft Word — vị trí đã chọn (${data.word.x},${data.word.y}) ${data.word.w}×${data.word.h}`;
+    const title = bar.textContent.split(" — ")[0] || "Microsoft Office";
+    bar.textContent = `${title} — vị trí đã chọn (${data.word.x},${data.word.y}) ${data.word.w}×${data.word.h}`;
   }
   if (place) {
     sim.classList.add("is-target");
@@ -69,9 +76,16 @@ document.getElementById("btn-place-word")?.addEventListener("click", () => {
 window.addEventListener("message", (ev) => {
   if (ev.origin !== window.location.origin) return;
   if (ev.data && ev.data.type === "mos-place-word") {
+    if (ev.data.app) {
+      document.body.dataset.app = ev.data.app;
+      sessionStorage.setItem("mos-app", ev.data.app);
+    }
     applyLayout(ev.data.state || currentState(), true);
   }
 });
 
 window.addEventListener("resize", () => applyLayout(currentState(), false));
+if (document.body?.dataset?.app) {
+  sessionStorage.setItem("mos-app", document.body.dataset.app);
+}
 applyLayout(currentState(), false);

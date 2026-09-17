@@ -16,8 +16,10 @@ static class Protocol
         cmd.SetValue("", $"\"{exe}\" \"%1\"");
     }
 
-    public static string? ParseState(string[] args)
+    public static (string? State, string? App) Parse(string[] args)
     {
+        string? state = null;
+        string? app = null;
         string? pending = null;
         foreach (var arg in args)
         {
@@ -28,29 +30,49 @@ static class Protocol
 
             if (arg.StartsWith("--state=", StringComparison.OrdinalIgnoreCase))
             {
-                return arg["--state=".Length..];
-            }
-
-            if (arg.Equals("--place", StringComparison.OrdinalIgnoreCase)
-                || arg.Equals("--state", StringComparison.OrdinalIgnoreCase))
-            {
-                pending = "next";
+                state = arg["--state=".Length..];
                 continue;
             }
 
-            if (pending == "next")
+            if (arg.StartsWith("--app=", StringComparison.OrdinalIgnoreCase))
             {
-                return arg;
+                app = arg["--app=".Length..];
+                continue;
+            }
+
+            if (arg.Equals("--place", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--state", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--app", StringComparison.OrdinalIgnoreCase))
+            {
+                pending = arg.TrimStart('-').ToLowerInvariant();
+                continue;
+            }
+
+            if (pending is "state" or "place")
+            {
+                state = arg;
+                pending = null;
+                continue;
+            }
+
+            if (pending == "app")
+            {
+                app = arg;
+                pending = null;
+                continue;
             }
 
             if (arg.StartsWith(Name + ":", StringComparison.OrdinalIgnoreCase))
             {
-                return QueryValue(arg, "state") ?? "bottom";
+                state = QueryValue(arg, "state") ?? state;
+                app = QueryValue(arg, "app") ?? app;
             }
         }
 
-        return null;
+        return (state, app);
     }
+
+    public static string? ParseState(string[] args) => Parse(args).State;
 
     static string? QueryValue(string uri, string key)
     {

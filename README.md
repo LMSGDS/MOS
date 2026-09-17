@@ -2,7 +2,7 @@
 
 ## Cổng web mos.gds.edu.vn
 
-Ứng dụng đăng nhập tài khoản nhà trường và **mở Microsoft Word trên máy tính cá nhân** (protocol `ms-word:` do Office đăng ký).
+Ứng dụng đăng nhập tài khoản nhà trường, chọn **Microsoft Word / Excel / PowerPoint** (menu ngoài khung đăng nhập) và **mở ứng dụng trên máy tính cá nhân** (protocol `ms-word:` / `ms-excel:` / `ms-powerpoint:`).
 
 ```bash
 bash scripts/run-mos-web.sh
@@ -11,7 +11,7 @@ bash scripts/run-mos-web.sh
 
 Tài khoản mặc định (đổi ngay khi đưa lên trường): `admin`, `giaovien`, `hocsinh` / `Mos@Gds2026`.
 
-Nút **Mở Microsoft Word** gọi `ms-word:`. Nút **Tạo văn bản mới** gọi `ms-word:nft|u|<url file mẫu>`. Máy người dùng cần cài Microsoft 365/Office.
+Nút **Mở … trên máy** gọi protocol Office tương ứng. Nút tạo tệp mẫu gọi `ms-*:nft|u|<url file mẫu>`. Máy người dùng cần cài Microsoft 365/Office.
 
 Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/etc/ssl/cloudflare/mos.gds.edu.vn.pem` và `.key`, rồi dùng `deploy/nginx-mos.gds.edu.vn.conf`.
 
@@ -19,7 +19,7 @@ Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/et
 
 Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định).
 
-Sau khi **Mở Word trên máy**, MOS Dock chờ cửa sổ Word hiện ra rồi **kéo/resize** nó vào ô còn lại của vị trí đã chọn (`SetWindowPos`). Chrome không tự dịch chuyển được cửa sổ WINWORD — cần `MosDock.exe` trên máy Windows (agent `127.0.0.1:17331` hoặc protocol `mosdock:place?state=...`).
+Sau khi **Mở Word/Excel/PowerPoint trên máy**, MOS Dock chờ cửa sổ hiện ra rồi **kéo/resize** nó vào ô còn lại của vị trí đã chọn (`SetWindowPos`). Chrome không tự dịch chuyển được cửa sổ Office — cần `MosDock.exe` trên máy Windows (agent `127.0.0.1:17331` hoặc protocol `mosdock:place?state=...&app=excel`).
 
 | Môi trường | Việc làm |
 | --- | --- |

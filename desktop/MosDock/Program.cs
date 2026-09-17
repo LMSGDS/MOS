@@ -9,25 +9,25 @@ static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        var state = Protocol.ParseState(args);
+        var parsed = Protocol.Parse(args);
         using var mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            ForwardToRunningInstance(state ?? "bottom");
+            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word");
             return;
         }
 
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm(state));
+        Application.Run(new MainForm(parsed.State, parsed.App));
     }
 
-    static void ForwardToRunningInstance(string state)
+    static void ForwardToRunningInstance(string state, string app)
     {
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
             http.PostAsync(
-                $"http://127.0.0.1:{LocalAgent.Port}/place?state={Uri.EscapeDataString(state)}",
+                $"http://127.0.0.1:{LocalAgent.Port}/place?state={Uri.EscapeDataString(state)}&app={Uri.EscapeDataString(app)}",
                 null).GetAwaiter().GetResult();
         }
         catch
