@@ -53,3 +53,9 @@ jobs:
           test -f app/schema.sql
           test -f deploy/docker-compose.yml
           test -f desktop/MosDock/ExamHub.cs
+          test -f desktop/MosDock/WordGrade.cs
+          test -f app/grade.py
+          test -f app/rubrics/word-objective-1-1.json
+          test -f data/projects/word-objective-1-1/Word_1-1.docx
+          test -f tests/fixtures/word-objective-1-1/Word_1-1.docx
+          test -f tests/fixtures/word-objective-1-1/Word_1-1_results.docx

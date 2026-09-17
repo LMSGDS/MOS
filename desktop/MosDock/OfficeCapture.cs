@@ -52,23 +52,83 @@ static class OfficeCapture
 
     static string? SaveWord(dynamic word)
     {
-        dynamic doc = word.ActiveDocument;
-        doc.Save();
-        return (string)doc.FullName;
+        var wanted = ExamSession.LocalPath;
+        dynamic docs = word.Documents;
+        int count = (int)docs.Count;
+        for (int i = 1; i <= count; i++)
+        {
+            dynamic doc = docs[i];
+            string full = (string)doc.FullName;
+            if (SamePath(full, wanted))
+            {
+                doc.Save();
+                return full;
+            }
+        }
+
+        if (count == 1 && string.IsNullOrWhiteSpace(wanted))
+        {
+            dynamic doc = docs[1];
+            doc.Save();
+            return (string)doc.FullName;
+        }
+
+        return null;
     }
 
     static string? SaveExcel(dynamic excel)
     {
-        dynamic book = excel.ActiveWorkbook;
-        book.Save();
-        return (string)book.FullName;
+        var wanted = ExamSession.LocalPath;
+        dynamic books = excel.Workbooks;
+        int count = (int)books.Count;
+        for (int i = 1; i <= count; i++)
+        {
+            dynamic book = books[i];
+            string full = (string)book.FullName;
+            if (SamePath(full, wanted))
+            {
+                book.Save();
+                return full;
+            }
+        }
+
+        return null;
     }
 
     static string? SavePpt(dynamic ppt)
     {
-        dynamic pres = ppt.ActivePresentation;
-        pres.Save();
-        return (string)pres.FullName;
+        var wanted = ExamSession.LocalPath;
+        dynamic presos = ppt.Presentations;
+        int count = (int)presos.Count;
+        for (int i = 1; i <= count; i++)
+        {
+            dynamic pres = presos[i];
+            string full = (string)pres.FullName;
+            if (SamePath(full, wanted))
+            {
+                pres.Save();
+                return full;
+            }
+        }
+
+        return null;
+    }
+
+    static bool SamePath(string? a, string? b)
+    {
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
+        {
+            return false;
+        }
+
+        try
+        {
+            return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     static object? Active(string progId)

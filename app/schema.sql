@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS attempts (
   project_id    TEXT NOT NULL REFERENCES projects(id),
   class_id      INTEGER REFERENCES classes(id),
   mode          TEXT NOT NULL CHECK (mode IN ('training', 'testing')),
-  status        TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'submitted')),
+  status        TEXT NOT NULL DEFAULT 'running',
   score         DOUBLE PRECISION,
   max_score     DOUBLE PRECISION NOT NULL DEFAULT 100,
   retries       INTEGER NOT NULL DEFAULT 0,
@@ -71,7 +71,90 @@ CREATE TABLE IF NOT EXISTS telemetry (
   detail        JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 
+CREATE TABLE IF NOT EXISTS project_versions (
+  id              TEXT PRIMARY KEY,
+  project_id      TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  rubric_version  TEXT NOT NULL,
+  grader_schema   TEXT NOT NULL DEFAULT 'mos-kulkul-1',
+  manifest        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rubric          JSONB NOT NULL DEFAULT '{}'::jsonb,
+  source_sha256   TEXT,
+  published       BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (project_id, rubric_version)
+);
+
+CREATE TABLE IF NOT EXISTS submissions (
+  id                TEXT PRIMARY KEY,
+  attempt_id        TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+  idempotency_key   TEXT,
+  status            TEXT NOT NULL DEFAULT 'received',
+  artifact_sha256   TEXT,
+  snapshot_path     TEXT,
+  grader_version    TEXT,
+  score             DOUBLE PRECISION,
+  verified_score    DOUBLE PRECISION,
+  pending_score     DOUBLE PRECISION,
+  max_score         DOUBLE PRECISION NOT NULL DEFAULT 100,
+  payload           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sealed_at         TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS grading_runs (
+  id              TEXT PRIMARY KEY,
+  submission_id   TEXT NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+  grader_version  TEXT NOT NULL,
+  rubric_version  TEXT,
+  status          TEXT NOT NULL DEFAULT 'provisional',
+  reason          TEXT,
+  started_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  finished_at     TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS criterion_results (
+  id                BIGSERIAL PRIMARY KEY,
+  grading_run_id    TEXT NOT NULL REFERENCES grading_runs(id) ON DELETE CASCADE,
+  criterion_id      TEXT NOT NULL,
+  status            TEXT NOT NULL,
+  earned            DOUBLE PRECISION NOT NULL DEFAULT 0,
+  possible          DOUBLE PRECISION NOT NULL,
+  reason_code       TEXT,
+  evidence_refs     JSONB NOT NULL DEFAULT '[]'::jsonb,
+  message           TEXT
+);
+
+CREATE TABLE IF NOT EXISTS review_decisions (
+  id                   BIGSERIAL PRIMARY KEY,
+  criterion_result_id  BIGINT REFERENCES criterion_results(id) ON DELETE CASCADE,
+  reviewer_id          INTEGER REFERENCES users(id),
+  before_status        TEXT,
+  after_status         TEXT,
+  reason               TEXT,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS rubric_version TEXT NOT NULL DEFAULT 'legacy';
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS project_version_id TEXT;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS verified_score DOUBLE PRECISION;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS pending_score DOUBLE PRECISION;
+ALTER TABLE attempts DROP CONSTRAINT IF EXISTS attempts_status_check;
+ALTER TABLE attempts ADD CONSTRAINT attempts_status_check
+  CHECK (status IN ('running', 'submitted', 'graded', 'technical_error'));
+ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS event_id TEXT;
+ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS sequence INTEGER;
+ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS document_id TEXT;
+ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS source_version TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS submissions_attempt_idempotency
+  ON submissions (attempt_id, idempotency_key)
+  WHERE idempotency_key IS NOT NULL AND idempotency_key <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS telemetry_attempt_event_id
+  ON telemetry (attempt_id, event_id)
+  WHERE event_id IS NOT NULL AND event_id <> '';
 CREATE INDEX IF NOT EXISTS idx_attempts_user ON attempts(user_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_attempts_class ON attempts(class_id);
 CREATE INDEX IF NOT EXISTS idx_telemetry_attempt ON telemetry(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_attempt ON submissions(attempt_id);
+CREATE INDEX IF NOT EXISTS idx_criterion_run ON criterion_results(grading_run_id);

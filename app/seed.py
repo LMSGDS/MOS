@@ -6,9 +6,12 @@ from pathlib import Path
 
 from app.auth import load_users
 from app.db import cursor
+from app.grade import load_rubric, sha256_file
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "app" / "static"
+WORD11 = ROOT / "data" / "projects" / "word-objective-1-1" / "Word_1-1.docx"
+WORD11_RUBRIC = ROOT / "app" / "rubrics" / "word-objective-1-1.json"
 
 
 def seed() -> None:
@@ -70,7 +73,28 @@ def seed() -> None:
                 """,
                 (student["id"],),
             )
+        word11_rubric = load_rubric(WORD11_RUBRIC) if WORD11_RUBRIC.is_file() else {}
         projects = [
+            {
+                "id": "word-objective-1-1",
+                "title": "Word 1.1 — Navigate within documents",
+                "program": "word",
+                "skill_domain": "Navigate within documents",
+                "filename": "Word_1-1.docx",
+                "file_path": str(WORD11),
+                "rubric_version": word11_rubric.get("rubric_version") or "1.0.0",
+                "steps": [
+                    "Mở Word_1-1.docx trên Microsoft Word đã cài trên máy (không dùng Office Online).",
+                    "Dùng Navigation pane tìm to, xem Results, đổi sang toy và chuyển giữa kết quả.",
+                    "Tìm đúng từ Toymakers (hoa/thường); Advanced Find Toy/toy giới hạn Heading 2.",
+                    "Bookmark SalesManager trên Lola Jacobsen và DesignManager trên Sarah Jones.",
+                    "Tạo liên kết mục lục tới New Electronic Favorites, Why Buy Wingtip Toys?, Recognition, Make It Your Own, Hand-Carved Toys, Resources.",
+                    "Go To Graphic đến cuối, Go To đầu trang 3, rồi Go To bookmark SalesManager.",
+                    "Lưu bài. Trong luyện tập chọn Kiểm tra nhiệm vụ — 38 điểm Find/Go To chưa tự chấm nếu chưa có bộ ghi nhận thao tác.",
+                ],
+                "rubric": word11_rubric or {"rubric_version": "1.0.0"},
+                "source_sha256": sha256_file(WORD11) if WORD11.is_file() else None,
+            },
             {
                 "id": "word-mail-merge",
                 "title": "Word — Mail Merge thư mời",
@@ -115,15 +139,17 @@ def seed() -> None:
             },
         ]
         for p in projects:
+            version = p.get("rubric_version") or (p["rubric"].get("rubric_version") if isinstance(p["rubric"], dict) else None) or "legacy"
             cur.execute(
                 """
-                INSERT INTO projects (id, title, program, skill_domain, filename, file_path, steps, rubric)
-                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
+                INSERT INTO projects (id, title, program, skill_domain, filename, file_path, steps, rubric, rubric_version)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s)
                 ON CONFLICT (id) DO UPDATE SET
                   title = EXCLUDED.title,
                   file_path = EXCLUDED.file_path,
                   steps = EXCLUDED.steps,
-                  rubric = EXCLUDED.rubric
+                  rubric = EXCLUDED.rubric,
+                  rubric_version = EXCLUDED.rubric_version
                 """,
                 (
                     p["id"],
@@ -134,5 +160,32 @@ def seed() -> None:
                     p["file_path"],
                     json.dumps(p["steps"], ensure_ascii=False),
                     json.dumps(p["rubric"], ensure_ascii=False),
+                    version,
+                ),
+            )
+            version_id = f"{p['id']}:{version}"
+            manifest = {
+                "project_id": p["id"],
+                "rubric_version": version,
+                "filename": p["filename"],
+                "sha256": p.get("source_sha256"),
+                "capabilities": (p["rubric"].get("capabilities") if isinstance(p["rubric"], dict) else None) or [],
+            }
+            cur.execute(
+                """
+                INSERT INTO project_versions (id, project_id, rubric_version, manifest, rubric, source_sha256, published)
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s, TRUE)
+                ON CONFLICT (project_id, rubric_version) DO UPDATE SET
+                  manifest = EXCLUDED.manifest,
+                  rubric = EXCLUDED.rubric,
+                  source_sha256 = COALESCE(EXCLUDED.source_sha256, project_versions.source_sha256)
+                """,
+                (
+                    version_id,
+                    p["id"],
+                    version,
+                    json.dumps(manifest, ensure_ascii=False),
+                    json.dumps(p["rubric"], ensure_ascii=False),
+                    p.get("source_sha256"),
                 ),
             )

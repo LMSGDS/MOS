@@ -15,6 +15,8 @@ sealed class MainForm : Form
     readonly System.Windows.Forms.Timer _keepWord = new();
     readonly Button _openBtn = new();
     readonly Button _submitBtn = new();
+    readonly Button _checkBtn = new();
+    readonly ListBox _results = new();
     LocalAgent? _agent;
     string _state;
     string _app;
@@ -60,6 +62,18 @@ sealed class MainForm : Form
         AddDockButton("Đặt cửa sổ", "place", placeOnly: true);
         AddDockButton("Mở rộng đề", "expand", placeOnly: true);
         AddDockButton("Cửa sổ đề", "workspace", placeOnly: true);
+        var checkBar = new Button
+        {
+            Text = "Kiểm tra nhiệm vụ",
+            AutoSize = true,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(124, 58, 237),
+            ForeColor = Color.White,
+            Margin = new Padding(8, 2, 2, 2),
+        };
+        checkBar.FlatAppearance.BorderSize = 0;
+        checkBar.Click += async (_, _) => await CheckTasks();
+        _bar.Controls.Add(checkBar);
 
         _exam.Dock = DockStyle.Fill;
         _exam.BackColor = Color.FromArgb(244, 248, 252);
@@ -93,9 +107,12 @@ sealed class MainForm : Form
         _openBtn.Click += async (_, _) => await StartExam();
         StyleAction(_submitBtn, "Nộp bài", Color.FromArgb(15, 118, 110));
         _submitBtn.Click += async (_, _) => await SubmitExam();
+        StyleAction(_checkBtn, "Kiểm tra nhiệm vụ", Color.FromArgb(124, 58, 237));
+        _checkBtn.Click += async (_, _) => await CheckTasks();
         row.Controls.Add(pickLbl);
         row.Controls.Add(_projects);
         row.Controls.Add(_openBtn);
+        row.Controls.Add(_checkBtn);
         row.Controls.Add(_submitBtn);
 
         _steps.Multiline = true;
@@ -105,6 +122,12 @@ sealed class MainForm : Form
         _steps.BackColor = Color.White;
         _steps.ScrollBars = ScrollBars.Vertical;
 
+        _results.Dock = DockStyle.Bottom;
+        _results.Height = 160;
+        _results.IntegralHeight = false;
+        _results.Font = new Font("Consolas", 9f);
+        _results.HorizontalScrollbar = true;
+
         _score.AutoSize = false;
         _score.Dock = DockStyle.Bottom;
         _score.Height = 24;
@@ -112,6 +135,7 @@ sealed class MainForm : Form
         _score.Text = "Chưa mở đề.";
 
         _exam.Controls.Add(_steps);
+        _exam.Controls.Add(_results);
         _exam.Controls.Add(_score);
         _exam.Controls.Add(row);
         _exam.Controls.Add(_meta);
@@ -305,10 +329,13 @@ sealed class MainForm : Form
         var p = _items[_projects.SelectedIndex];
 
         var mins = Math.Max(1, p.TimeLimitSec / 60);
+        _checkBtn.Visible = ExamSession.Mode != "testing";
         _steps.Text =
             p.Title + Environment.NewLine
             + "Kỹ năng: " + (string.IsNullOrWhiteSpace(p.Skill) ? "—" : p.Skill)
-            + " · Thời gian: " + mins + " phút" + Environment.NewLine + Environment.NewLine
+            + " · Thời gian: " + mins + " phút"
+            + (string.IsNullOrWhiteSpace(p.RubricVersion) ? "" : " · Rubric " + p.RubricVersion)
+            + Environment.NewLine + Environment.NewLine
             + "Hướng dẫn:" + Environment.NewLine
             + string.Join(Environment.NewLine, p.Steps.Select((s, i) => $"{i + 1}. {s}"));
     }
@@ -328,6 +355,38 @@ sealed class MainForm : Form
         else
         {
             MessageBox.Show(_score.Text, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    async Task CheckTasks()
+    {
+        if (ExamSession.Mode == "testing")
+        {
+            _score.Text = "Chế độ thi ẩn điểm luyện tập. Nộp bài khi xong.";
+            return;
+        }
+
+        ShowWorkspace();
+        _score.Text = "Đang lưu tài liệu bài thi và chấm nhiệm vụ…";
+        var (ok, summary, criteria) = await ExamHub.CheckTasksAsync(_app);
+        _score.Text = summary;
+        _results.Items.Clear();
+        foreach (var c in criteria)
+        {
+            var mark = c.Status switch
+            {
+                "pass" => "ĐẠT",
+                "fail" => "CHƯA ĐẠT",
+                "unverified" => "CHƯA XN",
+                "error" => "LỖI",
+                _ => c.Status.ToUpperInvariant(),
+            };
+            _results.Items.Add($"{c.Id} [{mark}] {c.Earned}/{c.Possible} — {c.Message}");
+        }
+
+        if (!ok)
+        {
+            MessageBox.Show(summary, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
