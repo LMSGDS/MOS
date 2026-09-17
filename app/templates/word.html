@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Word trong khung MOS</title>
+  <link rel="stylesheet" href="/static/mos.css" />
+</head>
+<body class="word-frame">
+  <div class="ribbon">
+    <button type="button" id="btn-word" class="rib primary">Mở Word trên máy</button>
+    <button type="button" id="btn-doc" class="rib">Tạo văn bản Word (máy)</button>
+    <button type="button" data-cmd="bold" class="rib">B</button>
+    <button type="button" data-cmd="italic" class="rib"><i>I</i></button>
+    <button type="button" data-cmd="underline" class="rib"><u>U</u></button>
+    <button type="button" id="btn-save-html" class="rib">Tải bản soạn (.doc)</button>
+  </div>
+  <p class="note">
+    Word desktop không chạy bên trong Chrome/Firefox — Microsoft chỉ cho nhúng qua Office Online (không dùng).
+    Khung này là cửa sổ MOS. Nút xanh mở <strong>ứng dụng Word đã cài trên máy bạn</strong> (protocol <code>ms-word:</code>).
+  </p>
+  <div class="paper-wrap">
+    <div id="page" class="paper" contenteditable="true" role="textbox" aria-label="Trang soạn thảo MOS">
+      <p><strong>MOS · GDS</strong></p>
+      <p>Soạn trong khung trình duyệt (không kết nối Office Online). Khi cần Word thật, bấm «Mở Word trên máy».</p>
+      <p></p>
+    </div>
+  </div>
+  <p class="hint" id="hint" hidden>
+    Chọn Microsoft Word khi trình duyệt hỏi mở <code>ms-word:</code>.
+  </p>
+  <script src="/static/mos.js"></script>
+</body>
+</html>

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Đăng nhập · MOS GDS{% endblock %}
+{% block bodyclass %}login-page{% endblock %}
 {% block body %}
 <section class="card login">
   <h1>Đăng nhập MOS</h1>
-  <p class="lead">Dùng tài khoản nhà trường để mở Microsoft Word trên máy tính của bạn.</p>
+  <p class="lead">Dùng tài khoản nhà trường. Microsoft Word mở trên máy tính của bạn, không dùng Office Online.</p>
   {% if error %}
   <p class="alert" role="alert">Tên đăng nhập hoặc mật khẩu không đúng.</p>
   {% endif %}

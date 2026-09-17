@@ -7,10 +7,11 @@
   <title>{% block title %}MOS · GDS{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&amp;family=Calibri:wght@400;700&amp;display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/mos.css" />
 </head>
-<body>
+<body class="{% block bodyclass %}{% endblock %}">
+  {% block chrome %}
   <header class="top">
     <a class="brand" href="/">
       <span class="mark">MOS</span>
@@ -23,6 +24,7 @@
     {% endif %}
   </header>
   <main>{% block body %}{% endblock %}</main>
-  <footer>Trường GDS · Cổng Microsoft Office trên web</footer>
+  <footer>Trường GDS · Cổng MOS — Word trên máy, không dùng Office Online</footer>
+  {% endblock %}
 </body>
 </html>

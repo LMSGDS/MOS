@@ -1,19 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Bàn làm việc · MOS GDS{% endblock %}
-{% block body %}
-<section class="hero">
-  <p class="hello">Xin chào, <strong>{{ user.name }}</strong></p>
-  <h1>Mở Microsoft Word trên máy tính cá nhân</h1>
-  <p class="lead">Nút bên dưới gọi ứng dụng Word đã cài trên máy Windows hoặc macOS của bạn (Microsoft 365 / Office).</p>
-</section>
-<section class="actions">
-  <button class="primary" id="btn-word" type="button">Mở Microsoft Word</button>
-  <button class="secondary" id="btn-doc" type="button">Tạo văn bản mới trong Word</button>
-  <a class="linkish" href="/static/mau-van-ban.docx" download="mau-van-ban-mos.docx">Tải file mẫu .docx</a>
-</section>
-<p class="hint" id="hint" hidden>
-  Trình duyệt sẽ hỏi mở <code>ms-word:</code>. Chọn Microsoft Word. Cần Office đã cài trên máy;
-  nếu không thấy hộp thoại, hãy dùng nút tải file mẫu rồi mở bằng Word.
-</p>
-<script src="/static/mos.js" defer></script>
+{% block title %}Microsoft Word · MOS GDS{% endblock %}
+{% block bodyclass %}shell{% endblock %}
+{% block chrome %}
+<div class="desk">
+  <header class="top slim">
+    <a class="brand" href="/">
+      <span class="mark">MOS</span>
+      <span class="sub">Khung trình duyệt · Word trên máy</span>
+    </a>
+    <div class="who">{{ user.name }}</div>
+    <form method="post" action="/dang-xuat">
+      <button class="ghost" type="submit">Đăng xuất</button>
+    </form>
+  </header>
+  <section class="window" aria-label="Cửa sổ Microsoft Word">
+    <div class="titlebar">
+      <span class="wicon" aria-hidden="true">W</span>
+      <span class="wtitle">Microsoft Word — Văn bản MOS</span>
+      <span class="wdots" aria-hidden="true"></span>
+    </div>
+    <iframe
+      id="word-frame"
+      title="Microsoft Word trong khung MOS"
+      src="/khung/word"
+      allow="clipboard-read; clipboard-write"
+    ></iframe>
+  </section>
+</div>
 {% endblock %}

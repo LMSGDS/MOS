@@ -46,6 +46,14 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 
+@app.middleware("http")
+async def frame_same_origin(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+    return response
+
+
 def current_user(request: Request) -> dict | None:
     user = request.session.get("user")
     return user if isinstance(user, dict) else None
@@ -66,6 +74,14 @@ def home(request: Request):
         "home.html",
         {"user": user, "host": request.headers.get("host", "mos.gds.edu.vn")},
     )
+
+
+@app.get("/khung/word", response_class=HTMLResponse)
+def word_frame(request: Request):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "word.html", {"user": user})
 
 
 @app.get("/dang-nhap", response_class=HTMLResponse)
