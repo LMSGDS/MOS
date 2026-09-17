@@ -13,5 +13,10 @@ __pycache__/
 *.pyc
 data/session.secret
 data/mos.env
+data/installers/*.exe
+data/installers/*.pkg
+dist-win/
+dist-mac/
+dist-installer/
 .env
 *.key

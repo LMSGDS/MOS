@@ -11,8 +11,9 @@ function currentApp() {
   return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
-function onWindows() {
-  return /Windows/i.test(navigator.userAgent) || !!window.chrome?.webview;
+function hasNativeDock() {
+  const ua = navigator.userAgent || "";
+  return /Windows/i.test(ua) || /Macintosh|Mac OS X/i.test(ua) || !!window.chrome?.webview;
 }
 
 function openProtocol(uri) {
@@ -61,7 +62,7 @@ function openOfficeOnPc(file) {
   } catch {
     /* not WebView2 */
   }
-  if (onWindows()) {
+  if (hasNativeDock()) {
     mosdockOpen(app, state, file);
     return;
   }

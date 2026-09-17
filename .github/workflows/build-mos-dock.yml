@@ -3,11 +3,11 @@ name: Build MOS Dock
 on:
   push:
     paths:
-      - "desktop/MosDock/**"
+      - "desktop/**"
       - ".github/workflows/build-mos-dock.yml"
   pull_request:
     paths:
-      - "desktop/MosDock/**"
+      - "desktop/**"
       - ".github/workflows/build-mos-dock.yml"
 
 permissions:
@@ -15,16 +15,38 @@ permissions:
 
 jobs:
   windows:
-    name: Publish MosDock.exe
+    name: Windows Setup.exe
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - name: Publish win-x64 single file
-        run: dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist
+      - name: Publish MosDock.exe
+        run: |
+          dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
+          Copy-Item desktop/installer/windows/install.ps1 dist-win/
+      - name: Compile Inno Setup installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: desktop/installer/windows/mosdock.iss
+          options: /DDist="${{ github.workspace }}\dist-win"
       - uses: actions/upload-artifact@v4
         with:
-          name: MosDock-win-x64
-          path: dist/MosDock.exe
+          name: MOS-Dock-Setup-Windows
+          path: |
+            dist-installer/MOS-Dock-Setup-Windows.exe
+            dist-win/MosDock.exe
+            dist-win/install.ps1
+
+  macos:
+    name: macOS Setup.pkg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build app and pkg
+        run: bash desktop/installer/macos/build-pkg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MOS-Dock-Setup-macOS
+          path: dist-installer/MOS-Dock-Setup-macOS.pkg

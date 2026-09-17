@@ -38,8 +38,9 @@ function currentApp() {
   return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
-function onWindows() {
-  return /Windows/i.test(navigator.userAgent) || !!window.chrome?.webview;
+function hasNativeDock() {
+  const ua = navigator.userAgent || "";
+  return /Windows/i.test(ua) || /Macintosh|Mac OS X/i.test(ua) || !!window.chrome?.webview;
 }
 
 function placeWordOnPc(state, useProtocol) {
@@ -51,7 +52,7 @@ function placeWordOnPc(state, useProtocol) {
     method: "POST",
     mode: "cors",
   }).catch(() => {});
-  if (useProtocol || onWindows()) {
+  if (useProtocol || hasNativeDock()) {
     openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}&compact=${compact}`);
   }
 }
@@ -93,7 +94,7 @@ document.querySelectorAll("[data-dock]").forEach((btn) => {
   btn.addEventListener("click", () => {
     const next = btn.getAttribute("data-dock");
     if (next === "minimized") setCompact(true);
-    applyLayout(next, true, onWindows());
+    applyLayout(next, true, hasNativeDock());
   });
 });
 

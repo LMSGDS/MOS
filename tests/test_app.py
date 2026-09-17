@@ -12,6 +12,21 @@ def test_login_page():
     assert "Microsoft Excel" in r.text
     assert "Microsoft PowerPoint" in r.text
     assert "login.js" in r.text
+    assert "/cai-dat" in r.text
+
+
+def test_install_page_lists_windows_and_macos():
+    c = TestClient(app)
+    r = c.get("/cai-dat")
+    assert r.status_code == 200
+    assert "Windows" in r.text
+    assert "macOS" in r.text
+    assert "MOS-Dock-Setup-Windows.exe" in r.text
+    assert "MOS-Dock-Setup-macOS.pkg" in r.text
+    missing = c.get("/cai-dat/windows")
+    assert missing.status_code == 404
+    missing_mac = c.get("/cai-dat/macos")
+    assert missing_mac.status_code == 404
 
 
 def test_home_requires_login():
@@ -74,12 +89,13 @@ def test_gmetrix_home_after_login():
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
-    assert "MosDock" in inner.text
+    assert "/cai-dat" in inner.text
     assert inner.headers.get("x-frame-options") == "SAMEORIGIN"
     js = c.get("/static/mos.js").text
     assert "mos-place-word" in js
     assert "mosdock:open" in js
-    assert "17331" in js
+    assert "Macintosh" in js
+    assert "hasNativeDock" in js
     assert "mosdock:place" in c.get("/static/gmetrix.js").text
     assert "ms-excel:" in js or "data-protocol" in inner.text
 

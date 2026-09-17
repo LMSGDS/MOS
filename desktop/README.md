@@ -1,17 +1,32 @@
-# MOS Dock (hành vi GMetrix)
+# MOS Dock (Windows + macOS)
 
-Cửa sổ **mini-browser TopMost** trên Windows. Mặc định dính **đáy màn hình**. Nút: **Thu nhỏ**, **Đính trái**, **Đính phải**, **Đính đáy**.
+Plugin kéo cửa sổ **Word / Excel / PowerPoint** đúng ô dock. Trình duyệt không làm được việc này.
 
-Sau khi mở Word (`ms-word:`), MOS Dock **mở đúng ứng dụng**, chờ cửa sổ chính (bỏ splash/maximize), rồi `SetWindowPlacement` + `MoveWindow` tới **ô còn lại** trong ~20 giây — Word / Excel / PowerPoint đều được đặt.
+## Bộ cài tự động
 
-- Agent: `http://127.0.0.1:17331/open?app=word|excel|powerpoint&state=left`
-- Protocol: `mosdock:open?app=powerpoint&state=bottom` (đăng ký HKCU lần chạy đầu)
-- Nút **Đặt Word** lặp lại thao tác nếu Word mở chậm
+CI (Actions → **Build MOS Dock**) tạo:
 
-Không dùng Office Online. WebView mở `https://mos.gds.edu.vn/dang-nhap?che-do=dock`.
+| Nền tảng | File |
+| --- | --- |
+| Windows | `MOS-Dock-Setup-Windows.exe` — cài per-user, đăng ký `mosdock:`, chạy cùng Windows |
+| macOS | `MOS-Dock-Setup-macOS.pkg` — cài vào `/Applications/MOS Dock.app` |
+
+Copy vào `data/installers/` trên server rồi học sinh tải tại `/cai-dat`.
+
+### Windows (máy build)
 
 ```powershell
-dotnet publish desktop/MosDock/MosDock.csproj -c Release
+dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
+# Inno Setup: ISCC desktop/installer/windows/mosdock.iss /DDist=dist-win
+# Hoặc: powershell -ExecutionPolicy Bypass -File desktop/installer/windows/install.ps1 -PayloadDir dist-win
 ```
 
-Yêu cầu: Windows 10/11, Microsoft Word, WebView2 Runtime (có sẵn trên Windows 11).
+### macOS (máy Mac hoặc runner macos-latest)
+
+```bash
+bash desktop/installer/macos/build-pkg.sh
+```
+
+Sau khi cài Mac: **System Settings → Privacy & Security → Accessibility** → bật MOS Dock.
+
+Chạy tay không cần pkg: `python3 desktop/MosDockMac/mosdock_mac.py`

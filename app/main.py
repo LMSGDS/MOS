@@ -161,6 +161,31 @@ def login(
     return RedirectResponse(dest, status_code=303)
 
 
+@app.get("/cai-dat", response_class=HTMLResponse)
+def install_page(request: Request):
+    return TEMPLATES.TemplateResponse(request, "install.html", _ctx(request))
+
+
+def _send_installer(filename: str, media: str):
+    path = ROOT / "data" / "installers" / filename
+    if not path.is_file():
+        return HTMLResponse(
+            f"Chưa có {filename} trên server. Copy artifact CI vào data/installers/.",
+            status_code=404,
+        )
+    return FileResponse(path, media_type=media, filename=filename)
+
+
+@app.get("/cai-dat/windows")
+def install_windows():
+    return _send_installer("MOS-Dock-Setup-Windows.exe", "application/vnd.microsoft.portable-executable")
+
+
+@app.get("/cai-dat/macos")
+def install_macos():
+    return _send_installer("MOS-Dock-Setup-macOS.pkg", "application/octet-stream")
+
+
 @app.post("/dang-xuat")
 def logout(request: Request):
     request.session.clear()

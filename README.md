@@ -19,16 +19,18 @@ Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/et
 
 Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định).
 
-Sau khi **Mở Word/Excel/PowerPoint trên máy**, MOS Dock chờ cửa sổ hiện ra rồi **kéo/resize** nó vào ô còn lại của vị trí đã chọn (`SetWindowPos`). Chrome không tự dịch chuyển được cửa sổ Office — cần `MosDock.exe` trên máy Windows (agent `127.0.0.1:17331` hoặc protocol `mosdock:place?state=...&app=excel`).
+Sau khi **Mở Word/Excel/PowerPoint trên máy**, MOS Dock chờ cửa sổ hiện ra rồi kéo vào ô còn lại. Cần **cài plugin** một lần:
+
+- Windows: [`MOS-Dock-Setup-Windows.exe`](/cai-dat/windows)
+- macOS: [`MOS-Dock-Setup-macOS.pkg`](/cai-dat/macos)
+
+Trang hướng dẫn: `/cai-dat`. CI đóng gói installer (Actions → Build MOS Dock). Copy artifact vào `data/installers/` trên server.
 
 | Môi trường | Việc làm |
 | --- | --- |
-| Trình duyệt (nghiệm thu UI) | Sau đăng nhập: `/` mô phỏng Word + dock, gọi `/api/layout` |
-| Máy Windows (hành vi thật) | `MosDock.exe` — WebView2 TopMost, `SetWindowPos` lên Word |
-
-```powershell
-dotnet publish desktop/MosDock/MosDock.csproj -c Release
-```
+| Trình duyệt | `/` mô phỏng layout; `/cai-dat` tải bộ cài |
+| Windows | Setup.exe → MosDock.exe TopMost + `SetWindowPos` |
+| macOS | .pkg → MOS Dock.app + AppleScript/Accessibility |
 
 Không dùng Office Online. Chi tiết: [`desktop/README.md`](desktop/README.md).
 

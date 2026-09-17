@@ -30,3 +30,7 @@ jobs:
           test -f app/static/mau-bai-trinh-bay.pptx
           test -f deploy/nginx-mos.gds.edu.vn.conf
           test -f desktop/MosDock/MosDock.csproj
+          test -f desktop/MosDockMac/mosdock_mac.py
+          test -f desktop/installer/windows/mosdock.iss
+          test -f desktop/installer/windows/install.ps1
+          test -f desktop/installer/macos/build-pkg.sh
