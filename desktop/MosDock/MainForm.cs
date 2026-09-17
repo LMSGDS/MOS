@@ -19,6 +19,8 @@ sealed class MainForm : Form
     string _state;
     string _app;
     bool _compact;
+    bool _docking;
+    Rectangle? _savedWorkspace;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
     IReadOnlyList<MosProject> _items = [];
@@ -30,10 +32,14 @@ sealed class MainForm : Form
         _launchOnStart = launchOnStart;
         _fileOnStart = fileOnStart;
         Text = "MOS-KulKul";
-        FormBorderStyle = FormBorderStyle.None;
-        TopMost = true;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        TopMost = false;
         ShowInTaskbar = true;
-        StartPosition = FormStartPosition.Manual;
+        MinimizeBox = true;
+        MaximizeBox = true;
+        StartPosition = FormStartPosition.CenterScreen;
+        ClientSize = new Size(980, 640);
+        MinimumSize = new Size(720, 420);
         BackColor = Color.FromArgb(30, 79, 115);
         Font = new Font("Segoe UI", 10f);
 
@@ -53,6 +59,7 @@ sealed class MainForm : Form
         AddDockButton("Đáy", "bottom");
         AddDockButton("Đặt cửa sổ", "place", placeOnly: true);
         AddDockButton("Mở rộng đề", "expand", placeOnly: true);
+        AddDockButton("Cửa sổ đề", "workspace", placeOnly: true);
 
         _exam.Dock = DockStyle.Fill;
         _exam.BackColor = Color.FromArgb(244, 248, 252);
@@ -126,11 +133,14 @@ sealed class MainForm : Form
 
             if (_launchOnStart)
             {
-                _compact = true;
                 WordWindow.Launch(_app, _fileOnStart);
+                EnterDock(compact: true);
+            }
+            else
+            {
+                ShowWorkspace();
             }
 
-            ApplyDock(waitForWord: true);
             await LoadProjects();
             try
             {
@@ -146,7 +156,6 @@ sealed class MainForm : Form
 
         _keepWord.Interval = 700;
         _keepWord.Tick += (_, _) => ApplyWordOnly();
-        _keepWord.Start();
     }
 
     static string ModeText() =>
@@ -224,6 +233,12 @@ sealed class MainForm : Form
         btn.Click += (_, _) =>
         {
             var tag = (string)btn.Tag!;
+            if (tag == "workspace")
+            {
+                ShowWorkspace();
+                return;
+            }
+
             if (tag == "expand")
             {
                 _compact = false;
@@ -232,7 +247,7 @@ sealed class MainForm : Form
                     _state = "bottom";
                 }
 
-                ApplyDock(waitForWord: true);
+                EnterDock(compact: false);
                 return;
             }
 
@@ -246,7 +261,8 @@ sealed class MainForm : Form
                 _state = tag;
             }
 
-            ApplyDock(waitForWord: true);
+            EnterDock(compact: _compact);
+            return;
         };
         _bar.Controls.Add(btn);
     }
@@ -304,10 +320,12 @@ sealed class MainForm : Form
             : null;
         _score.Text = "Đang tải đề và mở Office trên máy…";
         var (ok, msg) = await ExamHub.StartProjectAsync(_app, id);
-        _compact = true;
-        ApplyDock(waitForWord: true);
         _score.Text = ok ? "Đã mở: " + msg : "Lỗi đề: " + msg;
-        if (!ok)
+        if (ok)
+        {
+            EnterDock(compact: true);
+        }
+        else
         {
             MessageBox.Show(_score.Text, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
@@ -324,8 +342,7 @@ sealed class MainForm : Form
         }
         else
         {
-            _compact = false;
-            ApplyDock(waitForWord: true);
+            ShowWorkspace();
         }
     }
 
@@ -353,11 +370,81 @@ sealed class MainForm : Form
             WordWindow.Launch(_app, file);
         }
 
+        EnterDock(compact: _compact);
+    }
+
+    void ShowWorkspace()
+    {
+        var switching = _docking;
+        _docking = false;
+        _compact = false;
+        _keepWord.Stop();
+        if (switching)
+        {
+            Hide();
+        }
+
+        TopMost = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MinimizeBox = true;
+        MaximizeBox = true;
+        ControlBox = true;
+        Text = "MOS-KulKul";
+        _exam.Visible = true;
+        _bar.Dock = DockStyle.Top;
+        _bar.Height = 44;
+        if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
+        {
+            Bounds = saved;
+        }
+        else
+        {
+            var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
+            var w = Math.Min(980, wa.Width - 40);
+            var h = Math.Min(640, wa.Height - 40);
+            Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
+        }
+
+        if (switching)
+        {
+            Show();
+        }
+    }
+
+    void EnterDock(bool compact)
+    {
+        var switching = !_docking;
+        if (switching && FormBorderStyle != FormBorderStyle.None)
+        {
+            _savedWorkspace = Bounds;
+            Hide();
+        }
+
+        _docking = true;
+        _compact = compact;
+        FormBorderStyle = FormBorderStyle.None;
+        ControlBox = false;
+        TopMost = true;
+        if (!_keepWord.Enabled)
+        {
+            _keepWord.Start();
+        }
+
         ApplyDock(waitForWord: true);
+        if (switching)
+        {
+            Show();
+            TopMost = true;
+        }
     }
 
     void ApplyDock(bool waitForWord)
     {
+        if (!_docking)
+        {
+            return;
+        }
+
         var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
         var (dock, word) = LayoutMath.Compute(work, _state, _compact);
@@ -383,7 +470,7 @@ sealed class MainForm : Form
 
     void ApplyWordOnly()
     {
-        if (!Visible)
+        if (!Visible || !_docking)
         {
             return;
         }

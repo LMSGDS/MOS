@@ -122,6 +122,7 @@ sealed class LoginForm : Form
             }
         };
         Controls.Add(hint);
+        TryLoadLastUser();
         UpdateChosen();
     }
 
@@ -187,6 +188,41 @@ sealed class LoginForm : Form
         Controls.Add(box);
     }
 
+    static string LastUserPath => Path.Combine(ExamSession.DataDir, "last-user.txt");
+
+    void TryLoadLastUser()
+    {
+        try
+        {
+            if (File.Exists(LastUserPath))
+            {
+                _user.Text = File.ReadAllText(LastUserPath).Trim();
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    static void TrySaveLastUser(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(ExamSession.DataDir);
+            File.WriteAllText(LastUserPath, username);
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
     async Task DoLogin()
     {
         _error.Text = "";
@@ -202,6 +238,7 @@ sealed class LoginForm : Form
 
             _app = app;
             DisplayName = name;
+            TrySaveLastUser(_user.Text.Trim());
             DialogResult = DialogResult.OK;
             Close();
         }

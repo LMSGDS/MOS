@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập (JWT) và chọn **Word / Excel / PowerPoint** ngay trong app PC, chọn **Luyện tập / Thi**, xem danh sách đề MOS (PostgreSQL), mở Office trên máy, nộp bài (COM lưu tệp + store-and-forward), rồi kéo cửa sổ Office đúng ô dock. Không nhúng website, không dùng WebView2 / Office Online.
+Đăng nhập (JWT) trên **Windows trước**: cửa sổ đề bình thường (danh sách MOS, Luyện tập/Thi), rồi mới dock TopMost khi mở Word/Excel/PowerPoint trên máy. Không WebView2, không Office Online. macOS để sau.
 
 ## Bộ cài tự động
 
