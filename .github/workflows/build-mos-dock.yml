@@ -1,0 +1,30 @@
+name: Build MOS Dock
+
+on:
+  push:
+    paths:
+      - "desktop/MosDock/**"
+      - ".github/workflows/build-mos-dock.yml"
+  pull_request:
+    paths:
+      - "desktop/MosDock/**"
+      - ".github/workflows/build-mos-dock.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Publish MosDock.exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Publish win-x64 single file
+        run: dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MosDock-win-x64
+          path: dist/MosDock.exe

@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth import authenticate
+from app.gmetrix_layout import Rect, compute
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
@@ -64,14 +65,32 @@ def healthz():
     return {"ok": True, "service": "mos"}
 
 
+def _is_dock(request: Request) -> bool:
+    q = request.query_params.get("che-do")
+    if q:
+        request.session["che_do"] = q
+    return request.session.get("che_do") == "dock"
+
+
+@app.get("/api/layout")
+def api_layout(state: str = "bottom", x: int = 0, y: int = 0, w: int = 1920, h: int = 1040):
+    dock, word = compute(Rect(x, y, w, h), state)
+    return {
+        "state": state,
+        "dock": {"x": dock.x, "y": dock.y, "w": dock.w, "h": dock.h},
+        "word": {"x": word.x, "y": word.y, "w": word.w, "h": word.h},
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
+    template = "dock_content.html" if _is_dock(request) else "gmetrix.html"
     return TEMPLATES.TemplateResponse(
         request,
-        "home.html",
+        template,
         {"user": user, "host": request.headers.get("host", "mos.gds.edu.vn")},
     )
 
@@ -86,8 +105,12 @@ def word_frame(request: Request):
 
 @app.get("/dang-nhap", response_class=HTMLResponse)
 def login_form(request: Request, loi: str | None = None):
+    che_do = request.query_params.get("che-do")
+    if che_do:
+        request.session["che_do"] = che_do
     if current_user(request):
-        return RedirectResponse("/", status_code=303)
+        dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
+        return RedirectResponse(dest, status_code=303)
     return TEMPLATES.TemplateResponse(
         request,
         "login.html",
@@ -101,7 +124,8 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     if not user:
         return RedirectResponse("/dang-nhap?loi=sai", status_code=303)
     request.session["user"] = user
-    return RedirectResponse("/", status_code=303)
+    dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
+    return RedirectResponse(dest, status_code=303)
 
 
 @app.post("/dang-xuat")

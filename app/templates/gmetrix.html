@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MOS Dock · GMetrix</title>
+  <link rel="stylesheet" href="/static/mos.css" />
+</head>
+<body class="gmetrix">
+  <div id="word-sim" class="word-sim" aria-label="Cửa sổ Microsoft Word">
+    <div class="word-sim-bar">Microsoft Word — Document1</div>
+    <div class="word-sim-page">Vùng soạn thảo Word (không bị khung MOS che)</div>
+  </div>
+  <aside id="dock" class="gmetrix-dock" aria-label="Khung mini-browser MOS">
+    <div class="gmetrix-bar">
+      <span class="gmetrix-brand">MOS Dock · luôn trên cùng</span>
+      <button type="button" data-dock="minimized" aria-pressed="false">Thu nhỏ</button>
+      <button type="button" data-dock="left" aria-pressed="false">Đính trái</button>
+      <button type="button" data-dock="right" aria-pressed="false">Đính phải</button>
+      <button type="button" data-dock="bottom" aria-pressed="true">Đính đáy</button>
+      <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
+    </div>
+    <iframe title="Mini-browser MOS" src="/khung/word"></iframe>
+  </aside>
+  <script src="/static/gmetrix.js"></script>
+</body>
+</html>

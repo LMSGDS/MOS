@@ -27,3 +27,4 @@ jobs:
           python -m pytest -q tests
           test -f app/static/mau-van-ban.docx
           test -f deploy/nginx-mos.gds.edu.vn.conf
+          test -f desktop/MosDock/MosDock.csproj

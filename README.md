@@ -15,6 +15,21 @@ Nút **Mở Microsoft Word** gọi `ms-word:`. Nút **Tạo văn bản mới** g
 
 Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/etc/ssl/cloudflare/mos.gds.edu.vn.pem` và `.key`, rồi dùng `deploy/nginx-mos.gds.edu.vn.conf`.
 
+## MOS Dock (hành vi GMetrix)
+
+Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định). Khi đổi trạng thái, khung tự tính toán và **resize cửa sổ WINWORD.EXE** để hai cửa sổ không chồng lấp, vùng soạn thảo Word luôn hiện trọn.
+
+| Môi trường | Việc làm |
+| --- | --- |
+| Trình duyệt (nghiệm thu UI) | Sau đăng nhập: `/` mô phỏng Word + dock, gọi `/api/layout` |
+| Máy Windows (hành vi thật) | `MosDock.exe` — WebView2 TopMost, `SetWindowPos` lên Word |
+
+```powershell
+dotnet publish desktop/MosDock/MosDock.csproj -c Release
+```
+
+Không dùng Office Online. Chi tiết: [`desktop/README.md`](desktop/README.md).
+
 
 
 Repo GitHub private `LMSGDS/MOS`. Agent Cursor đã kết nối GitHub, có quyền đọc/ghi mã nguồn, và commit/push tự động trên nhánh làm việc.
