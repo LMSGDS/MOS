@@ -16,9 +16,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Check auto-commit script
+      - name: Check automation scripts
         run: |
-          test -x scripts/auto-commit.sh || chmod +x scripts/auto-commit.sh
+          chmod +x scripts/*.sh
           bash -n scripts/auto-commit.sh
+          bash -n scripts/openvpn-up.sh
+          bash -n scripts/openvpn-down.sh
+          bash -n scripts/ssh-connect.sh
           test -f .github/workflows/auto-commit.yml
-          echo "GitHub auto-commit setup is present."
+          test -f .github/workflows/ssh-openvpn.yml
+          echo "GitHub auto-commit and OpenVPN SSH scripts are present."

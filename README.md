@@ -80,3 +80,38 @@ COMMIT_MESSAGE="chore: auto-commit" bash scripts/auto-commit.sh
 
 - Actions → **CI** phải chạy trên pull request này.
 - Actions → **Check GitHub permissions** phải hiện `push: true`. Nếu `push: false`, hãy cấp Workflow permissions như trên rồi chạy lại.
+
+
+## Kết nối SSH qua OpenVPN client
+
+Cloud Agent máy này **mở được TUN** (`tun0`). OpenVPN 2.6 đã cài. Chưa kết nối được vì chưa có file `.ovpn` và khóa SSH.
+
+### 1. Thêm secret (Cursor)
+
+Trong [Cloud Agents secrets](https://cursor.com/dashboard/cloud-agents) hoặc panel Environment:
+
+| Secret | Bắt buộc | Nội dung |
+| --- | --- | --- |
+| `OPENVPN_CONFIG` | Có | Toàn bộ file `.ovpn` |
+| `OPENVPN_USERNAME` | Không | User VPN (nếu profile cần) |
+| `OPENVPN_PASSWORD` | Không | Mật khẩu VPN |
+| `SSH_HOST` | Có | Host/IP server trong mạng VPN |
+| `SSH_USER` | Có | User SSH |
+| `SSH_PRIVATE_KEY` | Có | Private key (PEM) |
+| `SSH_PORT` | Không | Mặc định `22` |
+
+Secret chỉ inject khi agent **khởi động**. Sau khi lưu, gửi tin nhắn mới cho agent này (hoặc mở agent mới).
+
+Cùng tên secret trên GitHub: **Settings → Secrets and variables → Actions**.
+
+### 2. Chạy
+
+```bash
+bash scripts/openvpn-up.sh
+bash scripts/ssh-connect.sh hostname
+bash scripts/openvpn-down.sh
+```
+
+Mặc định script **bỏ** `redirect-gateway` để agent vẫn ra GitHub/Cursor. Full tunnel: `MOS_OVPN_FULL_TUNNEL=1 bash scripts/openvpn-up.sh`.
+
+GitHub: **Actions → SSH via OpenVPN → Run workflow**.
