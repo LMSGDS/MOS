@@ -7,3 +7,11 @@ id_ed25519
 id_ecdsa
 *.pem
 !LICENSE
+
+.venv/
+__pycache__/
+*.pyc
+data/session.secret
+data/mos.env
+.env
+*.key

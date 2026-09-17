@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#008EE2" />
+  <title>{% block title %}MOS · GDS{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/mos.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/">
+      <span class="mark">MOS</span>
+      <span class="sub">GDS · mos.gds.edu.vn</span>
+    </a>
+    {% if user %}
+    <form method="post" action="/dang-xuat">
+      <button class="ghost" type="submit">Đăng xuất</button>
+    </form>
+    {% endif %}
+  </header>
+  <main>{% block body %}{% endblock %}</main>
+  <footer>Trường GDS · Cổng Microsoft Office trên web</footer>
+</body>
+</html>

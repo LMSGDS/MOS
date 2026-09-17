@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập · MOS GDS{% endblock %}
+{% block body %}
+<section class="card login">
+  <h1>Đăng nhập MOS</h1>
+  <p class="lead">Dùng tài khoản nhà trường để mở Microsoft Word trên máy tính của bạn.</p>
+  {% if error %}
+  <p class="alert" role="alert">Tên đăng nhập hoặc mật khẩu không đúng.</p>
+  {% endif %}
+  <form method="post" action="/dang-nhap" autocomplete="on">
+    <label for="username">Tài khoản</label>
+    <input id="username" name="username" required autofocus />
+    <label for="password">Mật khẩu</label>
+    <input id="password" name="password" type="password" required />
+    <button type="submit">Đăng nhập</button>
+  </form>
+</section>
+{% endblock %}

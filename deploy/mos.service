@@ -1,0 +1,15 @@
+[Unit]
+Description=MOS GDS web (mos.gds.edu.vn)
+After=network.target
+
+[Service]
+Type=simple
+User=plhien
+WorkingDirectory=/home/plhien/MOS
+Environment=MOS_HTTPS_ONLY=1
+Environment=MOS_SESSION_SECRET_FILE=/home/plhien/MOS/data/session.secret
+ExecStart=/home/plhien/MOS/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8088 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
