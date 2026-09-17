@@ -37,7 +37,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul5")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul6")
 SESSION_SECRET = _session_secret()
 
 @asynccontextmanager
@@ -183,7 +183,7 @@ def home(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
-    template = "dock_content.html" if _is_dock(request) else "kulkul.html"
+    template = "dock_content.html" if _is_dock(request) else "portal.html"
     return TEMPLATES.TemplateResponse(request, template, _ctx(request))
 
 

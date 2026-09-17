@@ -6,13 +6,13 @@ def test_login_page():
     r = c.get("/dang-nhap")
     assert r.status_code == 200
     assert "Đăng nhập MOS-KulKul" in r.text
-    assert "program-menu" in r.text
-    assert r.text.index("program-menu") < r.text.index("card login")
-    assert "Microsoft Word" in r.text
-    assert "Microsoft Excel" in r.text
-    assert "Microsoft PowerPoint" in r.text
-    assert "login.js" in r.text
+    assert "program-menu" not in r.text
+    assert "data-program" not in r.text
+    assert "program-tile" not in r.text
+    assert "Chọn chương trình" not in r.text
+    assert "login.js" not in r.text
     assert "/cai-dat" in r.text
+    assert "đã cài trên máy" in r.text
 
 
 def test_api_login_and_programs():
@@ -134,16 +134,14 @@ def test_kulkul_home_after_login():
     c = TestClient(app)
     r = c.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"}, follow_redirects=True)
     assert r.status_code == 200
-    assert "Thu nhỏ" in r.text
-    assert "Đính trái" in r.text
-    assert "Đính phải" in r.text
-    assert "Đặt Word vào chỗ đã chọn" in r.text
-    assert "Mở rộng đề" in r.text
-    assert "word-sim" in r.text
+    assert "Xin chào" in r.text
+    assert "Cài MOS-KulKul" in r.text
+    assert "program-menu" not in r.text
+    assert "word-sim" not in r.text
     assert "office.com" not in r.text.lower()
-    assert "kulkul.js" in r.text
     assert "KulKul" in r.text
     assert "GMetrix" not in r.text
+    assert "/quan-tri" in r.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
@@ -161,17 +159,16 @@ def test_kulkul_home_after_login():
 def test_login_excel_then_open_excel():
     c = TestClient(app)
     r = c.post(
-        "/dang-nhap",
-        data={"username": "giaovien", "password": "Mos@Gds2026", "chuong_trinh": "excel"},
-        follow_redirects=True,
+        "/api/dang-nhap",
+        json={"username": "giaovien", "password": "Mos@Gds2026", "chuong_trinh": "excel"},
     )
     assert r.status_code == 200
-    assert "Microsoft Excel" in r.text
-    assert "Mở Excel trên máy" in c.get("/khung/office").text
-    assert "office.com" not in r.text.lower()
-    ppt = c.get("/?chuong-trinh=powerpoint")
-    assert ppt.status_code == 200
-    assert "Microsoft PowerPoint" in ppt.text
+    assert r.json()["program"]["id"] == "excel"
+    inner = c.get("/khung/office")
+    assert inner.status_code == 200
+    assert "Mở Excel trên máy" in inner.text
+    assert "office.com" not in inner.text.lower()
+    c.get("/?chuong-trinh=powerpoint")
     assert "Mở PowerPoint trên máy" in c.get("/khung/office").text
 
 

@@ -85,15 +85,7 @@ button[type="submit"], .primary { background: var(--gds); color: #fff; }
 footer { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
 
 body.login-page main {
-  gap: 28px;
-}
-@media (min-width: 980px) {
-  body.login-page main {
-    flex-direction: row;
-    align-items: stretch;
-    justify-content: center;
-    gap: 36px;
-  }
+  justify-content: center;
 }
 .program-menu {
   width: min(920px, 100%);
