@@ -10,19 +10,46 @@ permissions:
 
 jobs:
   validate:
-    name: Validate GitHub automation
+    name: Validate MOS web app
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mos
+          POSTGRES_PASSWORD: mos
+          POSTGRES_DB: mos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://mos:mos@localhost:5432/mos
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Check automation scripts
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install and test
         run: |
-          chmod +x scripts/*.sh
-          bash -n scripts/auto-commit.sh
-          bash -n scripts/openvpn-up.sh
-          bash -n scripts/openvpn-down.sh
-          bash -n scripts/ssh-connect.sh
-          test -f .github/workflows/auto-commit.yml
-          test -f .github/workflows/ssh-openvpn.yml
-          echo "GitHub auto-commit and OpenVPN SSH scripts are present."
+          python -m pip install -r requirements.txt pytest httpx
+          python -m pytest -q tests
+          test -f app/static/mau-van-ban.docx
+          test -f app/static/mau-bang-tinh.xlsx
+          test -f app/static/mau-bai-trinh-bay.pptx
+          test -f deploy/nginx-mos.gds.edu.vn.conf
+          test -f desktop/MosDock/MosDock.csproj
+          test -f desktop/MosDockMac/mosdock_mac.py
+          test -f desktop/installer/windows/mosdock.iss
+          test -f desktop/installer/windows/install.ps1
+          test -f desktop/installer/macos/build-pkg.sh
+          test -f app/schema.sql
+          test -f deploy/docker-compose.yml
+          test -f desktop/MosDock/ExamHub.cs

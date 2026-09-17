@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Microsoft Word · MOS GDS{% endblock %}
+{% block bodyclass %}shell{% endblock %}
+{% block chrome %}
+<div class="desk">
+  <header class="top slim">
+    <a class="brand" href="/">
+      <span class="mark">MOS</span>
+      <span class="sub">Khung trình duyệt · Word trên máy</span>
+    </a>
+    <div class="who">{{ user.name }}</div>
+    <form method="post" action="/dang-xuat">
+      <button class="ghost" type="submit">Đăng xuất</button>
+    </form>
+  </header>
+  <section class="window" aria-label="Cửa sổ Microsoft Word">
+    <div class="titlebar">
+      <span class="wicon" aria-hidden="true">W</span>
+      <span class="wtitle">Microsoft Word — Văn bản MOS</span>
+      <span class="wdots" aria-hidden="true"></span>
+    </div>
+    <iframe
+      id="word-frame"
+      title="Microsoft Word trong khung MOS"
+      src="/khung/word"
+      allow="clipboard-read; clipboard-write"
+    ></iframe>
+  </section>
+</div>
+{% endblock %}

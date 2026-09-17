@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ program.short }} trong khung MOS</title>
+  <link rel="stylesheet" href="/static/mos.css?v={{ asset_v }}" />
+</head>
+<body class="word-frame" data-app="{{ program.id }}">
+  <div class="ribbon">
+    <button type="button" id="btn-word" class="rib primary" data-protocol="{{ program.protocol }}">{{ program.open_label }}</button>
+    <button type="button" id="btn-doc" class="rib" data-template="{{ program.template }}">{{ program.new_label }}</button>
+    <button type="button" data-cmd="bold" class="rib">B</button>
+    <button type="button" data-cmd="italic" class="rib"><i>I</i></button>
+    <button type="button" data-cmd="underline" class="rib"><u>U</u></button>
+    <button type="button" id="btn-save-html" class="rib">Tải bản soạn</button>
+  </div>
+  <p class="note">
+    {{ program.name }} desktop không chạy bên trong Chrome/Firefox — không dùng Office Online.
+    Nút xanh gọi <strong>MOS-KulKul</strong> (Windows Setup.exe hoặc macOS .zip) để mở {{ program.short }} trên máy và kéo cửa sổ đúng vị trí dock. <a href="/cai-dat">Cài đặt tự động</a>.
+  </p>
+  <div class="paper-wrap">
+    <div id="page" class="paper paper-{{ program.paper_kind }}" contenteditable="true" role="textbox" aria-label="Trang soạn thảo MOS">
+      <p><strong>MOS · GDS · {{ program.name }}</strong></p>
+      <p>Soạn trong khung trình duyệt (không kết nối Office Online). Khi cần ứng dụng thật, bấm «{{ program.open_label }}».</p>
+      <p></p>
+    </div>
+  </div>
+  <p class="hint" id="hint" hidden>
+    Chọn MOS-KulKul khi trình duyệt hỏi mở <code>mosdock:</code>. Ứng dụng mở {{ program.name }} rồi kéo cửa sổ đúng ô còn lại.
+  </p>
+  <script src="/static/mos.js?v={{ asset_v }}"></script>
+</body>
+</html>

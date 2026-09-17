@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MOS-KulKul · {{ program.short }}</title>
+  <link rel="stylesheet" href="/static/mos.css?v={{ asset_v }}" />
+</head>
+<body class="kulkul" data-app="{{ program.id }}" style="--app-color: {{ program.color }}">
+  <div id="word-sim" class="word-sim app-{{ program.id }}" aria-label="Cửa sổ {{ program.name }}">
+    <div id="word-sim-bar" class="word-sim-bar">{{ program.sim_title }} — vị trí đã chọn</div>
+    <div class="word-sim-page">{{ program.sim_hint }}</div>
+  </div>
+  <aside id="dock" class="kulkul-dock" aria-label="Khung mini-browser MOS">
+    <div class="kulkul-bar">
+      <span class="kulkul-brand">MOS-KulKul · {{ program.short }}</span>
+      <nav class="program-switch" aria-label="Chương trình">
+        {% for item in programs %}
+        <a class="program-mini {{ item.id }}" href="/?chuong-trinh={{ item.id }}"
+           aria-current="{{ 'page' if program.id == item.id else 'false' }}">{{ item.short }}</a>
+        {% endfor %}
+      </nav>
+      <button type="button" data-dock="minimized" aria-pressed="false">Thu nhỏ</button>
+      <button type="button" data-dock="left" aria-pressed="false">Đính trái</button>
+      <button type="button" data-dock="right" aria-pressed="false">Đính phải</button>
+      <button type="button" data-dock="bottom" aria-pressed="true">Đính đáy</button>
+      <button type="button" id="btn-place-word">{{ program.place_label }}</button>
+      <button type="button" id="btn-expand">Mở rộng đề</button>
+      <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
+      {% if user and user.role in ['admin', 'teacher', 'leadership'] %}
+      <a class="linkish" href="/quan-tri" style="color:#fff">Quản trị</a>
+      {% endif %}
+    </div>
+    <iframe title="Mini-browser MOS" src="/khung/office?chuong-trinh={{ program.id }}"></iframe>
+  </aside>
+  <script src="/static/kulkul.js?v={{ asset_v }}"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}MOS-KulKul{% endblock %}
+{% block bodyclass %}word-frame{% endblock %}
+{% block chrome %}
+<div class="ribbon">
+  <span class="kulkul-brand" style="color:#0f172a;font-weight:800;padding:6px 8px">MOS-KulKul</span>
+  <form method="post" action="/dang-xuat"><button class="rib" type="submit">Đăng xuất</button></form>
+</div>
+<p class="note">Xin chào <strong>{{ user.name }}</strong>. MOS-KulKul giữ TopMost và resize <strong>{{ program.name }}</strong> — không dùng Office Online.</p>
+<div class="paper-wrap">
+  <div class="paper">
+    <p>Nội dung đề / hướng dẫn MOS hiển thị trong khung mini-browser.</p>
+  </div>
+</div>
+{% endblock %}

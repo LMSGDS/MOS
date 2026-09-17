@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "name": "Quản trị MOS",
+      "role": "admin",
+      "password_hash": "pbkdf2_sha256$200000$fMbF5iU0lJIKFu/ZryXAjQ==$HXJnLFtYyNiEugy6TVxwGSR8q3aHptxfyb/ieJszCvE="
+    },
+    {
+      "username": "giaovien",
+      "name": "Giáo viên GDS",
+      "role": "teacher",
+      "password_hash": "pbkdf2_sha256$200000$gZj/lSxIEErbRF9LivCKXA==$XVeRs7COUh1Zh0xlBhVAwVEVNGMnxkKXj8zZSiWb/V0="
+    },
+    {
+      "username": "hocsinh",
+      "name": "Học sinh GDS",
+      "role": "student",
+      "password_hash": "pbkdf2_sha256$200000$BnNcGpKy/TDGtO+/9tcl2Q==$bZEyuDqAsq/z6BPDLe93ghLzCeZOWyEGj0hEXj7er0g="
+    }
+  ]
+}
