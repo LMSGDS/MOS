@@ -80,3 +80,34 @@ COMMIT_MESSAGE="chore: auto-commit" bash scripts/auto-commit.sh
 
 - Actions → **CI** phải chạy trên pull request này.
 - Actions → **Check GitHub permissions** phải hiện `push: true`. Nếu `push: false`, hãy cấp Workflow permissions như trên rồi chạy lại.
+
+
+## Kết nối SSH qua OpenVPN client
+
+Đã xác minh trên Cloud Agent: OpenVPN lên `tun0` (`10.10.11.18`), SSH vào `plhien@160.191.49.65` (`gpu-160-191-49-65`). Profile lấy từ [OpenVPN Client trên Drive](https://drive.google.com/drive/folders/1Z9lFTUnB60SdiHmTDZqahVZzBniCXjz3) — **không commit** `.ovpn` hay mật khẩu.
+
+Cổng 22 của máy GPU bị chặn từ Internet; phải đi qua VPN rồi `ip route` host SSH vào `tun0`.
+
+### 1. Secret (Cursor / GitHub Actions)
+
+| Secret | Bắt buộc | Nội dung |
+| --- | --- | --- |
+| `OPENVPN_CONFIG` | Có | File `openvpn_plhien.ovpn` |
+| `OPENVPN_USERNAME` | Có với profile này | User VPN |
+| `OPENVPN_PASSWORD` | Có với profile này | Mật khẩu VPN (trong doc Drive, cặp `Username: plhien`) |
+| `SSH_HOST` | Có | `160.191.49.65` |
+| `SSH_USER` | Có | `plhien` |
+| `SSH_PASSWORD` hoặc `SSH_PRIVATE_KEY` | Một trong hai | Mật khẩu SSH là dòng `password:` riêng trong doc Drive (không dùng `plhien@123`) |
+| `SSH_PORT` | Không | Mặc định `22` |
+
+Secret Cursor chỉ có khi agent **khởi động**. Agent hiện tại đã nối bằng file Drive, không qua secret môi trường.
+
+### 2. Chạy
+
+```bash
+bash scripts/openvpn-up.sh
+bash scripts/ssh-connect.sh hostname
+bash scripts/openvpn-down.sh
+```
+
+Mặc định bỏ `redirect-gateway` để agent vẫn ra GitHub. GitHub: **Actions → SSH via OpenVPN**.
