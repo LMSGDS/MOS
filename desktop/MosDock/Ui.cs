@@ -22,6 +22,7 @@ static class Ui
     public static readonly Color Ppt = Color.FromArgb(183, 71, 42);
     public static readonly Color Warning = Color.FromArgb(189, 107, 0);
     public static readonly Color SignIn = Color.FromArgb(11, 37, 69);
+    public static readonly Color SignInHover = Color.FromArgb(8, 28, 54);
     public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
     public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
     public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
