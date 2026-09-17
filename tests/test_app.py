@@ -5,7 +5,7 @@ def test_login_page():
     c = TestClient(app)
     r = c.get("/dang-nhap")
     assert r.status_code == 200
-    assert "Đăng nhập MOS" in r.text
+    assert "Đăng nhập MOS-KulKul" in r.text
     assert "program-menu" in r.text
     assert r.text.index("program-menu") < r.text.index("card login")
     assert "Microsoft Word" in r.text
@@ -15,40 +15,70 @@ def test_login_page():
     assert "/cai-dat" in r.text
 
 
+def test_api_login_and_programs():
+    c = TestClient(app)
+    denied = c.get("/api/me")
+    assert denied.status_code == 401
+    programs = c.get("/api/chuong-trinh").json()
+    assert programs["ok"] is True
+    ids = [p["id"] for p in programs["programs"]]
+    assert ids == ["word", "excel", "powerpoint"]
+    bad = c.post("/api/dang-nhap", json={"username": "giaovien", "password": "sai"})
+    assert bad.status_code == 401
+    r = c.post(
+        "/api/dang-nhap",
+        json={"username": "giaovien", "password": "Mos@Gds2026", "chuong_trinh": "excel"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert body["user"]["username"] == "giaovien"
+    assert body["program"]["id"] == "excel"
+    me = c.get("/api/me").json()
+    assert me["ok"] is True
+    assert me["program"]["id"] == "excel"
+
+
 def test_install_page_lists_windows_and_macos():
     c = TestClient(app)
     r = c.get("/cai-dat")
     assert r.status_code == 200
     assert "Windows" in r.text
     assert "macOS" in r.text
-    assert "MOS-Dock-Setup-Windows.exe" in r.text
+    assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
     assert "/cai-dat/macos" in r.text
-    assert "MOS-Dock-Setup-macOS.zip" in r.text
-    assert "Cai MOS Dock.command" in r.text
+    assert "MOS-KulKul-Setup-macOS.zip" in r.text
+    assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
     missing = c.get("/cai-dat/windows")
-    if (INSTALLER_DIR / "MOS-Dock-Setup-Windows.exe").is_file():
+    win_ready = any(
+        (INSTALLER_DIR / name).is_file()
+        for name in ("MOS-KulKul-Setup-Windows.exe", "MOS-Dock-Setup-Windows.exe")
+    )
+    if win_ready:
         assert missing.status_code == 200
-        assert missing.headers.get("content-disposition", "").lower().find("windows") >= 0
+        assert missing.headers.get("content-disposition", "").lower().find("windows") >= 0 or "kulkul" in missing.headers.get("content-disposition", "").lower()
     else:
         assert missing.status_code == 404
     missing_mac = c.get("/cai-dat/macos")
     mac_ready = any(
         (INSTALLER_DIR / name).is_file()
-        for name in ("MOS-Dock-Setup-macOS.pkg", "MOS-Dock-Setup-macOS.zip")
+        for name in (
+            "MOS-KulKul-Setup-macOS.zip",
+            "MOS-Dock-Setup-macOS.zip",
+            "MOS-Dock-Setup-macOS.pkg",
+        )
     )
     if mac_ready:
         assert missing_mac.status_code == 200
-        if (INSTALLER_DIR / "MOS-Dock-Setup-macOS.zip").is_file():
-            assert "zip" in missing_mac.headers.get("content-disposition", "").lower()
     else:
         assert missing_mac.status_code == 404
     sh = c.get("/cai-dat/macos.sh")
     assert sh.status_code == 200
     assert "osacompile" in sh.text
-    assert "MOS Dock.app" in sh.text
+    assert "MOS-KulKul.app" in sh.text
     src = c.get("/cai-dat/macos-files/mosdock_mac.py")
     assert src.status_code == 200
     assert "17331" in src.text

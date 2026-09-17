@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -33,10 +33,10 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul3")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul4")
 SESSION_SECRET = _session_secret()
 
-app = FastAPI(title="MOS GDS", docs_url=None, redoc_url=None)
+app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -91,6 +91,45 @@ def _is_dock(request: Request) -> bool:
     if q:
         request.session["che_do"] = q
     return request.session.get("che_do") == "dock"
+
+
+@app.get("/api/chuong-trinh")
+def api_programs():
+    return {"ok": True, "programs": MENU}
+
+
+@app.get("/api/me")
+def api_me(request: Request):
+    user = current_user(request)
+    if not user:
+        return JSONResponse({"ok": False, "error": "chua-dang-nhap"}, status_code=401)
+    return {"ok": True, "user": user, "program": current_program(request)}
+
+
+@app.post("/api/dang-nhap")
+async def api_login(request: Request):
+    username = ""
+    password = ""
+    chuong = "word"
+    ctype = (request.headers.get("content-type") or "").lower()
+    if "json" in ctype:
+        data = await request.json()
+        if isinstance(data, dict):
+            username = str(data.get("username") or "")
+            password = str(data.get("password") or "")
+            chuong = str(data.get("chuong_trinh") or "word")
+    else:
+        form = await request.form()
+        username = str(form.get("username") or "")
+        password = str(form.get("password") or "")
+        chuong = str(form.get("chuong_trinh") or "word")
+    request.session["chuong_trinh"] = normalize(chuong)
+    request.session["che_do"] = "dock"
+    user = authenticate(username, password)
+    if not user:
+        return JSONResponse({"ok": False, "error": "sai"}, status_code=401)
+    request.session["user"] = user
+    return {"ok": True, "user": user, "program": resolve(chuong)}
 
 
 @app.get("/api/layout")
@@ -200,14 +239,15 @@ def _send_installer(*names: str, media: str | None = None):
 @app.get("/cai-dat/windows")
 def install_windows():
     return _send_installer(
+        "MOS-KulKul-Setup-Windows.exe",
         "MOS-Dock-Setup-Windows.exe",
-        media="application/vnd.microsoft.portable-executable",
     )
 
 
 @app.get("/cai-dat/macos")
 def install_macos():
     return _send_installer(
+        "MOS-KulKul-Setup-macOS.zip",
         "MOS-Dock-Setup-macOS.zip",
         "MOS-Dock-Setup-macOS.pkg",
         media="application/zip",

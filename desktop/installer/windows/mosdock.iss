@@ -1,6 +1,6 @@
-; MOS Dock — cài per-user, không cần Admin
-#define MyAppName "MOS Dock"
-#define MyAppVersion "1.0.1"
+; MOS-KulKul — cài per-user, không cần Admin
+#define MyAppName "MOS-KulKul"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Trường GDS"
 #define MyAppURL "https://mos.gds.edu.vn/cai-dat"
 #ifndef Dist
@@ -13,16 +13,16 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
-DefaultDirName={localappdata}\MOS\MosDock
-DefaultGroupName=MOS GDS
+DefaultDirName={localappdata}\MOS\KulKul
+DefaultGroupName=MOS-KulKul
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\..\..\dist-installer
-OutputBaseFilename=MOS-Dock-Setup-Windows
+OutputBaseFilename=MOS-KulKul-Setup-Windows
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-UninstallDisplayIcon={app}\MosDock.exe
+UninstallDisplayIcon={app}\MOS-KulKul.exe
 SetupIconFile=
 DisableProgramGroupPage=yes
 CloseApplications=yes
@@ -35,17 +35,20 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "{#Dist}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pdb,install.ps1"
 
 [Icons]
-Name: "{group}\MOS Dock"; Filename: "{app}\MosDock.exe"
-Name: "{autodesktop}\MOS Dock"; Filename: "{app}\MosDock.exe"; Tasks: desktopicon
-Name: "{userstartup}\MOS Dock"; Filename: "{app}\MosDock.exe"
+Name: "{group}\MOS-KulKul"; Filename: "{app}\MOS-KulKul.exe"
+Name: "{autodesktop}\MOS-KulKul"; Filename: "{app}\MOS-KulKul.exe"; Tasks: desktopicon
+Name: "{userstartup}\MOS-KulKul"; Filename: "{app}\MOS-KulKul.exe"
 
 [Tasks]
 Name: "desktopicon"; Description: "Tạo lối tắt trên Desktop"; GroupDescription: "Lối tắt:"
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\mosdock"; ValueType: string; ValueName: ""; ValueData: "URL:MOS Dock"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\mosdock"; ValueType: string; ValueName: ""; ValueData: "URL:MOS-KulKul"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\mosdock"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
-Root: HKCU; Subkey: "Software\Classes\mosdock\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\MosDock.exe"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\mosdock\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\MOS-KulKul.exe"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\mos-kulkul"; ValueType: string; ValueName: ""; ValueData: "URL:MOS-KulKul"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\mos-kulkul"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\mos-kulkul\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\MOS-KulKul.exe"" ""%1"""
 
 [Run]
-Filename: "{app}\MosDock.exe"; Description: "Chạy MOS Dock ngay"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MOS-KulKul.exe"; Description: "Chạy MOS-KulKul ngay"; Flags: nowait postinstall skipifsilent

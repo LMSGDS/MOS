@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MOS Dock cho macOS — thanh TopMost + kéo cửa sổ Word/Excel/PowerPoint."""
+"""MOS-KulKul cho macOS — đăng nhập + kéo cửa sổ Word/Excel/PowerPoint."""
 from __future__ import annotations
 
 import json
@@ -200,6 +200,113 @@ def apply_url(raw: str) -> None:
     apply(launch=launch, file_url=(q.get("file") or [None])[0])
 
 
+def portal_origin() -> str:
+    return (os.environ.get("MOS_PORTAL") or "https://mos.gds.edu.vn").rstrip("/")
+
+
+def portal_login(username: str, password: str, app: str) -> tuple[bool, str]:
+    import urllib.error
+    import urllib.request
+
+    body = json.dumps(
+        {"username": username, "password": password, "chuong_trinh": app}
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        portal_origin() + "/api/dang-nhap",
+        data=body,
+        headers={"Content-Type": "application/json", "User-Agent": "MOS-KulKul/1.1"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as ex:
+        if ex.code == 401:
+            return False, "Tên đăng nhập hoặc mật khẩu không đúng."
+        return False, f"Lỗi máy chủ ({ex.code})."
+    except Exception as ex:
+        return False, "Không kết nối được MOS-KulKul: " + str(ex)
+    if not data.get("ok"):
+        return False, "Tên đăng nhập hoặc mật khẩu không đúng."
+    pid = ((data.get("program") or {}).get("id")) or app
+    State.app = pid
+    return True, (data.get("user") or {}).get("name") or username
+
+
+def show_login() -> bool:
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+    except Exception:
+        return True
+
+    result = {"ok": False}
+    root = tk.Tk()
+    root.title("MOS-KulKul")
+    root.geometry("560x420")
+    root.configure(bg="#f4f8fc")
+    root.resizable(False, False)
+
+    tk.Label(root, text="MOS-KulKul", bg="#f4f8fc", fg="#0f172a", font=("Helvetica", 22, "bold")).pack(pady=(18, 4))
+    tk.Label(
+        root,
+        text="Chọn Microsoft Word, Excel hoặc PowerPoint rồi đăng nhập trên máy.",
+        bg="#f4f8fc",
+        fg="#475569",
+        wraplength=500,
+    ).pack(pady=(0, 12))
+
+    tiles = tk.Frame(root, bg="#f4f8fc")
+    tiles.pack()
+    colors = {"word": "#2b579a", "excel": "#217346", "powerpoint": "#d24726"}
+
+    def pick(app: str):
+        State.app = app
+        chosen.set("Chương trình đã chọn: " + APPS.get(app, app))
+        for key, btn in tile_btns.items():
+            btn.configure(relief="solid" if key == app else "groove", bd=3 if key == app else 1)
+
+    tile_btns = {}
+    for key, label in (("word", "Word"), ("excel", "Excel"), ("powerpoint", "PowerPoint")):
+        b = tk.Button(
+            tiles,
+            text=label,
+            fg=colors[key],
+            font=("Helvetica", 12, "bold"),
+            width=12,
+            command=lambda a=key: pick(a),
+        )
+        b.pack(side="left", padx=6)
+        tile_btns[key] = b
+
+    chosen = tk.StringVar(value="Chương trình đã chọn: Microsoft Word")
+    tk.Label(root, textvariable=chosen, bg="#f4f8fc", fg="#0f172a").pack(pady=10)
+    pick("word")
+
+    form = tk.Frame(root, bg="#f4f8fc")
+    form.pack(pady=4)
+    tk.Label(form, text="Tài khoản", bg="#f4f8fc", font=("Helvetica", 10, "bold")).grid(row=0, column=0, sticky="w")
+    user = tk.Entry(form, width=36)
+    user.grid(row=1, column=0, pady=(0, 8))
+    tk.Label(form, text="Mật khẩu", bg="#f4f8fc", font=("Helvetica", 10, "bold")).grid(row=2, column=0, sticky="w")
+    pw = tk.Entry(form, width=36, show="*")
+    pw.grid(row=3, column=0)
+
+    def submit(_event=None):
+        ok, msg = portal_login(user.get().strip(), pw.get(), State.app)
+        if not ok:
+            messagebox.showerror("MOS-KulKul", msg)
+            return
+        result["ok"] = True
+        root.destroy()
+
+    tk.Button(root, text="Đăng nhập", command=submit, bg="#008EE2", fg="white", font=("Helvetica", 12, "bold"), width=28).pack(pady=16)
+    user.focus_set()
+    root.bind("<Return>", submit)
+    root.mainloop()
+    return result["ok"]
+
+
 def already_running() -> bool:
     try:
         import urllib.request
@@ -223,7 +330,7 @@ def show_bar():
         return
 
     root = tk.Tk()
-    root.title("MOS Dock")
+    root.title("MOS-KulKul")
     root.attributes("-topmost", True)
     root.configure(bg="#1e4f73")
     root.overrideredirect(True)
@@ -248,7 +355,7 @@ def show_bar():
 
     bar = tk.Frame(root, bg="#1e4f73")
     bar.pack(fill="both", expand=True, padx=8, pady=8)
-    tk.Label(bar, text="MOS Dock · Mac", fg="white", bg="#1e4f73", font=("Lato", 13, "bold")).pack(side="left", padx=(0, 12))
+    tk.Label(bar, text="MOS-KulKul", fg="white", bg="#1e4f73", font=("Lato", 13, "bold")).pack(side="left", padx=(0, 12))
     for label, app in (("Word", "word"), ("Excel", "excel"), ("PowerPoint", "powerpoint")):
         tk.Button(bar, text=label, command=lambda a=app: (setattr(State, "app", a), click(launch=True))).pack(side="left", padx=3)
     for label, st in (("Thu nhỏ", "minimized"), ("Đính trái", "left"), ("Đính phải", "right"), ("Đính đáy", "bottom")):
@@ -287,6 +394,8 @@ def main():
         apply_url(url)
     if os.environ.get("MOS_DOCK_HEADLESS") == "1":
         threading.Event().wait()
+        return
+    if not url and not show_login():
         return
     show_bar()
 

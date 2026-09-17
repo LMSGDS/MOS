@@ -5,7 +5,7 @@ namespace MosDock;
 
 static class Program
 {
-    const string MutexName = @"Local\MosDock.GDS";
+    const string MutexName = @"Local\MOS-KulKul.GDS";
 
     [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
     static extern bool SetDllDirectory(string lpPathName);
@@ -33,7 +33,18 @@ static class Program
         }
 
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm(parsed.State, parsed.App, parsed.Launch, parsed.File));
+        string appId = parsed.App ?? "word";
+        using (var login = new LoginForm(appId))
+        {
+            if (login.ShowDialog() != DialogResult.OK)
+            {
+                return;
+            }
+
+            appId = login.SelectedApp;
+        }
+
+        Application.Run(new MainForm(parsed.State, appId, parsed.Launch, parsed.File));
     }
 
     static void EnsureWebView2Loader()
@@ -65,11 +76,11 @@ static class Program
     static void ShowError(Exception ex)
     {
         MessageBox.Show(
-            "MOS Dock thiếu thư viện WebView2 (Dll was not found).\n\n"
+            "MOS-KulKul thiếu thư viện WebView2 (Dll was not found).\n\n"
             + "Gỡ bản cũ, tải lại Setup.exe tại https://mos.gds.edu.vn/cai-dat rồi cài lại.\n"
             + "Nếu vẫn lỗi, cài Microsoft Edge WebView2 Runtime.\n\n"
             + ex.GetType().Name + ": " + ex.Message,
-            "MOS Dock",
+            "MOS-KulKul",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
     }

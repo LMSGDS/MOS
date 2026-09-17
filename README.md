@@ -15,22 +15,18 @@ Nút **Mở … trên máy** gọi protocol Office tương ứng. Nút tạo t�
 
 Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/etc/ssl/cloudflare/mos.gds.edu.vn.pem` và `.key`, rồi dùng `deploy/nginx-mos.gds.edu.vn.conf`.
 
-## MOS Dock (hành vi KulKul)
+## MOS-KulKul
 
-Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định).
+Ứng dụng trên máy: **đăng nhập** và **chọn Word / Excel / PowerPoint** ngay trong MOS-KulKul, rồi kéo cửa sổ Office vào ô dock (TopMost).
 
-Sau khi **Mở Word/Excel/PowerPoint trên máy**, MOS Dock chờ cửa sổ hiện ra rồi kéo vào ô còn lại. Cần **cài plugin** một lần:
-
-- Windows: [`MOS-Dock-Setup-Windows.exe`](/cai-dat/windows)
-- macOS: [`MOS-Dock-Setup-macOS.zip`](/cai-dat/macos) (không dùng .pkg — Gatekeeper chặn gói chưa notarize)
-
-Trang hướng dẫn: `/cai-dat`. CI đóng gói installer (Actions → Build MOS Dock). Copy artifact vào `data/installers/` trên server.
+- Windows: [`MOS-KulKul-Setup-Windows.exe`](/cai-dat/windows)
+- macOS: [`MOS-KulKul-Setup-macOS.zip`](/cai-dat/macos)
 
 | Môi trường | Việc làm |
 | --- | --- |
 | Trình duyệt | `/` mô phỏng layout; `/cai-dat` tải bộ cài |
-| Windows | Setup.exe → MosDock.exe TopMost + `SetWindowPos` |
-| macOS | .zip → `Cai MOS Dock.command` (chuột phải → Mở) hoặc `curl …/cai-dat/macos.sh \| bash` |
+| Windows | MOS-KulKul.exe — đăng nhập + dock + `SetWindowPos` |
+| macOS | .zip → `Cai MOS-KulKul.command` hoặc `curl …/cai-dat/macos.sh \| bash` |
 
 Không dùng Office Online. Chi tiết: [`desktop/README.md`](desktop/README.md).
 

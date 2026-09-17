@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Cài MOS Dock · Windows và Mac{% endblock %}
+{% block title %}Cài MOS-KulKul · Windows và Mac{% endblock %}
 {% block body %}
 <section class="card hero" style="width:min(720px,100%)">
-  <h1>Cài MOS Dock / KulKul</h1>
-  <p class="lead">Trình duyệt không kéo được cửa sổ Word / Excel / PowerPoint. Cài plugin một lần trên máy.</p>
+  <h1>Cài MOS-KulKul</h1>
+  <p class="lead">Đăng nhập và chọn Word / Excel / PowerPoint ngay trong MOS-KulKul trên máy. Trình duyệt không kéo được cửa sổ Office.</p>
   <div class="actions" style="flex-direction:row;flex-wrap:wrap;gap:12px">
     <a class="primary" href="/cai-dat/windows" style="text-align:center;text-decoration:none">Tải cài đặt Windows (.exe)</a>
     <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải cài đặt macOS (.zip)</a>
@@ -11,22 +11,22 @@
 
   <h2 style="margin-top:28px;font-size:18px">Windows</h2>
   <ol class="lead">
-    <li>Tải và chạy <strong>MOS-Dock-Setup-Windows.exe</strong> (không cần Admin). Nếu bản cũ báo <em>Dll was not found</em>: gỡ MOS Dock rồi cài lại file mới.</li>
-    <li>Cài xong MOS Dock tự mở, đăng ký protocol <code>mosdock:</code>, chạy cùng Windows.</li>
-    <li>Vào lại MOS, chọn Word/Excel/PowerPoint, bấm mở trên máy.</li>
+    <li>Tải và chạy <strong>MOS-KulKul-Setup-Windows.exe</strong> (không cần Admin). Gỡ bản MOS Dock cũ nếu máy còn báo <em>Dll was not found</em>.</li>
+    <li>Mở <strong>MOS-KulKul</strong>, chọn Word / Excel / PowerPoint, đăng nhập.</li>
+    <li>Bấm mở chương trình trên máy — cửa sổ Office vào đúng ô dock.</li>
   </ol>
 
   <h2 style="margin-top:20px;font-size:18px">macOS</h2>
-  <p class="notice">macOS hiện hộp thoại <strong>Not Opened / Move to Trash</strong> với file <code>.pkg</code> vì gói chưa được Apple ký (notarize). Không dùng .pkg — tải <strong>.zip</strong> bên trên.</p>
+  <p class="notice">macOS chặn gói <code>.pkg</code> chưa ký Apple. Tải <strong>.zip</strong>.</p>
   <ol class="lead">
-    <li>Tải <strong>MOS-Dock-Setup-macOS.zip</strong>, giải nén.</li>
-    <li><strong>Chuột phải</strong> file <strong>Cai MOS Dock.command</strong> → <strong>Mở</strong> → <strong>Mở</strong> (đừng nhấp đúp nếu Mac báo Move to Trash).</li>
-    <li>Cho phép MOS Dock trong <strong>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → Accessibility</strong>.</li>
-    <li>Vào lại MOS, chọn Word/Excel/PowerPoint.</li>
+    <li>Tải <strong>MOS-KulKul-Setup-macOS.zip</strong>, giải nén.</li>
+    <li><strong>Chuột phải</strong> <strong>Cai MOS-KulKul.command</strong> → <strong>Mở</strong> → <strong>Mở</strong>.</li>
+    <li>Cho phép MOS-KulKul trong <strong>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → Accessibility</strong>.</li>
+    <li>Mở MOS-KulKul, chọn Word/Excel/PowerPoint rồi đăng nhập.</li>
   </ol>
-  <p class="lead">Hoặc mở <strong>Terminal</strong> rồi dán lệnh này (không bị Gatekeeper chặn):</p>
+  <p class="lead">Hoặc mở <strong>Terminal</strong> rồi dán:</p>
   <pre class="codebox">curl -fsSL https://mos.gds.edu.vn/cai-dat/macos.sh | bash</pre>
-  <p class="hint">Nếu đã tải nhầm .pkg: Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → kéo xuống → <strong>Open Anyway</strong>. Gói .pkg chỉ dùng được sau khi trường có tài khoản Apple Developer để ký. <a href="/cai-dat/macos-pkg">Tải .pkg</a>.</p>
-  <p><a class="linkish" href="/dang-nhap">← Về đăng nhập</a></p>
+  <p class="hint">Gói .pkg chỉ dùng khi đã notarize. <a href="/cai-dat/macos-pkg">Tải .pkg</a>.</p>
+  <p><a class="linkish" href="/dang-nhap">← Về đăng nhập trên web</a></p>
 </section>
 {% endblock %}

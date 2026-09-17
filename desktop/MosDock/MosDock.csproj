@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>MosDock</RootNamespace>
+    <AssemblyName>MOS-KulKul</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>true</SelfContained>

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
@@ -17,15 +18,13 @@ sealed class MainForm : Form
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
 
-    const string Portal = "https://mos.gds.edu.vn/dang-nhap?che-do=dock";
-
     public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null)
     {
         _state = string.IsNullOrWhiteSpace(initialState) ? "bottom" : initialState.ToLowerInvariant();
         _app = OfficeApp.Resolve(initialApp).Id;
         _launchOnStart = launchOnStart;
         _fileOnStart = fileOnStart;
-        Text = "MOS Dock";
+        Text = "MOS-KulKul";
         FormBorderStyle = FormBorderStyle.None;
         TopMost = true;
         ShowInTaskbar = true;
@@ -38,7 +37,7 @@ sealed class MainForm : Form
 
         var title = new Label
         {
-            Text = "MOS · KulKul",
+            Text = "MOS-KulKul",
             ForeColor = Color.White,
             AutoSize = true,
             Location = new Point(8, 10),
@@ -86,22 +85,86 @@ sealed class MainForm : Form
                 var dataDir = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "MOS",
-                    "MosDock",
+                    "KulKul",
                     "WebView2");
                 Directory.CreateDirectory(dataDir);
                 var env = await CoreWebView2Environment.CreateAsync(null, dataDir);
                 await _web.EnsureCoreWebView2Async(env);
+                SyncWebViewCookies();
+                _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+                _web.CoreWebView2.WebMessageReceived += (_, e) =>
+                {
+                    var raw = e.TryGetWebMessageAsString();
+                    var launch = raw?.Contains("\"open\"", StringComparison.OrdinalIgnoreCase) == true
+                        || raw?.Contains("mos-open", StringComparison.OrdinalIgnoreCase) == true;
+                    OnPlaceRequest(
+                        ExtractField(raw, "state") ?? _state,
+                        ExtractField(raw, "app"),
+                        launch,
+                        ExtractField(raw, "file"),
+                        launch);
+                };
+                _web.CoreWebView2.NavigationStarting += (_, e) =>
+                {
+                    if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase)
+                        || e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase)
+                        || e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase)
+                        || e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase)
+                        || e.Uri.StartsWith("mos-kulkul:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        e.Cancel = true;
+                        if (e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _app = "excel";
+                        }
+                        else if (e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _app = "powerpoint";
+                        }
+                        else if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _app = "word";
+                        }
+
+                        var launch = !e.Uri.Contains(":place", StringComparison.OrdinalIgnoreCase);
+                        if (e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase)
+                            || e.Uri.StartsWith("mos-kulkul:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var parsed = Protocol.Parse([e.Uri]);
+                            if (!string.IsNullOrWhiteSpace(parsed.App))
+                            {
+                                _app = OfficeApp.Resolve(parsed.App).Id;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(parsed.State))
+                            {
+                                _state = parsed.State;
+                            }
+
+                            launch = parsed.Launch;
+                        }
+
+                        if (launch || e.Uri.StartsWith("ms-", StringComparison.OrdinalIgnoreCase))
+                        {
+                            WordWindow.Launch(_app);
+                        }
+
+                        ApplyDock(waitForWord: true);
+                    }
+                };
+                _web.CoreWebView2.Navigate(
+                    $"{Portal.Origin}/?che-do=dock&chuong-trinh={Uri.EscapeDataString(_app)}");
             }
             catch (Exception ex)
             {
                 _web.Visible = false;
-                _status.Text = "Thiếu WebView2 — cài lại Setup.exe";
+                _status.Text = "Thiếu WebView2 — cài lại MOS-KulKul";
                 MessageBox.Show(
-                    "MOS Dock không tải được WebView2.\n\n"
+                    "MOS-KulKul không tải được WebView2.\n\n"
                     + "Gỡ bản cũ rồi tải Setup.exe mới tại https://mos.gds.edu.vn/cai-dat\n"
-                    + "Hoặc cài Microsoft Edge WebView2 Runtime rồi mở lại MOS Dock.\n\n"
+                    + "Hoặc cài Microsoft Edge WebView2 Runtime rồi mở lại MOS-KulKul.\n\n"
                     + ex.Message,
-                    "MOS Dock",
+                    "MOS-KulKul",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
                 try
@@ -112,69 +175,7 @@ sealed class MainForm : Form
                 {
                     // ignore
                 }
-
-                return;
             }
-            _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
-            _web.CoreWebView2.WebMessageReceived += (_, e) =>
-            {
-                var raw = e.TryGetWebMessageAsString();
-                var launch = raw?.Contains("\"open\"", StringComparison.OrdinalIgnoreCase) == true
-                    || raw?.Contains("mos-open", StringComparison.OrdinalIgnoreCase) == true;
-                OnPlaceRequest(
-                    ExtractField(raw, "state") ?? _state,
-                    ExtractField(raw, "app"),
-                    launch,
-                    ExtractField(raw, "file"),
-                    launch);
-            };
-            _web.CoreWebView2.NavigationStarting += (_, e) =>
-            {
-                if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase)
-                    || e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase)
-                    || e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase)
-                    || e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase))
-                {
-                    e.Cancel = true;
-                    if (e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _app = "excel";
-                    }
-                    else if (e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _app = "powerpoint";
-                    }
-                    else if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _app = "word";
-                    }
-
-                    var launch = !e.Uri.StartsWith("mosdock:place", StringComparison.OrdinalIgnoreCase);
-                    if (e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var parsed = Protocol.Parse([e.Uri]);
-                        if (!string.IsNullOrWhiteSpace(parsed.App))
-                        {
-                            _app = OfficeApp.Resolve(parsed.App).Id;
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(parsed.State))
-                        {
-                            _state = parsed.State;
-                        }
-
-                        launch = parsed.Launch;
-                    }
-
-                    if (launch || e.Uri.StartsWith("ms-", StringComparison.OrdinalIgnoreCase))
-                    {
-                        WordWindow.Launch(_app);
-                    }
-
-                    ApplyDock(waitForWord: true);
-                }
-            };
-            _web.CoreWebView2.Navigate(Portal);
         };
 
         FormClosed += (_, _) => _agent?.Dispose();
@@ -182,6 +183,37 @@ sealed class MainForm : Form
         _keepWord.Interval = 700;
         _keepWord.Tick += (_, _) => ApplyWordOnly();
         _keepWord.Start();
+    }
+
+    void SyncWebViewCookies()
+    {
+        if (_web.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        Uri uri;
+        try
+        {
+            uri = new Uri(Portal.Origin + "/");
+        }
+        catch
+        {
+            return;
+        }
+
+        foreach (Cookie cookie in Portal.Cookies.GetCookies(uri))
+        {
+            var domain = string.IsNullOrWhiteSpace(cookie.Domain) ? uri.Host : cookie.Domain.TrimStart('.');
+            var wv = _web.CoreWebView2.CookieManager.CreateCookie(
+                cookie.Name,
+                cookie.Value,
+                domain,
+                string.IsNullOrWhiteSpace(cookie.Path) ? "/" : cookie.Path);
+            wv.IsHttpOnly = cookie.HttpOnly;
+            wv.IsSecure = cookie.Secure;
+            _web.CoreWebView2.CookieManager.AddOrUpdateCookie(wv);
+        }
     }
 
     void AddButton(string text, string state, int x, bool placeOnly = false)

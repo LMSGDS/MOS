@@ -1,4 +1,4 @@
-"""Bố cục khung MOS Dock + cửa sổ Word — không chồng lấp (kiểu KulKul)."""
+"""Bố cục khung MOS-KulKul + cửa sổ Word — không chồng lấp."""
 from __future__ import annotations
 
 from dataclasses import dataclass

@@ -1,10 +1,10 @@
 #!/bin/bash
-# Cài MOS Dock vào /Applications và đăng ký protocol mosdock:
+# Cài MOS-KulKul vào /Applications
 # - Chuột phải file này → Mở (khi nằm trong zip)
 # - Hoặc: curl -fsSL https://mos.gds.edu.vn/cai-dat/macos.sh | bash
 set -euo pipefail
 BASE="${MOS_BASE_URL:-https://mos.gds.edu.vn}"
-APP="/Applications/MOS Dock.app"
+APP="/Applications/MOS-KulKul.app"
 SELF="${BASH_SOURCE[0]:-}"
 DIR=""
 if [[ -n "$SELF" && -f "$SELF" ]]; then
@@ -39,7 +39,7 @@ fi
 if [[ -n "$DIR" ]]; then
   xattr -cr "$DIR" >/dev/null 2>&1 || true
 fi
-rm -rf "$APP"
+rm -rf "/Applications/MOS Dock.app" "$APP"
 osacompile -o "$APP" "$SRC/handler.applescript"
 mkdir -p "$APP/Contents/Resources"
 cp "$SRC/mosdock_mac.py" "$APP/Contents/Resources/mosdock_mac.py"
@@ -59,7 +59,7 @@ plist_set() {
     /usr/libexec/PlistBuddy -c "Add :$key $type $value" "$PLIST"
   fi
 }
-plist_set CFBundleName string "MOS Dock"
+plist_set CFBundleName string "MOS-KulKul"
 plist_set CFBundleIdentifier string vn.edu.gds.mosdock
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
@@ -67,7 +67,7 @@ fi
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
 fi
-plist_set "CFBundleURLTypes:0:CFBundleURLName" string "MOS Dock"
+plist_set "CFBundleURLTypes:0:CFBundleURLName" string "MOS-KulKul"
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
 fi
@@ -78,6 +78,6 @@ else
 fi
 
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" || true
-open -a "MOS Dock" || true
-osascript -e 'display dialog "Đã cài MOS Dock vào Applications (KulKul). Cho phép Accessibility, rồi vào mos.gds.edu.vn." buttons {"OK"} default button 1' >/dev/null 2>&1 || true
+open -a "MOS-KulKul" || true
+osascript -e 'display dialog "Đã cài MOS-KulKul vào Applications. Cho phép Accessibility, rồi mở MOS-KulKul để đăng nhập." buttons {"OK"} default button 1' >/dev/null 2>&1 || true
 echo "Installed $APP"

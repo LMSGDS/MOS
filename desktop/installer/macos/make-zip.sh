@@ -3,8 +3,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/desktop/MosDockMac"
-STAGE="$ROOT/dist-mac/MOS-Dock-macOS"
-ZIP="$ROOT/dist-installer/MOS-Dock-Setup-macOS.zip"
+STAGE="$ROOT/dist-mac/MOS-KulKul-macOS"
+ZIP="$ROOT/dist-installer/MOS-KulKul-Setup-macOS.zip"
 INSTALL="$ROOT/desktop/installer/macos/install.sh"
 
 rm -rf "$STAGE"
@@ -12,19 +12,17 @@ mkdir -p "$STAGE/Files" "$ROOT/dist-installer"
 cp "$SRC/mosdock_mac.py" "$STAGE/Files/mosdock_mac.py"
 cp "$SRC/handler.applescript" "$STAGE/Files/handler.applescript"
 cp "$SRC/Info.plist.url.fragment" "$STAGE/Files/Info.plist"
-cp "$INSTALL" "$STAGE/Cai MOS Dock.command"
-chmod 755 "$STAGE/Cai MOS Dock.command"
+cp "$INSTALL" "$STAGE/Cai MOS-KulKul.command"
+chmod 755 "$STAGE/Cai MOS-KulKul.command"
 
 cat > "$STAGE/HUONG-DAN.txt" << 'EOF'
-MOS Dock / KulKul cho macOS
-
-macOS sẽ chặn gói .pkg vì chưa được Apple ký. Dùng zip này:
+MOS-KulKul cho macOS
 
 1. Giải nén.
-2. Chuột phải "Cai MOS Dock.command" → Mở → Mở
+2. Chuột phải "Cai MOS-KulKul.command" → Mở → Mở
    (đừng nhấp đúp nếu Mac báo Move to Trash).
-3. Cho phép MOS Dock trong Cài đặt hệ thống → Quyền riêng tư → Accessibility.
-4. Vào https://mos.gds.edu.vn chọn Word / Excel / PowerPoint.
+3. Cho phép MOS-KulKul trong Cài đặt hệ thống → Quyền riêng tư → Accessibility.
+4. Mở MOS-KulKul, chọn Word/Excel/PowerPoint rồi đăng nhập.
 
 Hoặc mở Terminal và chạy:
 curl -fsSL https://mos.gds.edu.vn/cai-dat/macos.sh | bash

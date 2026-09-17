@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/desktop/MosDockMac"
 OUT="$ROOT/dist-mac"
-APP="$OUT/MOS Dock.app"
+APP="$OUT/MOS-KulKul.app"
 PKG="$ROOT/dist-installer/MOS-Dock-Setup-macOS.pkg"
 PLIST_SRC="$SRC/Info.plist.url.fragment"
 
@@ -27,13 +27,13 @@ plist_set() {
   fi
 }
 
-plist_set CFBundleName string "MOS Dock"
-plist_set CFBundleDisplayName string "MOS Dock"
+plist_set CFBundleName string "MOS-KulKul"
+plist_set CFBundleDisplayName string "MOS-KulKul"
 plist_set CFBundleIdentifier string vn.edu.gds.mosdock
 plist_set CFBundleVersion string 1.0.0
 plist_set CFBundleShortVersionString string 1.0
 plist_set LSMinimumSystemVersion string 11.0
-plist_set NSAppleEventsUsageDescription string "MOS Dock cần điều khiển cửa sổ Microsoft Word, Excel và PowerPoint."
+plist_set NSAppleEventsUsageDescription string "MOS-KulKul cần điều khiển cửa sổ Microsoft Word, Excel và PowerPoint."
 
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
@@ -41,7 +41,7 @@ fi
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" "$PLIST"
 fi
-plist_set "CFBundleURLTypes:0:CFBundleURLName" string "MOS Dock"
+plist_set "CFBundleURLTypes:0:CFBundleURLName" string "MOS-KulKul"
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" "$PLIST"
 fi
@@ -60,7 +60,7 @@ mkdir -p "$SCRIPTS"
 cat > "$SCRIPTS/postinstall" << 'EOF'
 #!/bin/bash
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" || true
-open -a "MOS Dock" || true
+open -a "MOS-KulKul" || true
 exit 0
 EOF
 chmod 755 "$SCRIPTS/postinstall"

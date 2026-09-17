@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Đăng nhập · MOS GDS{% endblock %}
+{% block title %}Đăng nhập · MOS-KulKul{% endblock %}
 {% block bodyclass %}login-page{% endblock %}
 {% block body %}
 <nav class="program-menu" aria-label="Chọn chương trình">
@@ -17,8 +17,8 @@
   </div>
 </nav>
 <section class="card login">
-  <h1>Đăng nhập MOS</h1>
-  <p class="lead">Dùng tài khoản nhà trường. Chương trình đã chọn: <strong id="program-chosen">{{ program.name }}</strong>.</p>
+  <h1>Đăng nhập MOS-KulKul</h1>
+  <p class="lead">Đăng nhập ngay trên MOS-KulKul. Chương trình đã chọn: <strong id="program-chosen">{{ program.name }}</strong>.</p>
   {% if error %}
   <p class="alert" role="alert">Tên đăng nhập hoặc mật khẩu không đúng.</p>
   {% endif %}
@@ -28,7 +28,7 @@
     <input id="username" name="username" required autofocus />
     <label for="password">Mật khẩu</label>
     <input id="password" name="password" type="password" required />
-    <p><a class="linkish" href="/cai-dat">Cài MOS Dock tự động — Windows Setup.exe và macOS .zip</a></p>
+    <p><a class="linkish" href="/cai-dat">Cài MOS-KulKul — Windows Setup.exe và macOS .zip</a></p>
     <button type="submit">Đăng nhập</button>
   </form>
 </section>

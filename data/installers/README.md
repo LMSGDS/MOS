@@ -1,4 +1,4 @@
-# Place CI artifacts here on the school server so /cai-dat can serve them:
-#   MOS-Dock-Setup-Windows.exe
-#   MOS-Dock-Setup-macOS.zip   (default Mac installer — unsigned .pkg is blocked by Gatekeeper)
-#   MOS-Dock-Setup-macOS.pkg   (optional; Apple will refuse unless notarized)
+# Place CI artifacts here so /cai-dat can serve them:
+#   MOS-KulKul-Setup-Windows.exe
+#   MOS-KulKul-Setup-macOS.zip
+#   MOS-KulKul-Setup-macOS.pkg  (optional; Gatekeeper blocks unsigned pkg)

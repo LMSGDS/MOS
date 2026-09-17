@@ -9,11 +9,14 @@ static class Protocol
     public static void Register()
     {
         var exe = Application.ExecutablePath;
-        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + Name);
-        key.SetValue("", "URL:MOS Dock");
-        key.SetValue("URL Protocol", "");
-        using var cmd = key.CreateSubKey(@"shell\open\command");
-        cmd.SetValue("", $"\"{exe}\" \"%1\"");
+        foreach (var name in new[] { Name, "mos-kulkul" })
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + name);
+            key.SetValue("", "URL:MOS-KulKul");
+            key.SetValue("URL Protocol", "");
+            using var cmd = key.CreateSubKey(@"shell\open\command");
+            cmd.SetValue("", $"\"{exe}\" \"%1\"");
+        }
     }
 
     public static (string? State, string? App, bool Launch, string? File) Parse(string[] args)
@@ -78,7 +81,8 @@ static class Protocol
                 continue;
             }
 
-            if (arg.StartsWith(Name + ":", StringComparison.OrdinalIgnoreCase))
+            if (arg.StartsWith(Name + ":", StringComparison.OrdinalIgnoreCase)
+                || arg.StartsWith("mos-kulkul:", StringComparison.OrdinalIgnoreCase))
             {
                 launch = launch || arg.Contains(":open", StringComparison.OrdinalIgnoreCase);
                 state = QueryValue(arg, "state") ?? state;

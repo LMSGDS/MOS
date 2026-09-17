@@ -1,4 +1,4 @@
-name: Build MOS Dock
+name: Build MOS-KulKul
 
 on:
   push:
@@ -22,13 +22,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - name: Publish MosDock.exe
+      - name: Publish MOS-KulKul.exe
         run: |
           dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
           Copy-Item desktop/installer/windows/install.ps1 dist-win/
           $loader = Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Select-Object -First 1
           if (-not $loader) { throw "WebView2Loader.dll missing after publish" }
           Copy-Item $loader.FullName (Join-Path dist-win "WebView2Loader.dll") -Force
+          if (-not (Test-Path dist-win\MOS-KulKul.exe)) { throw "MOS-KulKul.exe missing after publish" }
           Get-ChildItem dist-win -Recurse -Filter WebView2Loader.dll | Format-Table FullName, Length
       - name: Compile Inno Setup installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
@@ -37,10 +38,10 @@ jobs:
           options: /DDist="${{ github.workspace }}\dist-win"
       - uses: actions/upload-artifact@v4
         with:
-          name: MOS-Dock-Setup-Windows
+          name: MOS-KulKul-Setup-Windows
           path: |
-            dist-installer/MOS-Dock-Setup-Windows.exe
-            dist-win/MosDock.exe
+            dist-installer/MOS-KulKul-Setup-Windows.exe
+            dist-win/MOS-KulKul.exe
             dist-win/install.ps1
 
   macos-zip:
@@ -52,8 +53,8 @@ jobs:
         run: bash desktop/installer/macos/make-zip.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: MOS-Dock-Setup-macOS-zip
-          path: dist-installer/MOS-Dock-Setup-macOS.zip
+          name: MOS-KulKul-Setup-macOS-zip
+          path: dist-installer/MOS-KulKul-Setup-macOS.zip
 
   macos:
     name: macOS Setup.pkg
