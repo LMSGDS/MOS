@@ -1,10 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Đăng nhập · MOS-KulKul{% endblock %}
+{% block title %}Đăng nhập MOS-KulKul{% endblock %}
 {% block bodyclass %}login-page{% endblock %}
-{% block body %}
-<section class="card login">
-  <h1>Đăng nhập MOS-KulKul</h1>
-  <p class="lead">Web dùng để đăng nhập và quản trị. Chọn Microsoft Word, Excel hoặc PowerPoint chỉ trong <strong>MOS-KulKul đã cài trên máy</strong> — không dùng Office Online.</p>
+{% block chrome %}
+<main>
+<section class="login-sms" aria-labelledby="login-mark">
+  <h1 id="login-mark" class="login-mark">MOS-KulKul</h1>
+  <p class="login-tag">Hệ thống luyện thi MOS</p>
   {% if error %}
   <p class="alert" role="alert">Tên đăng nhập hoặc mật khẩu không đúng.</p>
   {% endif %}
@@ -12,10 +13,33 @@
     <label for="username">Tài khoản</label>
     <input id="username" name="username" required autofocus />
     <label for="password">Mật khẩu</label>
-    <input id="password" name="password" type="password" required />
-    <p><a class="linkish" href="/cai-dat">Cài MOS-KulKul — Windows Setup.exe và macOS .zip</a></p>
-    <p><a class="linkish" href="/quan-tri">Giáo viên / BGH: bảng điều khiển web</a></p>
+    <div class="login-pass">
+      <input id="password" name="password" type="password" required />
+      <button type="button" class="login-eye" id="login-eye" aria-controls="password">Hiện</button>
+    </div>
+    <label class="visually-hidden" for="lang">Ngôn ngữ</label>
+    <select id="lang" name="lang" aria-label="Ngôn ngữ">
+      <option selected>Tiếng Việt</option>
+    </select>
     <button type="submit">Đăng nhập</button>
   </form>
+  <p class="login-note">Tài khoản nhà trường. Bài MOS mở trên Office đã cài trên máy — không dùng Office Online.</p>
+  <p class="login-foot">
+    <a href="https://mos.gds.edu.vn">Trợ giúp</a>
+    <a href="/cai-dat">Tải MOS-KulKul</a>
+  </p>
 </section>
+</main>
+<script>
+(function () {
+  var eye = document.getElementById("login-eye");
+  var box = document.getElementById("password");
+  if (!eye || !box) return;
+  eye.addEventListener("click", function () {
+    var show = box.type === "password";
+    box.type = show ? "text" : "password";
+    eye.textContent = show ? "Ẩn" : "Hiện";
+  });
+})();
+</script>
 {% endblock %}

@@ -21,6 +21,8 @@ static class Ui
     public static readonly Color Excel = Color.FromArgb(33, 115, 70);
     public static readonly Color Ppt = Color.FromArgb(183, 71, 42);
     public static readonly Color Warning = Color.FromArgb(189, 107, 0);
+    public static readonly Color SignIn = Color.FromArgb(11, 37, 69);
+    public static readonly Color SignInHover = Color.FromArgb(8, 28, 54);
 
     public static Color Navy => Nav;
     public static Color Blue => Primary;
@@ -137,6 +139,58 @@ static class Ui
         btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 44, 52);
         btn.Height = 36;
         return btn;
+    }
+
+    public static Button SignInBtn(string text)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = false,
+            Height = 48,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = SignIn,
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = SignInHover;
+        return btn;
+    }
+
+    public static void RoundControl(Control control, int radius)
+    {
+        void Apply(object? _, EventArgs e)
+        {
+            if (control.Width < 4 || control.Height < 4)
+            {
+                return;
+            }
+
+            using var path = RoundedRect(new Rectangle(0, 0, control.Width, control.Height), radius);
+            var next = new Region(path);
+            var prev = control.Region;
+            control.Region = next;
+            prev?.Dispose();
+        }
+
+        control.Resize += Apply;
+        Apply(null, EventArgs.Empty);
+    }
+
+    public static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        var d = Math.Max(2, radius * 2);
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+        path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+        path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+        path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     public static Button GhostBtn(string text, int minWidth = 120)

@@ -6,6 +6,7 @@ def test_login_page():
     r = c.get("/dang-nhap")
     assert r.status_code == 200
     assert "Đăng nhập MOS-KulKul" in r.text
+    assert "Hệ thống luyện thi MOS" in r.text
     assert "program-menu" not in r.text
     assert "data-program" not in r.text
     assert "program-tile" not in r.text
@@ -13,6 +14,7 @@ def test_login_page():
     assert "login.js" not in r.text
     assert "/cai-dat" in r.text
     assert "đã cài trên máy" in r.text
+    assert "Tải MOS-KulKul" in r.text
 
 
 def test_api_login_and_programs():
