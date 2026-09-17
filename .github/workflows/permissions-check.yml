@@ -1,0 +1,29 @@
+name: Check GitHub permissions
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    name: Report token access
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Probe repository permissions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "Actor: ${GITHUB_ACTOR}"
+          echo "Event: ${GITHUB_EVENT_NAME}"
+          echo "Ref: ${GITHUB_REF}"
+          gh api "/repos/${GITHUB_REPOSITORY}" --jq '{name, private, default_branch: .default_branch, permissions}'
+          echo "contents:write is requested by this workflow. If the probe above shows push=false, set Settings → Actions → General → Workflow permissions to Read and write."

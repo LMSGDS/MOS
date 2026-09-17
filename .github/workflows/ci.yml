@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate GitHub automation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Check auto-commit script
+        run: |
+          test -x scripts/auto-commit.sh || chmod +x scripts/auto-commit.sh
+          bash -n scripts/auto-commit.sh
+          test -f .github/workflows/auto-commit.yml
+          echo "GitHub auto-commit setup is present."
