@@ -87,7 +87,7 @@ def test_layout_api_side_docks_leave_word_visible():
     assert compact["word"]["h"] == 1040 - 96
 
 
-def test_gmetrix_home_after_login():
+def test_kulkul_home_after_login():
     c = TestClient(app)
     r = c.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"}, follow_redirects=True)
     assert r.status_code == 200
@@ -98,7 +98,7 @@ def test_gmetrix_home_after_login():
     assert "Mở rộng đề" in r.text
     assert "word-sim" in r.text
     assert "office.com" not in r.text.lower()
-    assert "gmetrix.js" in r.text
+    assert "kulkul.js" in r.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
@@ -109,7 +109,7 @@ def test_gmetrix_home_after_login():
     assert "mosdock:open" in js
     assert "Macintosh" in js
     assert "hasNativeDock" in js
-    assert "mosdock:place" in c.get("/static/gmetrix.js").text
+    assert "mosdock:place" in c.get("/static/kulkul.js").text
     assert "ms-excel:" in js or "data-protocol" in inner.text
 
 

@@ -6,14 +6,14 @@
   <title>MOS Dock · {{ program.short }}</title>
   <link rel="stylesheet" href="/static/mos.css" />
 </head>
-<body class="gmetrix" data-app="{{ program.id }}" style="--app-color: {{ program.color }}">
+<body class="kulkul" data-app="{{ program.id }}" style="--app-color: {{ program.color }}">
   <div id="word-sim" class="word-sim app-{{ program.id }}" aria-label="Cửa sổ {{ program.name }}">
     <div id="word-sim-bar" class="word-sim-bar">{{ program.sim_title }} — vị trí đã chọn</div>
     <div class="word-sim-page">{{ program.sim_hint }}</div>
   </div>
-  <aside id="dock" class="gmetrix-dock" aria-label="Khung mini-browser MOS">
-    <div class="gmetrix-bar">
-      <span class="gmetrix-brand">MOS Dock · {{ program.short }}</span>
+  <aside id="dock" class="kulkul-dock" aria-label="Khung mini-browser MOS">
+    <div class="kulkul-bar">
+      <span class="kulkul-brand">MOS Dock · {{ program.short }}</span>
       <nav class="program-switch" aria-label="Chương trình">
         {% for item in programs %}
         <a class="program-mini {{ item.id }}" href="/?chuong-trinh={{ item.id }}"
@@ -30,6 +30,6 @@
     </div>
     <iframe title="Mini-browser MOS" src="/khung/office?chuong-trinh={{ program.id }}"></iframe>
   </aside>
-  <script src="/static/gmetrix.js"></script>
+  <script src="/static/kulkul.js"></script>
 </body>
 </html>

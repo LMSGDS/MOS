@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth import authenticate
-from app.gmetrix_layout import Rect, compute
+from app.kulkul_layout import Rect, compute
 from app.programs import MENU, normalize, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -114,7 +114,7 @@ def home(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
-    template = "dock_content.html" if _is_dock(request) else "gmetrix.html"
+    template = "dock_content.html" if _is_dock(request) else "kulkul.html"
     return TEMPLATES.TemplateResponse(request, template, _ctx(request))
 
 

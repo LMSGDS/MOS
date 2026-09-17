@@ -15,7 +15,7 @@ Nút **Mở … trên máy** gọi protocol Office tương ứng. Nút tạo t�
 
 Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/etc/ssl/cloudflare/mos.gds.edu.vn.pem` và `.key`, rồi dùng `deploy/nginx-mos.gds.edu.vn.conf`.
 
-## MOS Dock (hành vi GMetrix)
+## MOS Dock (hành vi KulKul)
 
 Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm ở **đáy màn hình**. Thanh điều khiển: **Thu nhỏ**, **Đính trái**, **Đính phải** (và **Đính đáy** để trở về mặc định).
 

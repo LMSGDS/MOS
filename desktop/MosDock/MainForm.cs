@@ -36,7 +36,7 @@ sealed class MainForm : Form
 
         var title = new Label
         {
-            Text = "MOS · GMetrix",
+            Text = "MOS · KulKul",
             ForeColor = Color.White,
             AutoSize = true,
             Location = new Point(8, 10),

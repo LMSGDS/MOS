@@ -1,4 +1,4 @@
-from app.gmetrix_layout import Rect, compute, overlap
+from app.kulkul_layout import Rect, compute, overlap
 
 WORK = Rect(0, 0, 1920, 1040)  # 1080p trừ taskbar
 
