@@ -25,6 +25,9 @@ def test_install_page_lists_windows_and_macos():
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
     assert "/cai-dat/macos" in r.text
+    assert "MOS-Dock-Setup-macOS.zip" in r.text
+    assert "Cai MOS Dock.command" in r.text
+    assert "macos.sh" in r.text
     missing = c.get("/cai-dat/windows")
     if (INSTALLER_DIR / "MOS-Dock-Setup-Windows.exe").is_file():
         assert missing.status_code == 200
@@ -38,8 +41,18 @@ def test_install_page_lists_windows_and_macos():
     )
     if mac_ready:
         assert missing_mac.status_code == 200
+        if (INSTALLER_DIR / "MOS-Dock-Setup-macOS.zip").is_file():
+            assert "zip" in missing_mac.headers.get("content-disposition", "").lower()
     else:
         assert missing_mac.status_code == 404
+    sh = c.get("/cai-dat/macos.sh")
+    assert sh.status_code == 200
+    assert "osacompile" in sh.text
+    assert "MOS Dock.app" in sh.text
+    src = c.get("/cai-dat/macos-files/mosdock_mac.py")
+    assert src.status_code == 200
+    assert "17331" in src.text
+    assert c.get("/cai-dat/macos-files/secret").status_code == 404
 
 
 def test_home_requires_login():

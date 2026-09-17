@@ -6,7 +6,7 @@ import secrets
 from pathlib import Path
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -33,7 +33,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul2")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul3")
 SESSION_SECRET = _session_secret()
 
 app = FastAPI(title="MOS GDS", docs_url=None, redoc_url=None)
@@ -179,7 +179,7 @@ def _installer_file(*names: str) -> Path | None:
     return None
 
 
-def _send_installer(*names: str, media: str):
+def _send_installer(*names: str, media: str | None = None):
     path = _installer_file(*names)
     if path is None:
         listed = " / ".join(names)
@@ -187,7 +187,14 @@ def _send_installer(*names: str, media: str):
             f"Chưa có {listed} trên server. Copy artifact CI vào data/installers/.",
             status_code=404,
         )
-    return FileResponse(path, media_type=media, filename=path.name)
+    chosen = media
+    if path.suffix == ".zip":
+        chosen = "application/zip"
+    elif path.suffix == ".exe":
+        chosen = "application/vnd.microsoft.portable-executable"
+    elif path.suffix == ".pkg":
+        chosen = "application/octet-stream"
+    return FileResponse(path, media_type=chosen or "application/octet-stream", filename=path.name)
 
 
 @app.get("/cai-dat/windows")
@@ -201,10 +208,39 @@ def install_windows():
 @app.get("/cai-dat/macos")
 def install_macos():
     return _send_installer(
-        "MOS-Dock-Setup-macOS.pkg",
         "MOS-Dock-Setup-macOS.zip",
+        "MOS-Dock-Setup-macOS.pkg",
+        media="application/zip",
+    )
+
+
+@app.get("/cai-dat/macos-pkg")
+def install_macos_pkg():
+    return _send_installer(
+        "MOS-Dock-Setup-macOS.pkg",
         media="application/octet-stream",
     )
+
+
+@app.get("/cai-dat/macos.sh")
+def install_macos_sh():
+    path = ROOT / "desktop" / "installer" / "macos" / "install.sh"
+    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/plain; charset=utf-8")
+
+
+_MACOS_FILES = {
+    "mosdock_mac.py": ROOT / "desktop" / "MosDockMac" / "mosdock_mac.py",
+    "handler.applescript": ROOT / "desktop" / "MosDockMac" / "handler.applescript",
+    "Info.plist": ROOT / "desktop" / "MosDockMac" / "Info.plist.url.fragment",
+}
+
+
+@app.get("/cai-dat/macos-files/{name}")
+def install_macos_file(name: str):
+    path = _MACOS_FILES.get(name)
+    if path is None or not path.is_file():
+        return HTMLResponse("Not found", status_code=404)
+    return FileResponse(path, filename=name)
 
 
 @app.post("/dang-xuat")

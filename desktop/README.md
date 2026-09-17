@@ -9,8 +9,8 @@ CI (Actions → **Build MOS Dock**) tạo:
 | Nền tảng | File |
 | --- | --- |
 | Windows | `MOS-Dock-Setup-Windows.exe` — cài per-user, đăng ký `mosdock:`, chạy cùng Windows |
-| macOS | `MOS-Dock-Setup-macOS.pkg` — cài vào `/Applications/MOS Dock.app` |
-| macOS (zip) | `MOS-Dock-Setup-macOS.zip` — giải nén, chạy `Cai MOS Dock.command` |
+| macOS | `MOS-Dock-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS Dock.command` → Mở |
+| macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple; không dùng làm mặc định |
 
 Copy vào `data/installers/` trên server rồi học sinh tải tại `/cai-dat`.
 
