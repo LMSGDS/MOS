@@ -30,7 +30,7 @@ function currentApp() {
   return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
-function placeWordOnPc(state) {
+function placeWordOnPc(state, useProtocol) {
   const s = state || currentState();
   const app = currentApp();
   sessionStorage.setItem("mos-app", app);
@@ -38,10 +38,12 @@ function placeWordOnPc(state) {
     method: "POST",
     mode: "cors",
   }).catch(() => {});
-  openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}`);
+  if (useProtocol) {
+    openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}`);
+  }
 }
 
-async function applyLayout(state, place) {
+async function applyLayout(state, place, useProtocol) {
   const wa = workArea();
   const url = `/api/layout?state=${encodeURIComponent(state)}&x=${wa.x}&y=${wa.y}&w=${wa.w}&h=${wa.h}`;
   const data = await fetch(url).then((r) => r.json());
@@ -61,16 +63,16 @@ async function applyLayout(state, place) {
   }
   if (place) {
     sim.classList.add("is-target");
-    placeWordOnPc(state);
+    placeWordOnPc(state, useProtocol);
   }
 }
 
 document.querySelectorAll("[data-dock]").forEach((btn) => {
-  btn.addEventListener("click", () => applyLayout(btn.getAttribute("data-dock"), true));
+  btn.addEventListener("click", () => applyLayout(btn.getAttribute("data-dock"), true, false));
 });
 
 document.getElementById("btn-place-word")?.addEventListener("click", () => {
-  applyLayout(currentState(), true);
+  applyLayout(currentState(), true, true);
 });
 
 window.addEventListener("message", (ev) => {
@@ -80,7 +82,7 @@ window.addEventListener("message", (ev) => {
       document.body.dataset.app = ev.data.app;
       sessionStorage.setItem("mos-app", ev.data.app);
     }
-    applyLayout(ev.data.state || currentState(), true);
+    applyLayout(ev.data.state || currentState(), true, true);
   }
 });
 
