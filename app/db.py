@@ -20,7 +20,12 @@ def database_url() -> str:
 
 
 def connect() -> psycopg.Connection:
-    return psycopg.connect(database_url(), row_factory=dict_row, autocommit=False)
+    return psycopg.connect(
+        database_url(),
+        row_factory=dict_row,
+        autocommit=False,
+        client_encoding="UTF8",
+    )
 
 
 @contextmanager
@@ -39,7 +44,7 @@ def cursor():
 
 def init_schema() -> None:
     sql = SCHEMA.read_text(encoding="utf-8")
-    conn = psycopg.connect(database_url(), autocommit=True)
+    conn = psycopg.connect(database_url(), autocommit=True, client_encoding="UTF8")
     try:
         conn.execute(sql)
     finally:

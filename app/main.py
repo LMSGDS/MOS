@@ -49,7 +49,7 @@ async def lifespan(_app: FastAPI):
         init_schema()
         seed()
     except Exception as exc:
-        print("PostgreSQL chưa sẵn sàng:", exc)
+        print("PostgreSQL chua san sang:", exc)
     yield
 
 
