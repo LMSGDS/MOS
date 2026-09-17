@@ -189,3 +189,8 @@ def seed() -> None:
                     p.get("source_sha256"),
                 ),
             )
+    print("seeded")
+
+
+if __name__ == "__main__":
+    seed()
