@@ -3,24 +3,23 @@
 {% block body %}
 <section class="card hero" style="width:min(720px,100%)">
   <h1>Cài MOS Dock tự động</h1>
-  <p class="lead">Trình duyệt không kéo được cửa sổ Word / Excel / PowerPoint. Cài plugin MOS Dock một lần trên máy — Windows dùng Setup.exe, macOS dùng gói .pkg.</p>
+  <p class="lead">Trình duyệt không kéo được cửa sổ Word / Excel / PowerPoint. Cài plugin MOS Dock một lần trên máy — Windows dùng Setup.exe, macOS dùng gói .pkg hoặc file .zip.</p>
   <div class="actions" style="flex-direction:row;flex-wrap:wrap;gap:12px">
     <a class="primary" href="/cai-dat/windows" style="text-align:center;text-decoration:none">Tải cài đặt Windows (.exe)</a>
-    <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải cài đặt macOS (.pkg)</a>
+    <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải cài đặt macOS (.pkg / .zip)</a>
   </div>
   <h2 style="margin-top:28px;font-size:18px">Windows</h2>
   <ol class="lead">
-    <li>Chạy <strong>MOS-Dock-Setup-Windows.exe</strong> (không cần Admin).</li>
+    <li>Tải và chạy <strong>MOS-Dock-Setup-Windows.exe</strong> (không cần Admin).</li>
     <li>Cài xong MOS Dock tự mở, đăng ký protocol <code>mosdock:</code>, chạy cùng Windows.</li>
     <li>Vào lại MOS, chọn Word/Excel/PowerPoint, bấm mở trên máy.</li>
   </ol>
   <h2 style="margin-top:20px;font-size:18px">macOS</h2>
   <ol class="lead">
-    <li>Mở <strong>MOS-Dock-Setup-macOS.pkg</strong>, cài vào Applications.</li>
+    <li>Tải <strong>MOS-Dock-Setup-macOS.pkg</strong> (hoặc file .zip). Nếu là zip: giải nén rồi nhấp đúp <strong>Cai MOS Dock.command</strong>.</li>
     <li>Cho phép MOS Dock trong <strong>Cài đặt hệ thống → Quyền riêng tư → Accessibility</strong> (để kéo cửa sổ Office).</li>
     <li>Nếu macOS chặn app chưa ký: chuột phải → Mở.</li>
   </ol>
-  <p class="hint">Nếu nút tải báo chưa có file: lấy artifact CI <strong>MOS-Dock-Setup-Windows</strong> / <strong>MOS-Dock-Setup-macOS</strong> rồi copy vào <code>data/installers/</code> trên server.</p>
   <p><a class="linkish" href="/dang-nhap">← Về đăng nhập</a></p>
 </section>
 {% endblock %}

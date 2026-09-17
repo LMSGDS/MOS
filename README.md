@@ -22,7 +22,7 @@ Hệ thống khởi tạo khung mini-browser **TopMost**. Mặc định nằm �
 Sau khi **Mở Word/Excel/PowerPoint trên máy**, MOS Dock chờ cửa sổ hiện ra rồi kéo vào ô còn lại. Cần **cài plugin** một lần:
 
 - Windows: [`MOS-Dock-Setup-Windows.exe`](/cai-dat/windows)
-- macOS: [`MOS-Dock-Setup-macOS.pkg`](/cai-dat/macos)
+- macOS: [`MOS-Dock-Setup-macOS.pkg` / `.zip`](/cai-dat/macos)
 
 Trang hướng dẫn: `/cai-dat`. CI đóng gói installer (Actions → Build MOS Dock). Copy artifact vào `data/installers/` trên server.
 
@@ -30,7 +30,7 @@ Trang hướng dẫn: `/cai-dat`. CI đóng gói installer (Actions → Build MO
 | --- | --- |
 | Trình duyệt | `/` mô phỏng layout; `/cai-dat` tải bộ cài |
 | Windows | Setup.exe → MosDock.exe TopMost + `SetWindowPos` |
-| macOS | .pkg → MOS Dock.app + AppleScript/Accessibility |
+| macOS | .pkg hoặc .zip → MOS Dock.app + AppleScript/Accessibility |
 
 Không dùng Office Online. Chi tiết: [`desktop/README.md`](desktop/README.md).
 

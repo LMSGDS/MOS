@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from app.main import app
+from app.main import INSTALLER_DIR, app
 
 def test_login_page():
     c = TestClient(app)
@@ -22,11 +22,24 @@ def test_install_page_lists_windows_and_macos():
     assert "Windows" in r.text
     assert "macOS" in r.text
     assert "MOS-Dock-Setup-Windows.exe" in r.text
-    assert "MOS-Dock-Setup-macOS.pkg" in r.text
+    assert "macOS" in r.text
+    assert "/cai-dat/windows" in r.text
+    assert "/cai-dat/macos" in r.text
     missing = c.get("/cai-dat/windows")
-    assert missing.status_code == 404
+    if (INSTALLER_DIR / "MOS-Dock-Setup-Windows.exe").is_file():
+        assert missing.status_code == 200
+        assert missing.headers.get("content-disposition", "").lower().find("windows") >= 0
+    else:
+        assert missing.status_code == 404
     missing_mac = c.get("/cai-dat/macos")
-    assert missing_mac.status_code == 404
+    mac_ready = any(
+        (INSTALLER_DIR / name).is_file()
+        for name in ("MOS-Dock-Setup-macOS.pkg", "MOS-Dock-Setup-macOS.zip")
+    )
+    if mac_ready:
+        assert missing_mac.status_code == 200
+    else:
+        assert missing_mac.status_code == 404
 
 
 def test_home_requires_login():

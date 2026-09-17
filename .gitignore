@@ -15,6 +15,7 @@ data/session.secret
 data/mos.env
 data/installers/*.exe
 data/installers/*.pkg
+data/installers/*.zip
 dist-win/
 dist-mac/
 dist-installer/

@@ -10,6 +10,7 @@ CI (Actions → **Build MOS Dock**) tạo:
 | --- | --- |
 | Windows | `MOS-Dock-Setup-Windows.exe` — cài per-user, đăng ký `mosdock:`, chạy cùng Windows |
 | macOS | `MOS-Dock-Setup-macOS.pkg` — cài vào `/Applications/MOS Dock.app` |
+| macOS (zip) | `MOS-Dock-Setup-macOS.zip` — giải nén, chạy `Cai MOS Dock.command` |
 
 Copy vào `data/installers/` trên server rồi học sinh tải tại `/cai-dat`.
 
@@ -25,6 +26,7 @@ dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
 
 ```bash
 bash desktop/installer/macos/build-pkg.sh
+# hoặc trên Linux: bash desktop/installer/macos/make-zip.sh
 ```
 
 Sau khi cài Mac: **System Settings → Privacy & Security → Accessibility** → bật MOS Dock.

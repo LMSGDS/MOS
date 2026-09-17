@@ -166,24 +166,43 @@ def install_page(request: Request):
     return TEMPLATES.TemplateResponse(request, "install.html", _ctx(request))
 
 
-def _send_installer(filename: str, media: str):
-    path = ROOT / "data" / "installers" / filename
-    if not path.is_file():
+INSTALLER_DIR = ROOT / "data" / "installers"
+
+
+def _installer_file(*names: str) -> Path | None:
+    for name in names:
+        path = INSTALLER_DIR / name
+        if path.is_file() and path.stat().st_size > 0:
+            return path
+    return None
+
+
+def _send_installer(*names: str, media: str):
+    path = _installer_file(*names)
+    if path is None:
+        listed = " / ".join(names)
         return HTMLResponse(
-            f"Chưa có {filename} trên server. Copy artifact CI vào data/installers/.",
+            f"Chưa có {listed} trên server. Copy artifact CI vào data/installers/.",
             status_code=404,
         )
-    return FileResponse(path, media_type=media, filename=filename)
+    return FileResponse(path, media_type=media, filename=path.name)
 
 
 @app.get("/cai-dat/windows")
 def install_windows():
-    return _send_installer("MOS-Dock-Setup-Windows.exe", "application/vnd.microsoft.portable-executable")
+    return _send_installer(
+        "MOS-Dock-Setup-Windows.exe",
+        media="application/vnd.microsoft.portable-executable",
+    )
 
 
 @app.get("/cai-dat/macos")
 def install_macos():
-    return _send_installer("MOS-Dock-Setup-macOS.pkg", "application/octet-stream")
+    return _send_installer(
+        "MOS-Dock-Setup-macOS.pkg",
+        "MOS-Dock-Setup-macOS.zip",
+        media="application/octet-stream",
+    )
 
 
 @app.post("/dang-xuat")
