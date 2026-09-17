@@ -99,6 +99,8 @@ def test_kulkul_home_after_login():
     assert "word-sim" in r.text
     assert "office.com" not in r.text.lower()
     assert "kulkul.js" in r.text
+    assert "KulKul" in r.text
+    assert "GMetrix" not in r.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
@@ -135,5 +137,6 @@ def test_dock_mode_hides_simulated_word():
     c.get("/dang-nhap?che-do=dock")
     r = c.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"}, follow_redirects=True)
     assert r.status_code == 200
-    assert "mini-browser" in r.text
+    assert "KulKul" in r.text
+    assert "GMetrix" not in r.text
     assert "word-sim" not in r.text
