@@ -16,15 +16,23 @@ static class Protocol
         cmd.SetValue("", $"\"{exe}\" \"%1\"");
     }
 
-    public static (string? State, string? App) Parse(string[] args)
+    public static (string? State, string? App, bool Launch, string? File) Parse(string[] args)
     {
         string? state = null;
         string? app = null;
+        string? file = null;
+        var launch = false;
         string? pending = null;
         foreach (var arg in args)
         {
             if (string.IsNullOrWhiteSpace(arg))
             {
+                continue;
+            }
+
+            if (arg.Equals("--open", StringComparison.OrdinalIgnoreCase))
+            {
+                launch = true;
                 continue;
             }
 
@@ -42,7 +50,8 @@ static class Protocol
 
             if (arg.Equals("--place", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("--state", StringComparison.OrdinalIgnoreCase)
-                || arg.Equals("--app", StringComparison.OrdinalIgnoreCase))
+                || arg.Equals("--app", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--file", StringComparison.OrdinalIgnoreCase))
             {
                 pending = arg.TrimStart('-').ToLowerInvariant();
                 continue;
@@ -62,14 +71,23 @@ static class Protocol
                 continue;
             }
 
+            if (pending == "file")
+            {
+                file = arg;
+                pending = null;
+                continue;
+            }
+
             if (arg.StartsWith(Name + ":", StringComparison.OrdinalIgnoreCase))
             {
+                launch = launch || arg.Contains(":open", StringComparison.OrdinalIgnoreCase);
                 state = QueryValue(arg, "state") ?? state;
                 app = QueryValue(arg, "app") ?? app;
+                file = QueryValue(arg, "file") ?? file;
             }
         }
 
-        return (state, app);
+        return (state, app, launch, file);
     }
 
     public static string? ParseState(string[] args) => Parse(args).State;

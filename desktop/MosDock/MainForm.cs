@@ -11,13 +11,17 @@ sealed class MainForm : Form
     LocalAgent? _agent;
     string _state;
     string _app;
+    readonly bool _launchOnStart;
+    readonly string? _fileOnStart;
 
     const string Portal = "https://mos.gds.edu.vn/dang-nhap?che-do=dock";
 
-    public MainForm(string? initialState, string? initialApp = null)
+    public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null)
     {
         _state = string.IsNullOrWhiteSpace(initialState) ? "bottom" : initialState.ToLowerInvariant();
         _app = OfficeApp.Resolve(initialApp).Id;
+        _launchOnStart = launchOnStart;
+        _fileOnStart = fileOnStart;
         Text = "MOS Dock";
         FormBorderStyle = FormBorderStyle.None;
         TopMost = true;
@@ -66,13 +70,24 @@ sealed class MainForm : Form
                 _status.Text = "Agent local lỗi: " + ex.Message;
             }
 
+            if (_launchOnStart)
+            {
+                WordWindow.Launch(_app, _fileOnStart);
+            }
+
             ApplyDock(waitForWord: true);
             await _web.EnsureCoreWebView2Async();
             _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             _web.CoreWebView2.WebMessageReceived += (_, e) =>
             {
                 var raw = e.TryGetWebMessageAsString();
-                OnPlaceRequest(ExtractField(raw, "state") ?? _state, ExtractField(raw, "app"));
+                var launch = raw?.Contains("\"open\"", StringComparison.OrdinalIgnoreCase) == true
+                    || raw?.Contains("mos-open", StringComparison.OrdinalIgnoreCase) == true;
+                OnPlaceRequest(
+                    ExtractField(raw, "state") ?? _state,
+                    ExtractField(raw, "app"),
+                    launch,
+                    ExtractField(raw, "file"));
             };
             _web.CoreWebView2.NavigationStarting += (_, e) =>
             {
@@ -81,6 +96,7 @@ sealed class MainForm : Form
                     || e.Uri.StartsWith("ms-powerpoint:", StringComparison.OrdinalIgnoreCase)
                     || e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase))
                 {
+                    e.Cancel = true;
                     if (e.Uri.StartsWith("ms-excel:", StringComparison.OrdinalIgnoreCase))
                     {
                         _app = "excel";
@@ -92,6 +108,28 @@ sealed class MainForm : Form
                     else if (e.Uri.StartsWith("ms-word:", StringComparison.OrdinalIgnoreCase))
                     {
                         _app = "word";
+                    }
+
+                    var launch = !e.Uri.StartsWith("mosdock:place", StringComparison.OrdinalIgnoreCase);
+                    if (e.Uri.StartsWith("mosdock:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var parsed = Protocol.Parse([e.Uri]);
+                        if (!string.IsNullOrWhiteSpace(parsed.App))
+                        {
+                            _app = OfficeApp.Resolve(parsed.App).Id;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(parsed.State))
+                        {
+                            _state = parsed.State;
+                        }
+
+                        launch = parsed.Launch;
+                    }
+
+                    if (launch || e.Uri.StartsWith("ms-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        WordWindow.Launch(_app);
                     }
 
                     ApplyDock(waitForWord: true);
@@ -132,7 +170,7 @@ sealed class MainForm : Form
         _bar.Controls.Add(btn);
     }
 
-    void OnPlaceRequest(string state, string? app = null)
+    void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null)
     {
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right" or "minimized" or "bottom")
@@ -143,6 +181,11 @@ sealed class MainForm : Form
         if (!string.IsNullOrWhiteSpace(app))
         {
             _app = OfficeApp.Resolve(app).Id;
+        }
+
+        if (launch)
+        {
+            WordWindow.Launch(_app, file);
         }
 
         ApplyDock(waitForWord: true);

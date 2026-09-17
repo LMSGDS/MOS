@@ -11,6 +11,10 @@ function currentApp() {
   return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
+function onWindows() {
+  return /Windows/i.test(navigator.userAgent) || !!window.chrome?.webview;
+}
+
 function openProtocol(uri) {
   const hint = document.getElementById("hint");
   if (hint) hint.hidden = false;
@@ -21,11 +25,11 @@ function openProtocol(uri) {
   setTimeout(() => probe.remove(), 4000);
 }
 
-function placeOfficeAfterOpen() {
-  const state = dockState();
-  const app = currentApp();
-  sessionStorage.setItem("mos-app", app);
-  const payload = { type: "mos-place-word", state, app };
+function mosdockOpen(app, state, file) {
+  let uri = `mosdock:open?app=${encodeURIComponent(app)}&state=${encodeURIComponent(state)}`;
+  if (file) uri += `&file=${encodeURIComponent(file)}`;
+  openProtocol(uri);
+  const payload = { type: "mos-place-word", open: true, state, app, file: file || "" };
   try {
     window.parent.postMessage(payload, window.location.origin);
   } catch {
@@ -36,23 +40,34 @@ function placeOfficeAfterOpen() {
   } catch {
     /* not WebView2 */
   }
-  fetch(`http://127.0.0.1:17331/place?state=${encodeURIComponent(state)}&app=${encodeURIComponent(app)}`, {
-    method: "POST",
-    mode: "cors",
-  }).catch(() => {});
-  openProtocol(`mosdock:place?state=${encodeURIComponent(state)}&app=${encodeURIComponent(app)}`);
+  fetch(
+    `http://127.0.0.1:17331/open?app=${encodeURIComponent(app)}&state=${encodeURIComponent(state)}${file ? `&file=${encodeURIComponent(file)}` : ""}`,
+    { method: "POST", mode: "cors" },
+  ).catch(() => {});
+}
+
+function openOfficeOnPc(file) {
+  const app = currentApp();
+  const state = dockState();
+  sessionStorage.setItem("mos-app", app);
+  if (onWindows()) {
+    mosdockOpen(app, state, file);
+    return;
+  }
+  const proto = document.getElementById("btn-word")?.getAttribute("data-protocol") || "ms-word:";
+  if (file) {
+    openProtocol(`${proto.replace(/:$/, "")}:nft|u|${file}`);
+  } else {
+    openProtocol(proto);
+  }
 }
 
 document.getElementById("btn-word")?.addEventListener("click", () => {
-  const proto = document.getElementById("btn-word").getAttribute("data-protocol") || "ms-word:";
-  openProtocol(proto);
-  setTimeout(placeOfficeAfterOpen, 600);
+  openOfficeOnPc();
 });
 
 document.getElementById("btn-doc")?.addEventListener("click", () => {
-  const proto = (document.getElementById("btn-word")?.getAttribute("data-protocol") || "ms-word:").replace(/:$/, "");
-  openProtocol(`${proto}:nft|u|${templateUrl()}`);
-  setTimeout(placeOfficeAfterOpen, 600);
+  openOfficeOnPc(templateUrl());
 });
 
 document.querySelectorAll("[data-cmd]").forEach((btn) => {

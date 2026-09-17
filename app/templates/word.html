@@ -17,8 +17,7 @@
   </div>
   <p class="note">
     {{ program.name }} desktop không chạy bên trong Chrome/Firefox — không dùng Office Online.
-    Nút xanh mở <strong>{{ program.short }} trên máy</strong>, rồi MOS Dock kéo cửa sổ tới vị trí đã chọn.
-    Cần <code>MosDock.exe</code> trên Windows.
+    Nút xanh bảo <strong>MosDock.exe</strong> mở {{ program.short }} trên máy và <strong>kéo cửa sổ đúng vị trí dock</strong> (đáy / trái / phải). Cần chạy MosDock trên Windows.
   </p>
   <div class="paper-wrap">
     <div id="page" class="paper paper-{{ program.paper_kind }}" contenteditable="true" role="textbox" aria-label="Trang soạn thảo MOS">
@@ -28,8 +27,7 @@
     </div>
   </div>
   <p class="hint" id="hint" hidden>
-    Chọn {{ program.name }} khi trình duyệt hỏi mở <code>{{ program.protocol }}</code>.
-    Cửa sổ sẽ được đưa vào ô còn lại trên màn hình (vị trí dock đã chọn).
+    Chọn MOS Dock khi trình duyệt hỏi mở <code>mosdock:</code>. MosDock.exe mở {{ program.name }} rồi kéo cửa sổ đúng ô còn lại trên màn hình.
   </p>
   <script src="/static/mos.js"></script>
 </body>

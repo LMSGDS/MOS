@@ -69,12 +69,13 @@ def test_gmetrix_home_after_login():
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
-    assert "vị trí đã chọn" in inner.text
+    assert "MosDock" in inner.text
     assert inner.headers.get("x-frame-options") == "SAMEORIGIN"
     js = c.get("/static/mos.js").text
     assert "mos-place-word" in js
-    assert "mosdock:place" in js
+    assert "mosdock:open" in js
     assert "17331" in js
+    assert "mosdock:place" in c.get("/static/gmetrix.js").text
     assert "ms-excel:" in js or "data-protocol" in inner.text
 
 

@@ -13,22 +13,27 @@ static class Program
         using var mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word");
+            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word", parsed.Launch, parsed.File);
             return;
         }
 
         ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm(parsed.State, parsed.App));
+        Application.Run(new MainForm(parsed.State, parsed.App, parsed.Launch, parsed.File));
     }
 
-    static void ForwardToRunningInstance(string state, string app)
+    static void ForwardToRunningInstance(string state, string app, bool launch, string? file)
     {
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            http.PostAsync(
-                $"http://127.0.0.1:{LocalAgent.Port}/place?state={Uri.EscapeDataString(state)}&app={Uri.EscapeDataString(app)}",
-                null).GetAwaiter().GetResult();
+            var path = launch ? "open" : "place";
+            var url = $"http://127.0.0.1:{LocalAgent.Port}/{path}?state={Uri.EscapeDataString(state)}&app={Uri.EscapeDataString(app)}";
+            if (!string.IsNullOrWhiteSpace(file))
+            {
+                url += "&file=" + Uri.EscapeDataString(file);
+            }
+
+            http.PostAsync(url, null).GetAwaiter().GetResult();
         }
         catch
         {

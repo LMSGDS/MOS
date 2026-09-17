@@ -30,6 +30,10 @@ function currentApp() {
   return document.body?.dataset?.app || sessionStorage.getItem("mos-app") || "word";
 }
 
+function onWindows() {
+  return /Windows/i.test(navigator.userAgent) || !!window.chrome?.webview;
+}
+
 function placeWordOnPc(state, useProtocol) {
   const s = state || currentState();
   const app = currentApp();
@@ -38,7 +42,7 @@ function placeWordOnPc(state, useProtocol) {
     method: "POST",
     mode: "cors",
   }).catch(() => {});
-  if (useProtocol) {
+  if (useProtocol || onWindows()) {
     openHiddenUri(`mosdock:place?state=${encodeURIComponent(s)}&app=${encodeURIComponent(app)}`);
   }
 }
@@ -68,7 +72,7 @@ async function applyLayout(state, place, useProtocol) {
 }
 
 document.querySelectorAll("[data-dock]").forEach((btn) => {
-  btn.addEventListener("click", () => applyLayout(btn.getAttribute("data-dock"), true, false));
+  btn.addEventListener("click", () => applyLayout(btn.getAttribute("data-dock"), true, onWindows()));
 });
 
 document.getElementById("btn-place-word")?.addEventListener("click", () => {

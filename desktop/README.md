@@ -2,10 +2,10 @@
 
 Cửa sổ **mini-browser TopMost** trên Windows. Mặc định dính **đáy màn hình**. Nút: **Thu nhỏ**, **Đính trái**, **Đính phải**, **Đính đáy**.
 
-Sau khi mở Word / Excel / PowerPoint, MOS Dock **chờ cửa sổ chính hiện ra**, restore nếu đang maximize, rồi `SetWindowPos` tới **ô còn lại** của vị trí đã chọn — hai cửa sổ không chồng.
+Sau khi mở Word (`ms-word:`), MOS Dock **mở đúng ứng dụng**, chờ cửa sổ chính (bỏ splash/maximize), rồi `SetWindowPlacement` + `MoveWindow` tới **ô còn lại** trong ~20 giây — Word / Excel / PowerPoint đều được đặt.
 
-- Agent local: `http://127.0.0.1:17331/place?state=left|right|bottom|minimized&app=word|excel|powerpoint`
-- Protocol: `mosdock:place?state=left&app=excel`
+- Agent: `http://127.0.0.1:17331/open?app=word|excel|powerpoint&state=left`
+- Protocol: `mosdock:open?app=powerpoint&state=bottom` (đăng ký HKCU lần chạy đầu)
 - Nút **Đặt Word** lặp lại thao tác nếu Word mở chậm
 
 Không dùng Office Online. WebView mở `https://mos.gds.edu.vn/dang-nhap?che-do=dock`.
