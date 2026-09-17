@@ -92,6 +92,7 @@ def _public_criteria(rubric: dict) -> list[dict]:
                 "kind": item.get("kind"),
                 "weight": item.get("weight"),
                 "prompt": item.get("prompt") or "",
+                "help_steps": [str(s) for s in (item.get("help_steps") or []) if str(s).strip()],
             }
         )
     return out

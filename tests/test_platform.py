@@ -142,6 +142,7 @@ def test_word_11_manifest_checkpoint_and_submit(client):
     assert len(manifest["criteria"]) == 16
     ids = [c["id"] for c in manifest["criteria"]]
     assert "W11-B01" in ids
+    assert all(len(c.get("help_steps") or []) >= 2 for c in manifest["criteria"])
     starter = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers)
     assert starter.status_code == 200
     assert starter.content[:2] == b"PK"

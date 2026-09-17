@@ -11,6 +11,8 @@ public static class LayoutMath
     public const int ClusterW = 260;
     public const int ClusterH = 108;
     public const int ClusterMargin = 8;
+    public const int HelpW = 320;
+    public const int HelpH = 360;
     public const int ExpandedSideW = 340;
     public const int MinWord = 400;
 
@@ -64,6 +66,35 @@ public static class LayoutMath
             "top" => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Y + m, w, h),
             _ => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Bottom - h - m, w, h),
         };
+    }
+
+    public static Rect GrowForHelp(Rect dock, Rect work, string state)
+    {
+        var w = Math.Max(dock.W, HelpW);
+        var h = dock.H + HelpH;
+        var x = dock.X - (w - dock.W) / 2;
+        var y = state is "top" ? dock.Y : dock.Y - HelpH;
+        if (x < work.X)
+        {
+            x = work.X + ClusterMargin;
+        }
+
+        if (x + w > work.Right)
+        {
+            x = work.Right - w - ClusterMargin;
+        }
+
+        if (y < work.Y)
+        {
+            y = work.Y + ClusterMargin;
+        }
+
+        if (y + h > work.Bottom)
+        {
+            y = work.Bottom - h - ClusterMargin;
+        }
+
+        return new Rect(x, y, w, h);
     }
 
     static Rect ClampWord(Rect word, Rect work)

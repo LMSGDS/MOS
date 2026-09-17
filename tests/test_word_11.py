@@ -13,8 +13,13 @@ FIXTURES = ROOT / "tests" / "fixtures" / "word-objective-1-1"
 STARTER = FIXTURES / "Word_1-1.docx"
 RESULTS = FIXTURES / "Word_1-1_results.docx"
 RUBRIC = load_rubric(ROOT / "app" / "rubrics" / "word-objective-1-1.json")
-
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+
+def test_training_help_steps_present():
+    assert len(RUBRIC["criteria"]) == 16
+    for item in RUBRIC["criteria"]:
+        assert len(item.get("help_steps") or []) >= 2, item.get("id")
 
 
 def _docx(document_xml: str) -> Path:

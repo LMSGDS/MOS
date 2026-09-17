@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office, thanh dock là **cụm icon 2 hàng** (menu Trái/Phải/Trên/Dưới/Tháo dock), không chiếm cả màn hình. Không WebView2, không Office Online.
+Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office: cụm icon dock 2 hàng. **Luyện tập** có khung Hướng dẫn (bước đánh số + nút AAA); **Thi** ẩn hướng dẫn. Không WebView2, không Office Online.
 
 ## Bộ cài tự động
 

@@ -294,6 +294,7 @@ sealed class JsonCriterion
     public string Kind { get; set; } = "artifact";
     public double Weight { get; set; }
     public string Prompt { get; set; } = "";
+    public List<string> HelpSteps { get; set; } = [];
     public JsonSelector Selector { get; set; } = new();
     public JsonPredicate Predicate { get; set; } = new();
     public JsonFeedback Feedback { get; set; } = new();
