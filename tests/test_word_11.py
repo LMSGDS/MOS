@@ -19,7 +19,9 @@ W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 def test_training_help_steps_present():
     assert len(RUBRIC["criteria"]) == 16
     for item in RUBRIC["criteria"]:
-        assert len(item.get("help_steps") or []) >= 2, item.get("id")
+        steps = item.get("help_steps") or []
+        assert len(steps) >= 2, item.get("id")
+        assert any("**" in step for step in steps), item.get("id")
 
 
 def _docx(document_xml: str) -> Path:

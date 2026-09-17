@@ -10,6 +10,8 @@ from dataclasses import dataclass
 CLUSTER_W = 260
 CLUSTER_H = 108
 CLUSTER_MARGIN = 8
+HELP_W = 320
+HELP_H = 360
 EXPANDED_SIDE_W = 340
 MIN_WORD = 400
 
@@ -70,6 +72,23 @@ def compute(work: Rect, state: str, compact: bool = False) -> tuple[Rect, Rect]:
         dock = Rect(work.x, work.bottom - dock_h, work.w, dock_h)
         word = Rect(work.x, work.y, work.w, work.h - dock_h)
     return dock, _clamp_word(word, work)
+
+
+def grow_for_help(dock: Rect, work: Rect, state: str) -> Rect:
+    """Mở rộng cụm dock để chứa khung Hướng dẫn phía trên (trừ khi dock đang ở mép trên)."""
+    w = max(dock.w, HELP_W)
+    h = dock.h + HELP_H
+    x = dock.x - (w - dock.w) // 2
+    y = dock.y if (state or "").lower() == "top" else dock.y - HELP_H
+    if x < work.x:
+        x = work.x + CLUSTER_MARGIN
+    if x + w > work.right:
+        x = work.right - w - CLUSTER_MARGIN
+    if y < work.y:
+        y = work.y + CLUSTER_MARGIN
+    if y + h > work.bottom:
+        y = work.bottom - h - CLUSTER_MARGIN
+    return Rect(x, y, w, h)
 
 
 def overlap(a: Rect, b: Rect) -> bool:

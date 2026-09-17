@@ -412,8 +412,7 @@ static class Ui
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(fill);
         btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(fill);
-        var hint = new ToolTip { ShowAlways = true };
-        hint.SetToolTip(btn, tip);
+        DockTips.SetToolTip(btn, tip);
         btn.Paint += (_, e) =>
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
@@ -422,6 +421,134 @@ static class Ui
         };
         RoundControl(btn, 6);
         return btn;
+    }
+
+    static ToolTip? _dockTips;
+    static readonly Font TipFont = new("Segoe UI", 9f, FontStyle.Bold);
+    static readonly Font AaaBig = new("Segoe UI", 13f, FontStyle.Bold);
+    static readonly Font AaaMid = new("Segoe UI", 10f, FontStyle.Bold);
+    static readonly Font AaaSm = new("Segoe UI", 8f, FontStyle.Bold);
+
+    public static ToolTip DockTips => _dockTips ??= CreateDarkTip();
+
+    public static ToolTip CreateDarkTip()
+    {
+        var tip = new ToolTip
+        {
+            ShowAlways = true,
+            OwnerDraw = true,
+            UseAnimation = false,
+            UseFading = false,
+            InitialDelay = 120,
+            AutoPopDelay = 5000,
+            ReshowDelay = 80,
+            BackColor = Color.FromArgb(20, 20, 20),
+            ForeColor = Color.White,
+        };
+        tip.Popup += (_, e) =>
+        {
+            e.ToolTipSize = new Size(Math.Max(88, e.ToolTipSize.Width + 28), Math.Max(32, e.ToolTipSize.Height + 8));
+        };
+        tip.Draw += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = new Rectangle(0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+            using var path = RoundedRect(box, 8);
+            using var bg = new SolidBrush(Color.FromArgb(20, 20, 20));
+            e.Graphics.FillPath(bg, path);
+            TextRenderer.DrawText(
+                e.Graphics,
+                e.ToolTipText,
+                TipFont,
+                box,
+                Color.White,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        };
+        return tip;
+    }
+
+    public static Button AaaButton()
+    {
+        var btn = new Button
+        {
+            Size = new Size(54, 36),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = DockBlue,
+            ForeColor = Color.White,
+            Text = "",
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            AccessibleName = "Cỡ chữ hướng dẫn",
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 99, 177);
+        DockTips.SetToolTip(btn, "Cỡ chữ hướng dẫn");
+        btn.Paint += (_, e) => PaintAaa(e.Graphics, btn.ClientRectangle);
+        RoundControl(btn, 6);
+        return btn;
+    }
+
+    public static void PaintAaa(Graphics g, Rectangle r)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        using var brush = new SolidBrush(Color.White);
+        g.DrawString("A", AaaBig, brush, r.X + 3, r.Y + 3);
+        g.DrawString("A", AaaMid, brush, r.X + 20, r.Y + 10);
+        g.DrawString("A", AaaSm, brush, r.X + 33, r.Y + 16);
+    }
+
+    public static string StripMarks(string? text) =>
+        (text ?? "").Replace("**", "", StringComparison.Ordinal);
+
+    public static string HelpStepsRtf(IReadOnlyList<string> steps, float bodyPt)
+    {
+        var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
+        var sb = new System.Text.StringBuilder();
+        sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}");
+        sb.Append(@"\pard\qc\cf0\f0\fs").Append(fs).Append(' ');
+        for (var i = 0; i < steps.Count; i++)
+        {
+            sb.Append(i + 1).Append(". ");
+            AppendMarkedRtf(sb, steps[i] ?? "");
+            sb.Append(@"\par ");
+        }
+
+        sb.Append('}');
+        return sb.ToString();
+    }
+
+    static void AppendMarkedRtf(System.Text.StringBuilder sb, string text)
+    {
+        var parts = text.Split("**");
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i % 2 == 1)
+            {
+                sb.Append(@"\b ");
+            }
+
+            foreach (var ch in parts[i])
+            {
+                if (ch is '\\' or '{' or '}')
+                {
+                    sb.Append('\\').Append(ch);
+                }
+                else if (ch > 127)
+                {
+                    sb.Append(@"\u").Append((int)ch).Append('?');
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
+            }
+
+            if (i % 2 == 1)
+            {
+                sb.Append(@"\b0 ");
+            }
+        }
     }
 
     public static FlowLayoutPanel DockChip()

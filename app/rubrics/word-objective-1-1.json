@@ -36,9 +36,9 @@
       },
       "version": "1.0.0",
       "help_steps": [
-        "Mở tab Home.",
-        "Nhóm Editing, bấm Find (hoặc Ctrl+F) để mở Navigation pane.",
-        "Gõ to vào ô Search Document."
+        "Mở tab **Home**.",
+        "Nhóm **Editing**, bấm **Find** (hoặc Ctrl+F) để mở **Navigation** pane.",
+        "Gõ to vào ô **Search Document**."
       ]
     },
     {
@@ -62,8 +62,8 @@
       },
       "version": "1.0.0",
       "help_steps": [
-        "Giữ Navigation pane đang mở.",
-        "Bấm thẻ Results dưới ô tìm kiếm.",
+        "Giữ **Navigation** pane đang mở.",
+        "Bấm thẻ **Results** dưới ô tìm kiếm.",
         "Xem danh sách kết quả to trong tài liệu."
       ]
     },
@@ -91,8 +91,8 @@
       },
       "version": "1.0.0",
       "help_steps": [
-        "Trong Navigation pane, xóa to và gõ toy.",
-        "Bấm Next Search Result để nhảy kết quả.",
+        "Trong **Navigation** pane, xóa to và gõ toy.",
+        "Bấm **Next Search Result** để nhảy kết quả.",
         "Chuyển ít nhất hai lần giữa các kết quả toy."
       ]
     },
@@ -123,9 +123,9 @@
       },
       "version": "1.0.0",
       "help_steps": [
-        "Mở Find rồi bấm mũi tên Find Options / Advanced Find.",
-        "Gõ Toymakers. Bật Match case và Find whole words only.",
-        "Bấm Find Next."
+        "Mở **Find** rồi bấm mũi tên **Find Options** / **Advanced Find**.",
+        "Gõ Toymakers. Bật **Match case** và **Find whole words only**.",
+        "Bấm **Find Next**."
       ]
     },
     {
@@ -153,9 +153,9 @@
       },
       "version": "1.0.0",
       "help_steps": [
-        "Mở Advanced Find.",
-        "Gõ toy. Trong Format / Style chọn Heading 2.",
-        "Bấm Find Next để tìm Toy/toy chỉ trong Heading 2."
+        "Mở **Advanced Find**.",
+        "Gõ toy. Trong **Format** / **Style** chọn **Heading 2**.",
+        "Bấm **Find Next** để tìm Toy/toy chỉ trong **Heading 2**."
       ]
     },
     {
@@ -182,8 +182,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen đúng chữ Lola Jacobsen.",
-        "Tab Insert, nhóm Links, bấm Bookmark.",
-        "Đặt tên SalesManager rồi bấm Add."
+        "Tab **Insert**, nhóm **Links**, bấm **Bookmark**.",
+        "Đặt tên SalesManager rồi bấm **Add**."
       ]
     },
     {
@@ -210,8 +210,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Trong phần Contact Us, bôi đen đúng chữ Sarah Jones.",
-        "Insert > Bookmark.",
-        "Đặt tên DesignManager rồi bấm Add."
+        "**Insert** > **Bookmark**.",
+        "Đặt tên DesignManager rồi bấm **Add**."
       ]
     },
     {
@@ -238,8 +238,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen dòng mục lục New Electronic Favorites.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading cùng tên rồi bấm OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading cùng tên rồi bấm **OK**."
       ]
     },
     {
@@ -266,8 +266,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen Why Buy Wingtip Toys? trong mục lục.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading Why Buy Wingtip Toys? rồi OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Why Buy Wingtip Toys? rồi **OK**."
       ]
     },
     {
@@ -294,8 +294,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen Recognition trong mục lục.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading Recognition rồi OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Recognition rồi **OK**."
       ]
     },
     {
@@ -322,8 +322,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen Make It Your Own trong mục lục.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading Make It Your Own rồi OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Make It Your Own rồi **OK**."
       ]
     },
     {
@@ -350,8 +350,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen Hand-Carved Toys trong mục lục.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading Hand-Carved Toys rồi OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Hand-Carved Toys rồi **OK**."
       ]
     },
     {
@@ -378,8 +378,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Bôi đen Resources trong mục lục.",
-        "Insert > Link > Place in This Document.",
-        "Chọn heading Resources rồi OK."
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Resources rồi **OK**."
       ]
     },
     {
@@ -404,8 +404,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Đưa con trỏ về đầu tài liệu.",
-        "Ctrl+G (Go To), chọn Graphic.",
-        "Nhảy đến đối tượng Graphic cuối cùng."
+        "Ctrl+G (**Go To**), chọn **Graphic**.",
+        "Nhảy đến đối tượng **Graphic** cuối cùng."
       ]
     },
     {
@@ -432,8 +432,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Từ vị trí graphic cuối, Ctrl+G.",
-        "Chọn Page, gõ 3.",
-        "Bấm Go To để về đầu trang 3."
+        "Chọn **Page**, gõ 3.",
+        "Bấm **Go To** để về đầu trang 3."
       ]
     },
     {
@@ -460,8 +460,8 @@
       "version": "1.0.0",
       "help_steps": [
         "Từ đầu trang 3, Ctrl+G.",
-        "Chọn Bookmark.",
-        "Chọn SalesManager rồi Go To."
+        "Chọn **Bookmark**.",
+        "Chọn SalesManager rồi **Go To**."
       ]
     }
   ]

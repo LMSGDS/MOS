@@ -1,4 +1,14 @@
-from app.kulkul_layout import CLUSTER_H, CLUSTER_W, EXPANDED_SIDE_W, Rect, compute, overlap
+from app.kulkul_layout import (
+    CLUSTER_H,
+    CLUSTER_W,
+    EXPANDED_SIDE_W,
+    HELP_H,
+    HELP_W,
+    Rect,
+    compute,
+    grow_for_help,
+    overlap,
+)
 
 WORK = Rect(0, 0, 1920, 1040)  # 1080p trừ taskbar
 
@@ -61,6 +71,22 @@ def test_minimized_matches_compact_bottom():
     dock2, word2 = compute(WORK, "bottom", compact=True)
     assert dock == dock2
     assert word == word2
+
+
+def test_grow_for_help_sits_above_bottom_cluster():
+    dock, _ = compute(WORK, "bottom", compact=True)
+    grown = grow_for_help(dock, WORK, "bottom")
+    assert grown.w == HELP_W
+    assert grown.h == CLUSTER_H + HELP_H
+    assert grown.bottom == dock.bottom
+    assert grown.y == dock.y - HELP_H
+
+
+def test_grow_for_help_keeps_top_cluster_at_top():
+    dock, _ = compute(WORK, "top", compact=True)
+    grown = grow_for_help(dock, WORK, "top")
+    assert grown.y == dock.y
+    assert grown.h == CLUSTER_H + HELP_H
 
 
 def test_unknown_state_defaults_to_bottom():
