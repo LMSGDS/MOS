@@ -1,12 +1,15 @@
-"""Bố cục khung MOS-KulKul + cửa sổ Word — không chồng lấp."""
+"""Bố cục khung MOS-KulKul + cửa sổ Word — không chồng lấp.
+
+Thanh điều hướng kiểu GMetrix: compact = thanh icon 48px (nút Trái/Phải nằm ngang),
+không chiếm cả chiều cao màn hình.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-BOTTOM_RATIO = 0.28
-SIDE_RATIO = 0.30
-CONTROLS_H = 96
-CONTROLS_W = 248
+ICON_BAR_H = 48
+ICON_BAR_W = 360
+EXPANDED_SIDE_W = 340
 MIN_WORD = 400
 
 
@@ -35,22 +38,28 @@ def _clamp_word(word: Rect, work: Rect) -> Rect:
 
 
 def compute(work: Rect, state: str, compact: bool = False) -> tuple[Rect, Rect]:
-    """Trả về (khung_dock, cua_so_word). compact = chỉ thanh điều khiển, vừa đủ nút."""
+    """Trả về (khung_dock, cua_so_word). compact = thanh icon ngang 48px."""
     state = (state or "bottom").lower()
     compact = compact or state == "minimized"
     if state == "left":
-        dock_w = CONTROLS_W if compact else max(280, int(work.w * SIDE_RATIO))
-        dock = Rect(work.x, work.y, dock_w, work.h)
-        word = Rect(dock.right, work.y, work.w - dock_w, work.h)
+        if compact:
+            dock = Rect(work.x, work.bottom - ICON_BAR_H, ICON_BAR_W, ICON_BAR_H)
+            word = Rect(work.x, work.y, work.w, work.h - ICON_BAR_H)
+        else:
+            dock = Rect(work.x, work.y, EXPANDED_SIDE_W, work.h)
+            word = Rect(dock.right, work.y, work.w - EXPANDED_SIDE_W, work.h)
     elif state == "right":
-        dock_w = CONTROLS_W if compact else max(280, int(work.w * SIDE_RATIO))
-        dock = Rect(work.right - dock_w, work.y, dock_w, work.h)
-        word = Rect(work.x, work.y, work.w - dock_w, work.h)
+        if compact:
+            dock = Rect(work.right - ICON_BAR_W, work.bottom - ICON_BAR_H, ICON_BAR_W, ICON_BAR_H)
+            word = Rect(work.x, work.y, work.w, work.h - ICON_BAR_H)
+        else:
+            dock = Rect(work.right - EXPANDED_SIDE_W, work.y, EXPANDED_SIDE_W, work.h)
+            word = Rect(work.x, work.y, work.w - EXPANDED_SIDE_W, work.h)
     elif state == "minimized":
-        dock = Rect(work.x, work.bottom - CONTROLS_H, work.w, CONTROLS_H)
-        word = Rect(work.x, work.y, work.w, work.h - CONTROLS_H)
+        dock = Rect(work.x, work.bottom - ICON_BAR_H, work.w, ICON_BAR_H)
+        word = Rect(work.x, work.y, work.w, work.h - ICON_BAR_H)
     else:  # bottom
-        dock_h = CONTROLS_H if compact else max(180, int(work.h * BOTTOM_RATIO))
+        dock_h = ICON_BAR_H if compact else max(200, int(work.h * 0.22))
         dock = Rect(work.x, work.bottom - dock_h, work.w, dock_h)
         word = Rect(work.x, work.y, work.w, work.h - dock_h)
     return dock, _clamp_word(word, work)

@@ -336,4 +336,96 @@ static class Ui
 
     public static string ModeLabel(string mode) =>
         mode == "testing" ? "Thi" : "Luyện tập";
+
+    public static Button IconBtn(NavIcon icon, string tip)
+    {
+        var btn = new Button
+        {
+            Size = new Size(36, 32),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = NavDark,
+            ForeColor = Color.White,
+            Margin = new Padding(2, 4, 2, 4),
+            Tag = icon,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            Text = "",
+            AccessibleName = tip,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Primary;
+        btn.FlatAppearance.MouseDownBackColor = PrimaryDark;
+        var hint = new ToolTip { ShowAlways = true };
+        hint.SetToolTip(btn, tip);
+        btn.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var kind = btn.Tag is NavIcon n ? n : icon;
+            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White);
+        };
+        return btn;
+    }
+
+    public static void SetIconActive(Button btn, bool on)
+    {
+        btn.BackColor = on ? Primary : NavDark;
+        btn.Invalidate();
+    }
+
+    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color)
+    {
+        using var pen = new Pen(color, 1.6f);
+        using var brush = new SolidBrush(color);
+        var cx = r.X + r.Width / 2;
+        var cy = r.Y + r.Height / 2;
+        var frame = new Rectangle(cx - 10, cy - 8, 20, 16);
+        switch (icon)
+        {
+            case NavIcon.Home:
+                g.FillPolygon(brush, new[] { new Point(cx, cy - 8), new Point(cx - 8, cy + 1), new Point(cx + 8, cy + 1) });
+                g.FillRectangle(brush, cx - 5, cy, 10, 8);
+                break;
+            case NavIcon.Left:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Y + 1, 7, frame.Height - 1));
+                break;
+            case NavIcon.Right:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.Right - 8, frame.Y + 1, 7, frame.Height - 1));
+                break;
+            case NavIcon.Bottom:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Bottom - 6, frame.Width - 1, 5));
+                break;
+            case NavIcon.Expand:
+                g.DrawRectangle(pen, frame);
+                g.DrawLine(pen, frame.X + 4, cy, frame.Right - 4, cy);
+                g.DrawLine(pen, cx, frame.Y + 3, cx, frame.Bottom - 3);
+                break;
+            case NavIcon.Collapse:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Bottom - 6, frame.Width - 1, 5));
+                break;
+            case NavIcon.Check:
+                g.DrawLines(pen, new[] { new Point(cx - 6, cy), new Point(cx - 1, cy + 5), new Point(cx + 7, cy - 6) });
+                break;
+            case NavIcon.Submit:
+                g.DrawLine(pen, cx, cy + 6, cx, cy - 6);
+                g.DrawLines(pen, new[] { new Point(cx - 5, cy - 1), new Point(cx, cy - 6), new Point(cx + 5, cy - 1) });
+                g.DrawLine(pen, cx - 7, cy + 7, cx + 7, cy + 7);
+                break;
+        }
+    }
+}
+
+enum NavIcon
+{
+    Home,
+    Left,
+    Right,
+    Bottom,
+    Expand,
+    Collapse,
+    Check,
+    Submit,
 }

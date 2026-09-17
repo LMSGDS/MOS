@@ -24,13 +24,18 @@ sealed class MainForm : Form
     readonly Label _examMeta = new();
     readonly ListView _tasks = new();
     readonly Label _examStatus = new();
-    readonly Button _checkBtn = new();
-    readonly Button _submitBtn = new();
-    readonly Button _saveBtn = new();
-    readonly Button _compactBtn = new();
+    readonly Button _navHome = Ui.IconBtn(NavIcon.Home, "Lưu và về trang chủ");
+    readonly Button _navLeft = Ui.IconBtn(NavIcon.Left, "Trái");
+    readonly Button _navRight = Ui.IconBtn(NavIcon.Right, "Phải");
+    readonly Button _navBottom = Ui.IconBtn(NavIcon.Bottom, "Đáy");
+    readonly Button _navToggle = Ui.IconBtn(NavIcon.Expand, "Hiện nhiệm vụ");
+    readonly Button _checkBtn = Ui.IconBtn(NavIcon.Check, "Kiểm tra nhiệm vụ");
+    readonly Button _submitBtn = Ui.IconBtn(NavIcon.Submit, "Nộp bài");
+    readonly ToolTip _navTips = new() { ShowAlways = true };
+    readonly FlowLayoutPanel _navIcons = new();
     readonly System.Windows.Forms.Timer _keepWord = new();
     LocalAgent? _agent;
-    string _state = "left";
+    string _state = "bottom";
     string _app = "word";
     bool _compact;
     bool _docking;
@@ -120,13 +125,13 @@ sealed class MainForm : Form
     void BuildHeader()
     {
         _header.Dock = DockStyle.Top;
-        _header.Height = 72;
+        _header.Height = 52;
         _header.BackColor = Ui.Nav;
-        _header.Padding = new Padding(16, 14, 16, 14);
+        _header.Padding = new Padding(16, 8, 16, 8);
 
         _signOut.Text = "Đăng xuất";
         _signOut.AutoSize = false;
-        _signOut.Size = new Size(Math.Max(148, Ui.MeasureW("Đăng xuất", Ui.BtnFont) + 32), 40);
+        _signOut.Size = new Size(Math.Max(128, Ui.MeasureW("Đăng xuất", Ui.BtnFont) + 24), 32);
         _signOut.Dock = DockStyle.Right;
         _signOut.FlatStyle = FlatStyle.Flat;
         _signOut.BackColor = Ui.NavDark;
@@ -153,7 +158,7 @@ sealed class MainForm : Form
 
         _back.Text = "Trang chủ";
         _back.AutoSize = false;
-        _back.Size = new Size(0, 40);
+        _back.Size = new Size(0, 32);
         _back.Dock = DockStyle.Left;
         _back.FlatStyle = FlatStyle.Flat;
         _back.BackColor = Ui.NavDark;
@@ -256,8 +261,42 @@ sealed class MainForm : Form
     {
         _exam.Dock = DockStyle.Fill;
         _exam.BackColor = Color.White;
-        _exam.Padding = new Padding(16);
+        _exam.Padding = new Padding(8, 4, 8, 8);
         _exam.Visible = false;
+
+        _navIcons.Dock = DockStyle.Top;
+        _navIcons.Height = LayoutMath.IconBarH;
+        _navIcons.WrapContents = false;
+        _navIcons.FlowDirection = FlowDirection.LeftToRight;
+        _navIcons.BackColor = Ui.Nav;
+        _navIcons.Padding = new Padding(4, 2, 4, 2);
+        _navIcons.Controls.Add(new Label
+        {
+            Text = "MOS",
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold),
+            AutoSize = true,
+            Margin = new Padding(6, 8, 8, 0),
+            UseMnemonic = false,
+        });
+        _navHome.Click += (_, _) => SaveAndHome();
+        _navLeft.Click += (_, _) => MoveDock("left");
+        _navRight.Click += (_, _) => MoveDock("right");
+        _navBottom.Click += (_, _) => MoveDock("bottom");
+        _navToggle.Click += (_, _) =>
+        {
+            _compact = !_compact;
+            EnterDock(_compact);
+        };
+        _checkBtn.Click += async (_, _) => await CheckTasks();
+        _submitBtn.Click += async (_, _) => await SubmitExam();
+        _navIcons.Controls.Add(_navHome);
+        _navIcons.Controls.Add(_navLeft);
+        _navIcons.Controls.Add(_navRight);
+        _navIcons.Controls.Add(_navBottom);
+        _navIcons.Controls.Add(_navToggle);
+        _navIcons.Controls.Add(_checkBtn);
+        _navIcons.Controls.Add(_submitBtn);
 
         _examTitle.Dock = DockStyle.Top;
         _examTitle.Font = Ui.HeadFont;
@@ -270,6 +309,11 @@ sealed class MainForm : Form
         _examMeta.UseMnemonic = false;
         Ui.BindWrap(_examMeta, 8);
 
+        _examStatus.Dock = DockStyle.Top;
+        _examStatus.ForeColor = Ui.Text;
+        _examStatus.UseMnemonic = false;
+        Ui.BindWrap(_examStatus, 8);
+
         _tasks.Dock = DockStyle.Fill;
         _tasks.View = System.Windows.Forms.View.Details;
         _tasks.FullRowSelect = true;
@@ -279,69 +323,34 @@ sealed class MainForm : Form
         _tasks.BorderStyle = BorderStyle.FixedSingle;
         _tasks.BackColor = Color.White;
 
-        var actions = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 220,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(0, 8, 0, 0),
-        };
-        _examStatus.AutoSize = false;
-        _examStatus.Size = new Size(300, 56);
-        _examStatus.ForeColor = Ui.Text;
-        _examStatus.UseMnemonic = false;
-        Ui.BindWrap(_examStatus, 8);
-        _checkBtn.Text = "Kiểm tra nhiệm vụ";
-        StyleExamBtn(_checkBtn, Ui.Primary);
-        _checkBtn.Click += async (_, _) => await CheckTasks();
-        _submitBtn.Text = "Nộp bài";
-        StyleExamBtn(_submitBtn, Ui.Success);
-        _submitBtn.Click += async (_, _) => await SubmitExam();
-        _saveBtn.Text = "Lưu và về trang chủ";
-        StyleExamBtn(_saveBtn, Ui.NavDark);
-        _saveBtn.Click += (_, _) => SaveAndHome();
-        _compactBtn.Text = "Thu gọn khung";
-        StyleExamBtn(_compactBtn, Ui.PrimaryDark);
-        _compactBtn.Click += (_, _) =>
-        {
-            _compact = !_compact;
-            _compactBtn.Text = _compact ? "Hiện nhiệm vụ" : "Thu gọn khung";
-            EnterDock(_compact);
-        };
-        actions.Controls.Add(_examStatus);
-        actions.Controls.Add(_checkBtn);
-        actions.Controls.Add(_submitBtn);
-        actions.Controls.Add(_saveBtn);
-        actions.Controls.Add(_compactBtn);
-        _exam.Resize += (_, _) =>
-        {
-            var w = Math.Max(200, _exam.ClientSize.Width - 36);
-            _examStatus.Width = w;
-            foreach (var btn in new[] { _checkBtn, _submitBtn, _saveBtn, _compactBtn })
-            {
-                btn.Width = w;
-            }
-        };
-
         _exam.Controls.Add(_tasks);
-        _exam.Controls.Add(actions);
+        _exam.Controls.Add(_examStatus);
         _exam.Controls.Add(_examMeta);
         _exam.Controls.Add(_examTitle);
+        _exam.Controls.Add(_navIcons);
     }
 
-    static void StyleExamBtn(Button btn, Color color)
+    void MoveDock(string state)
     {
-        btn.AutoSize = false;
-        btn.Size = new Size(Math.Max(220, Ui.MeasureW(btn.Text, Ui.BtnFont) + 28), 40);
-        btn.Margin = new Padding(0, 0, 0, 8);
-        btn.FlatStyle = FlatStyle.Flat;
-        btn.BackColor = color;
-        btn.ForeColor = Color.White;
-        btn.Font = Ui.BtnFont;
-        btn.FlatAppearance.BorderSize = 0;
-        btn.TextAlign = ContentAlignment.MiddleCenter;
-        btn.UseMnemonic = false;
+        _state = state;
+        if (!_docking)
+        {
+            EnterDock(_compact);
+            return;
+        }
+
+        ApplyDock(waitForWord: true);
+        HighlightDockIcons();
+    }
+
+    void HighlightDockIcons()
+    {
+        Ui.SetIconActive(_navLeft, _state == "left");
+        Ui.SetIconActive(_navRight, _state == "right");
+        Ui.SetIconActive(_navBottom, _state is "bottom" or "minimized");
+        _navToggle.Tag = _compact ? NavIcon.Expand : NavIcon.Collapse;
+        _navTips.SetToolTip(_navToggle, _compact ? "Hiện nhiệm vụ" : "Thu gọn thanh");
+        _navToggle.Invalidate();
     }
 
     void ShowPage(HubPage view, string title)
@@ -514,7 +523,7 @@ sealed class MainForm : Form
 
                 _app = attempt.Program;
                 ShowExamUi();
-                EnterDock(compact: false);
+                EnterDock(compact: true);
             };
         }
 
@@ -547,7 +556,7 @@ sealed class MainForm : Form
 
         _app = project.Program;
         ShowExamUi();
-        EnterDock(compact: false);
+        EnterDock(compact: true);
     }
 
     void ShowExamUi()
@@ -583,6 +592,12 @@ sealed class MainForm : Form
 
     async Task CheckTasks()
     {
+        if (_compact)
+        {
+            _compact = false;
+            EnterDock(compact: false);
+        }
+
         if (ExamSession.Mode == "testing")
         {
             _examStatus.Text = "Chế độ thi ẩn kết quả. Nộp bài khi xong.";
@@ -748,9 +763,14 @@ sealed class MainForm : Form
         var (dock, word) = LayoutMath.Compute(work, _state, _compact);
         Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
         TopMost = true;
+        _exam.Padding = _compact ? Padding.Empty : new Padding(12, 8, 12, 12);
+        _exam.BackColor = _compact ? Ui.Nav : Color.White;
+        _navIcons.Visible = true;
         _tasks.Visible = !_compact;
         _examTitle.Visible = !_compact;
         _examMeta.Visible = !_compact;
+        _examStatus.Visible = !_compact;
+        HighlightDockIcons();
         if (_tasks.Visible && _tasks.Columns.Count >= 1)
         {
             _tasks.Columns[0].Width = Math.Max(160, _exam.ClientSize.Width - 120);

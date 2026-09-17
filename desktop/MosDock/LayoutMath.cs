@@ -8,10 +8,9 @@ public readonly record struct Rect(int X, int Y, int W, int H)
 
 public static class LayoutMath
 {
-    public const double BottomRatio = 0.28;
-    public const double SideRatio = 0.30;
-    public const int ControlsH = 96;
-    public const int ControlsW = 248;
+    public const int IconBarH = 48;
+    public const int IconBarW = 360;
+    public const int ExpandedSideW = 340;
     public const int MinWord = 400;
 
     public static (Rect Dock, Rect Word) Compute(Rect work, string state, bool compact = false)
@@ -22,24 +21,38 @@ public static class LayoutMath
         Rect word;
         if (state == "left")
         {
-            var dockW = compact ? ControlsW : Math.Max(360, Math.Min(420, (int)(work.W * 0.24)));
-            dock = new Rect(work.X, work.Y, dockW, work.H);
-            word = new Rect(dock.Right, work.Y, work.W - dockW, work.H);
+            if (compact)
+            {
+                dock = new Rect(work.X, work.Bottom - IconBarH, IconBarW, IconBarH);
+                word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
+            }
+            else
+            {
+                dock = new Rect(work.X, work.Y, ExpandedSideW, work.H);
+                word = new Rect(dock.Right, work.Y, work.W - ExpandedSideW, work.H);
+            }
         }
         else if (state == "right")
         {
-            var dockW = compact ? ControlsW : Math.Max(360, Math.Min(420, (int)(work.W * 0.24)));
-            dock = new Rect(work.Right - dockW, work.Y, dockW, work.H);
-            word = new Rect(work.X, work.Y, work.W - dockW, work.H);
+            if (compact)
+            {
+                dock = new Rect(work.Right - IconBarW, work.Bottom - IconBarH, IconBarW, IconBarH);
+                word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
+            }
+            else
+            {
+                dock = new Rect(work.Right - ExpandedSideW, work.Y, ExpandedSideW, work.H);
+                word = new Rect(work.X, work.Y, work.W - ExpandedSideW, work.H);
+            }
         }
         else if (state == "minimized")
         {
-            dock = new Rect(work.X, work.Bottom - ControlsH, work.W, ControlsH);
-            word = new Rect(work.X, work.Y, work.W, work.H - ControlsH);
+            dock = new Rect(work.X, work.Bottom - IconBarH, work.W, IconBarH);
+            word = new Rect(work.X, work.Y, work.W, work.H - IconBarH);
         }
         else
         {
-            var dockH = compact ? ControlsH : Math.Max(180, (int)(work.H * BottomRatio));
+            var dockH = compact ? IconBarH : Math.Max(200, (int)(work.H * 0.22));
             dock = new Rect(work.X, work.Bottom - dockH, work.W, dockH);
             word = new Rect(work.X, work.Y, work.W, work.H - dockH);
         }

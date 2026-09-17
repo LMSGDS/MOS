@@ -23,7 +23,7 @@ static class Program
         using var mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            ForwardToRunningInstance(parsed.State ?? "left", parsed.App ?? "word", parsed.Launch, parsed.File);
+            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word", parsed.Launch, parsed.File);
             return;
         }
 
@@ -39,7 +39,7 @@ static class Program
 
             ExamSession.DisplayName = login.DisplayName;
             using var main = new MainForm(
-                parsed.State ?? "left",
+                parsed.State ?? "bottom",
                 parsed.App ?? "word",
                 first && parsed.Launch,
                 first ? parsed.File : null);
