@@ -191,10 +191,13 @@ static class WordXml
 
             void AddHyperlink(string text, string anchor, string rid, string fieldRaw = "")
             {
-                rels.TryGetValue(rid, out var rel);
-                if (anchor.Length == 0 && rel.Target.StartsWith("#", StringComparison.Ordinal))
+                // TOC / HYPERLINK fields often have no rId — missing rel must not NRE.
+                rels.TryGetValue(rid ?? "", out var rel);
+                var target = rel.Target ?? "";
+                var mode = rel.Mode ?? "";
+                if (anchor.Length == 0 && target.StartsWith("#", StringComparison.Ordinal))
                 {
-                    anchor = rel.Target[1..];
+                    anchor = target[1..];
                 }
 
                 if (anchor.Length == 0 && fieldRaw.Length > 0)
@@ -202,7 +205,7 @@ static class WordXml
                     (anchor, _) = FieldAnchor(fieldRaw);
                 }
 
-                var external = rel.Mode == "External" || (rel.Target.Length > 0 && anchor.Length == 0);
+                var external = mode == "External" || (target.Length > 0 && anchor.Length == 0);
                 if (fieldRaw.Length > 0)
                 {
                     var lower = fieldRaw.ToLowerInvariant();
@@ -385,6 +388,10 @@ static class WordXml
         catch (System.Xml.XmlException)
         {
             return new WordFacts { Ok = false, Error = "bad_xml" };
+        }
+        catch (Exception)
+        {
+            return new WordFacts { Ok = false, Error = "extract_failed" };
         }
     }
 
@@ -776,20 +783,30 @@ static class WordGrade
 
         foreach (var item in rubric.Criteria)
         {
+            item.Predicate ??= new JsonPredicate();
+            item.Selector ??= new JsonSelector();
+            item.Feedback ??= new JsonFeedback();
             var weight = item.Weight;
-            if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                results.Add(ActionEvidence.Grade(item, evidence));
-                continue;
-            }
+                if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
+                {
+                    results.Add(ActionEvidence.Grade(item, evidence));
+                    continue;
+                }
 
-            if (!facts.Ok)
+                if (!facts.Ok)
+                {
+                    results.Add(new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp."));
+                    continue;
+                }
+
+                results.Add(GradeArtifact(facts, item));
+            }
+            catch (Exception ex)
             {
-                results.Add(new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp."));
-                continue;
+                results.Add(new LocalCriterion(item.Id, "error", 0, weight, "Không chấm được mục này: " + ex.Message));
             }
-
-            results.Add(GradeArtifact(facts, item));
         }
 
         var verified = results.Sum(r => r.Earned);

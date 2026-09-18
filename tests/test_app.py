@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.3" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.4" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -264,6 +264,13 @@ def test_windows_sources_include_action_demo():
     assert "Chưa chấm" in home
     assert "Ui.PercentTrack" in home
     assert "SnapshotWork" in hub
+    grade = (root / "WordGrade.cs").read_text(encoding="utf-8")
+    assert 'var target = rel.Target ?? ""' in grade
+    assert 'var mode = rel.Mode ?? ""' in grade
+    assert "extract_failed" in grade
+    assert "item.Predicate ??=" in grade
+    assert "Không chấm được bài Word đang mở" in form
+    assert "Không đọc được bài Word đang mở" in hub
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
     assert "FileShare.ReadWrite" in (root / "WordGrade.cs").read_text(encoding="utf-8")
@@ -272,7 +279,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.3"' in (
+    assert 'MyAppVersion "1.16.4"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

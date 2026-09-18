@@ -194,9 +194,10 @@ sealed class MainForm : Form
             {
                 return;
             }
-            ApplyWordOnly();
+
             try
             {
+                ApplyWordOnly();
                 WordActionProbe.Poll();
             }
             catch
@@ -1807,29 +1808,44 @@ sealed class MainForm : Form
 
         _examStatus.Text = "Đang lưu đúng tài liệu bài thi và chấm…";
         Cursor = Cursors.WaitCursor;
-        var (ok, summary, criteria) = await ExamHub.CheckTasksAsync(_app);
-        Cursor = Cursors.Default;
-        ExamSession.LastCheck = criteria;
-        _examStatus.Text = summary;
-        foreach (ListViewItem item in _tasks.Items)
+        try
         {
-            var id = item.Tag as string;
-            var hit = SkillReview.Find(criteria, id, _tasks.Items.IndexOf(item));
-            if (string.IsNullOrEmpty(hit.Id) && string.IsNullOrEmpty(hit.Status))
+            var (ok, summary, criteria) = await ExamHub.CheckTasksAsync(_app);
+            ExamSession.LastCheck = criteria;
+            _examStatus.Text = summary;
+            foreach (ListViewItem item in _tasks.Items)
             {
-                continue;
+                var id = item.Tag as string;
+                var hit = SkillReview.Find(criteria, id, _tasks.Items.IndexOf(item));
+                if (string.IsNullOrEmpty(hit.Id) && string.IsNullOrEmpty(hit.Status))
+                {
+                    continue;
+                }
+
+                item.SubItems[1].Text = SkillReview.Label(hit.Status);
+                item.ForeColor = SkillReview.ColorOf(hit.Status);
             }
 
-            item.SubItems[1].Text = SkillReview.Label(hit.Status);
-            item.ForeColor = SkillReview.ColorOf(hit.Status);
-        }
+            if (!ok)
+            {
+                MessageBox.Show(summary, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
-        if (!ok)
+            ShowSummary(true);
+        }
+        catch (Exception ex)
         {
-            MessageBox.Show(summary, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            _examStatus.Text = "Không chấm được bài đang mở.";
+            MessageBox.Show(
+                "Không chấm được bài Word đang mở.\n\n" + ex.Message,
+                "MOS-KulKul",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
         }
-
-        ShowSummary(true);
+        finally
+        {
+            Cursor = Cursors.Default;
+        }
     }
 
     async Task SubmitExam()

@@ -663,7 +663,16 @@ static class ExamHub
             }
         }
 
-        var local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
+        (double Verified, double Pending, IReadOnlyList<LocalCriterion> Criteria) local;
+        try
+        {
+            local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
+        }
+        catch (Exception ex)
+        {
+            return (false, "Không đọc được bài Word đang mở: " + ex.Message, []);
+        }
+
         try
         {
             await FlushActionsAsync();
