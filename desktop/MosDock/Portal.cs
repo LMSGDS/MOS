@@ -36,7 +36,7 @@ static class Portal
             : new AuthenticationHeaderValue("Bearer", Token);
     }
 
-    public static async Task<(bool Ok, string? Error, string Name, string App, string? Token)> LoginAsync(
+    public static async Task<(bool Ok, string Kind, string? Error, string Name, string App, string? Token)> LoginAsync(
         string username,
         string password,
         string app)
@@ -53,9 +53,9 @@ static class Portal
         {
             resp = await Http.PostAsync(Origin + "/api/v1/auth/login", content);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return (false, "Không kết nối được MOS-KulKul: " + ex.Message, "", app, null);
+            return (false, "status", StatusBusy, "", app, null);
         }
 
         using (resp)
@@ -68,7 +68,8 @@ static class Portal
                 var ok = root.TryGetProperty("ok", out var okEl) && okEl.GetBoolean();
                 if (!ok || resp.StatusCode != HttpStatusCode.OK)
                 {
-                    return (false, "Tên đăng nhập hoặc mật khẩu không đúng.", "", app, null);
+                    var (kind, message) = ClassifyLogin(resp.StatusCode, ReadLoginDetail(root));
+                    return (false, kind, message, "", app, null);
                 }
 
                 var name = username;
@@ -92,13 +93,75 @@ static class Portal
                 var token = root.TryGetProperty("token", out var tok) ? tok.GetString() : null;
                 Token = token;
                 ApplyAuth();
-                return (true, null, name, app, token);
+                return (true, "", null, name, app, token);
             }
-            catch (Exception ex)
+            catch (JsonException)
             {
-                return (false, "Không kết nối được MOS-KulKul: " + ex.Message, "", app, null);
+                var (kind, message) = ClassifyLogin(resp.StatusCode, text);
+                return (false, kind, message, "", app, null);
             }
         }
+    }
+
+    public const string AuthWrong = "Tài khoản hoặc mật khẩu không chính xác. Vui lòng thử lại.";
+    public const string StatusDenied = "Tài khoản của bạn chưa được cấp quyền thi môn này. Vui lòng liên hệ giám thị hoặc giáo viên Tin học để được hỗ trợ.";
+    public const string StatusBusy = "Hệ thống đang bận. Em chờ giây lát rồi thử lại, hoặc báo giám thị / giáo viên Tin học.";
+
+    public static (string Kind, string Message) ClassifyLogin(HttpStatusCode status, string? detail)
+    {
+        var code = (int)status;
+        var d = (detail ?? "").Trim().ToLowerInvariant();
+        if (code >= 500 || d.Contains("timeout") || d.Contains("connect") || d.Contains("network"))
+        {
+            return ("status", StatusBusy);
+        }
+
+        if (code == 403
+            || d.Contains("forbidden")
+            || d.Contains("lock")
+            || d.Contains("khoa")
+            || d.Contains("inactive")
+            || d.Contains("disabled")
+            || d.Contains("chua")
+            || d.Contains("denied"))
+        {
+            return ("status", StatusDenied);
+        }
+
+        if (code == 401 || d is "sai" or "user" or "token" || d.Contains("sai"))
+        {
+            return ("auth", AuthWrong);
+        }
+
+        if (code == 0)
+        {
+            return ("status", StatusBusy);
+        }
+
+        return ("auth", AuthWrong);
+    }
+
+    static string ReadLoginDetail(JsonElement root)
+    {
+        if (root.TryGetProperty("error", out var err) && err.ValueKind == JsonValueKind.String)
+        {
+            return err.GetString() ?? "";
+        }
+
+        if (root.TryGetProperty("detail", out var detail))
+        {
+            if (detail.ValueKind == JsonValueKind.String)
+            {
+                return detail.GetString() ?? "";
+            }
+
+            if (detail.ValueKind == JsonValueKind.Object && detail.TryGetProperty("msg", out var msg))
+            {
+                return msg.GetString() ?? "";
+            }
+        }
+
+        return "";
     }
 
     public static async Task<JsonDocument> GetJsonAsync(string path)

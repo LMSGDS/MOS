@@ -33,6 +33,13 @@ static class Ui
     public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
     public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
 
+    /// <summary>
+    /// Form error SOP: radius 8, idle Line, focus Primary + soft shadow,
+    /// empty-field Danger border + SmallFont microcopy under the field,
+    /// auth/status errors use AlertBar above the first field (never under the password).
+    /// </summary>
+    public const int FormFieldRadius = 8;
+
     public static Color Navy => Nav;
     public static Color Blue => Primary;
     public static Color Teal => Success;
@@ -381,6 +388,174 @@ static class Ui
         RoundControl(inner, radius);
         shell.Controls.Add(inner);
         return shell;
+    }
+
+    public sealed class SoftField : Panel
+    {
+        Control? _focus;
+        bool _error;
+        bool _focused;
+
+        public SoftField()
+        {
+            Height = 50;
+            DoubleBuffered = true;
+            ResizeRedraw = true;
+            BackColor = Color.White;
+            Padding = new Padding(4, 3, 4, 4);
+        }
+
+        public void Bind(Control focus)
+        {
+            _focus = focus;
+            focus.GotFocus += (_, _) =>
+            {
+                _focused = true;
+                Invalidate();
+            };
+            focus.LostFocus += (_, _) =>
+            {
+                _focused = false;
+                Invalidate();
+            };
+        }
+
+        public void SetError(bool error)
+        {
+            _error = error;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = new Rectangle(3, 2, Math.Max(8, Width - 7), Math.Max(8, Height - 6));
+            using var path = RoundedRect(box, FormFieldRadius);
+            if (_focused && !_error)
+            {
+                using var shadow = new SolidBrush(Color.FromArgb(40, Primary));
+                var sh = box;
+                sh.Offset(0, 2);
+                using var sp = RoundedRect(sh, FormFieldRadius);
+                g.FillPath(shadow, sp);
+            }
+
+            using (var fill = new SolidBrush(Card))
+            {
+                g.FillPath(fill, path);
+            }
+
+            var border = _error ? Danger : _focused ? Primary : Line;
+            using var pen = new Pen(border, _focused || _error ? 1.8f : 1.2f);
+            g.DrawPath(pen, path);
+        }
+    }
+
+    public sealed class AlertBar : Panel
+    {
+        readonly Label _msg = new();
+        readonly Panel _icon = new();
+        string _tone = "danger";
+
+        public AlertBar()
+        {
+            Visible = false;
+            Height = 0;
+            Padding = new Padding(10, 8, 12, 8);
+            _icon.Dock = DockStyle.Left;
+            _icon.Width = 28;
+            _icon.Paint += (_, e) => PaintInfoMark(e.Graphics, _icon.ClientRectangle, AccentOf(_tone));
+            _msg.Dock = DockStyle.Fill;
+            _msg.Font = SmallFont;
+            _msg.ForeColor = Text;
+            _msg.UseMnemonic = false;
+            Controls.Add(_msg);
+            Controls.Add(_icon);
+            RoundControl(this, 10);
+        }
+
+        public void ShowMessage(string text, string tone)
+        {
+            _tone = tone;
+            _msg.Text = text;
+            Visible = true;
+            ApplyTone();
+            Invalidate();
+            _icon.Invalidate();
+        }
+
+        public void Clear()
+        {
+            _msg.Text = "";
+            Visible = false;
+            Height = 0;
+        }
+
+        public int FitWidth(int inner)
+        {
+            if (!Visible || string.IsNullOrWhiteSpace(_msg.Text))
+            {
+                Height = 0;
+                return 0;
+            }
+
+            Height = Math.Max(52, MeasureH(_msg.Text, SmallFont, Math.Max(120, inner - 56)) + 22);
+            return Height;
+        }
+
+        void ApplyTone()
+        {
+            var fill = _tone switch
+            {
+                "warn" => ReviewYours,
+                "info" => BannerBg,
+                _ => ReviewPitfall,
+            };
+            BackColor = fill;
+            _icon.BackColor = fill;
+            _msg.BackColor = fill;
+        }
+
+        static Color AccentOf(string tone) => tone switch
+        {
+            "warn" => Warning,
+            "info" => Primary,
+            _ => Danger,
+        };
+    }
+
+    public static void PaintEye(Graphics g, Rectangle r, Color color, bool open)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var cx = r.X + r.Width / 2f;
+        var cy = r.Y + r.Height / 2f;
+        using var pen = new Pen(color, 1.6f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        g.DrawBezier(pen, cx - 9, cy, cx - 4, cy - 6, cx + 4, cy - 6, cx + 9, cy);
+        g.DrawBezier(pen, cx - 9, cy, cx - 4, cy + 6, cx + 4, cy + 6, cx + 9, cy);
+        if (open)
+        {
+            g.DrawEllipse(pen, cx - 3, cy - 3, 6, 6);
+        }
+        else
+        {
+            g.DrawLine(pen, cx - 8, cy + 7, cx + 8, cy - 7);
+        }
+    }
+
+    public static void PaintGlobe(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var box = new Rectangle(r.X + (r.Width - 16) / 2, r.Y + (r.Height - 16) / 2, 16, 16);
+        using var pen = new Pen(color, 1.5f);
+        g.DrawEllipse(pen, box);
+        g.DrawEllipse(pen, box.X + 4, box.Y, 8, 16);
+        g.DrawLine(pen, box.X, box.Y + 8, box.Right, box.Y + 8);
+        g.DrawLine(pen, box.X + 2, box.Y + 4, box.Right - 2, box.Y + 4);
+        g.DrawLine(pen, box.X + 2, box.Y + 12, box.Right - 2, box.Y + 12);
     }
 
     public static Panel InfoBanner(string text)

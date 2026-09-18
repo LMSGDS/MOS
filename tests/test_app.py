@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.5" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.6" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -271,6 +271,22 @@ def test_windows_sources_include_action_demo():
     assert "item.Predicate ??=" in grade
     assert "Không chấm được bài Word đang mở" in form
     assert "Không đọc được bài Word đang mở" in hub
+    login = (root / "LoginForm.cs").read_text(encoding="utf-8")
+    portal = (root / "Portal.cs").read_text(encoding="utf-8")
+    assert "SoftField" in ui
+    assert "AlertBar" in ui
+    assert "PaintEye" in ui
+    assert "PaintGlobe" in ui
+    assert "FormFieldRadius" in ui
+    assert "Vui lòng nhập tài khoản để tiếp tục" in login
+    assert "Vui lòng nhập mật khẩu để tiếp tục" in login
+    assert "Tài khoản hoặc mật khẩu không chính xác" in portal
+    assert "chưa được cấp quyền thi môn này" in portal
+    assert "Bài MOS mở trên Office đã cài trên máy — không dùng Office Online." in login
+    assert "Tài khoản nhà trường." not in login
+    assert '_eye.Text = "Hiện"' not in login
+    assert "PaintGlobe" in login
+    assert "ClassifyLogin" in portal
     assert "ProgramTile" in ui
     assert "MarkProgramTiles" in ui
     assert "OutlineBtn" in ui
@@ -285,7 +301,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.5"' in (
+    assert 'MyAppVersion "1.16.6"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
