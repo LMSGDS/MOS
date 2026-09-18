@@ -1,0 +1,14 @@
+[Unit]
+Description=MOS pull from GitHub over HTTPS (no SSH)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=plhien
+WorkingDirectory=/home/plhien/MOS
+EnvironmentFile=-/home/plhien/MOS/data/git-sync.env
+Environment=MOS_ROOT=/home/plhien/MOS
+Environment=MOS_GIT_URL=https://github.com/LMSGDS/MOS.git
+Environment=MOS_GIT_REF=main
+Environment=MOS_RESTART=1
+ExecStart=/bin/bash /home/plhien/MOS/scripts/git-sync.sh

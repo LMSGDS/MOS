@@ -51,7 +51,8 @@ jobs:
           test -f desktop/installer/windows/install.ps1
           test -f desktop/installer/macos/build-pkg.sh
           test -f app/schema.sql
-          test -f deploy/docker-compose.yml
+          test -f scripts/git-sync.sh
+          test -f deploy/mos-git-sync.timer
           test -f desktop/MosDock/ExamHub.cs
           test -f desktop/MosDock/WordGrade.cs
           test -f app/grade.py

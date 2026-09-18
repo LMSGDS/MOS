@@ -205,70 +205,29 @@ COMMIT_MESSAGE="chore: auto-commit" bash scripts/auto-commit.sh
 
 ## Kiểm tra
 
-
-
 - Actions → **CI** phải chạy trên pull request này.
-
 - Actions → **Check GitHub permissions** phải hiện `push: true`. Nếu `push: false`, hãy cấp Workflow permissions như trên rồi chạy lại.
 
+## Chuyển dữ liệu — chỉ HTTPS
 
+Không SSH, không scp, không sshpass. Đưa mã hoặc bài học sinh đi SSH sẽ lộ máy chủ.
 
+| Dữ liệu | Đường đi |
+| --- | --- |
+| Mã nguồn | GitHub HTTPS (`https://github.com/LMSGDS/MOS.git`) |
+| Bài làm, điểm, bằng chứng | MOS-KulKul → `https://mos.gds.edu.vn/api/v1/` (JWT) |
+| Cập nhật máy chủ | `scripts/git-sync.sh` trên chính server, timer systemd, hoặc webhook GitHub `POST /api/v1/hooks/github` |
 
-
-## Kết nối SSH qua OpenVPN client
-
-
-
-Đã xác minh trên Cloud Agent: OpenVPN lên `tun0` (`10.10.11.18`), SSH vào `plhien@160.191.49.65` (`gpu-160-191-49-65`). Profile lấy từ [OpenVPN Client trên Drive](https://drive.google.com/drive/folders/1Z9lFTUnB60SdiHmTDZqahVZzBniCXjz3) — **không commit** `.ovpn` hay mật khẩu.
-
-
-
-Cổng 22 của máy GPU bị chặn từ Internet; phải đi qua VPN rồi `ip route` host SSH vào `tun0`.
-
-
-
-### 1. Secret (Cursor / GitHub Actions)
-
-
-
-| Secret | Bắt buộc | Nội dung |
-
-| --- | --- | --- |
-
-| `OPENVPN_CONFIG` | Có | File `openvpn_plhien.ovpn` |
-
-| `OPENVPN_USERNAME` | Có với profile này | User VPN |
-
-| `OPENVPN_PASSWORD` | Có với profile này | Mật khẩu VPN (trong doc Drive, cặp `Username: plhien`) |
-
-| `SSH_HOST` | Có | `160.191.49.65` |
-
-| `SSH_USER` | Có | `plhien` |
-
-| `SSH_PASSWORD` hoặc `SSH_PRIVATE_KEY` | Một trong hai | Mật khẩu SSH là dòng `password:` riêng trong doc Drive (không dùng `plhien@123`) |
-
-| `SSH_PORT` | Không | Mặc định `22` |
-
-
-
-Secret Cursor chỉ có khi agent **khởi động**. Agent hiện tại đã nối bằng file Drive, không qua secret môi trường.
-
-
-
-### 2. Chạy
-
-
+Trên máy chủ (một lần, tại console máy — không từ Cloud Agent):
 
 ```bash
-
-bash scripts/openvpn-up.sh
-
-bash scripts/ssh-connect.sh hostname
-
-bash scripts/openvpn-down.sh
-
+cd /home/plhien/MOS
+git remote set-url origin https://github.com/LMSGDS/MOS.git
+# data/git-sync.env (chmod 600): MOS_GITHUB_TOKEN, MOS_GITHUB_WEBHOOK_SECRET, MOS_GIT_REF=main
+sudo cp deploy/mos-git-sync.service deploy/mos-git-sync.timer /etc/systemd/system/
+sudo systemctl enable --now mos-git-sync.timer
 ```
 
+Webhook GitHub (HTTPS, chữ ký HMAC): Settings → Webhooks → `https://mos.gds.edu.vn/api/v1/hooks/github` (push). Secret = `MOS_GITHUB_WEBHOOK_SECRET`.
 
-
-Mặc định bỏ `redirect-gateway` để agent vẫn ra GitHub. GitHub: **Actions → SSH via OpenVPN**.
+`scripts/ssh-connect.sh` chủ động từ chối. Workflow SSH qua OpenVPN đã gỡ.

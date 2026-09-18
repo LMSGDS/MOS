@@ -16,6 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.admin import router as admin_router
 from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
+from app.hooks import router as hooks_router
 from app.kulkul_layout import Rect, compute
 from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
@@ -57,6 +58,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(client_v1_router)
 app.include_router(progress_router)
+app.include_router(hooks_router)
 app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,
