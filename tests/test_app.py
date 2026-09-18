@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.9" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -207,6 +207,16 @@ def test_windows_sources_include_action_demo():
     assert "Thu nhỏ nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "Phóng to nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "AaSizeButton" in (root / "Ui.cs").read_text(encoding="utf-8")
+    assert "await CheckTasks()" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "Chuyển tới câu hỏi" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "Xem gợi ý" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "Lỗi thường gặp" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "Thao tác đúng" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "Thao tác của bạn" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "MarkWordUi" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "CreateStatusImages" in (root / "Ui.cs").read_text(encoding="utf-8")
+    assert "LayoutSummaryChrome" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "✅  Đạt" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")

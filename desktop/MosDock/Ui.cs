@@ -644,6 +644,79 @@ static class Ui
     public static string StripMarks(string? text) =>
         (text ?? "").Replace("**", "", StringComparison.Ordinal);
 
+    public static string MarkedDocumentRtf(string text, float bodyPt)
+    {
+        var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
+        var sb = new System.Text.StringBuilder();
+        sb.Append(@"{\rtf1\ansi\deff0\viewkind4\uc1{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}}");
+        var first = true;
+        foreach (var line in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+        {
+            if (!first)
+            {
+                sb.Append(@"\par ");
+            }
+
+            first = false;
+            var heading = line.StartsWith("**", StringComparison.Ordinal) && line.EndsWith("**", StringComparison.Ordinal) && line.Length > 4 && !line[2..^2].Contains("**", StringComparison.Ordinal);
+            sb.Append(@"\pard\widctlpar\ql\sa80\li0\ri80\f0\fs").Append(heading ? fs + 2 : fs).Append(' ');
+            AppendMarkedRtf(sb, line);
+        }
+
+        sb.Append('}');
+        return sb.ToString();
+    }
+
+    public static ImageList CreateStatusImages()
+    {
+        var list = new ImageList
+        {
+            ColorDepth = ColorDepth.Depth32Bit,
+            ImageSize = new Size(16, 16),
+        };
+        list.Images.Add("none", StatusIcon(Muted, "none"));
+        list.Images.Add("pass", StatusIcon(Success, "pass"));
+        list.Images.Add("fail", StatusIcon(Danger, "fail"));
+        list.Images.Add("warn", StatusIcon(Warning, "warn"));
+        return list;
+    }
+
+    static Bitmap StatusIcon(Color color, string kind)
+    {
+        var bmp = new Bitmap(16, 16);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+        using var brush = new SolidBrush(color);
+        using var pen = new Pen(Color.White, 1.8f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        if (kind == "none")
+        {
+            using var outline = new Pen(color, 1.5f);
+            g.DrawEllipse(outline, 3, 3, 10, 10);
+            return bmp;
+        }
+
+        g.FillEllipse(brush, 1, 1, 14, 14);
+        if (kind == "pass")
+        {
+            g.DrawLines(pen, new[] { new Point(4, 8), new Point(7, 11), new Point(12, 5) });
+        }
+        else if (kind == "fail")
+        {
+            g.DrawLine(pen, 5, 5, 11, 11);
+            g.DrawLine(pen, 11, 5, 5, 11);
+        }
+        else
+        {
+            g.FillRectangle(Brushes.White, 7, 4, 2, 5);
+            g.FillRectangle(Brushes.White, 7, 11, 2, 2);
+        }
+
+        return bmp;
+    }
+
     public static string HelpStepsRtf(IReadOnlyList<string> steps, float bodyPt)
     {
         var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
