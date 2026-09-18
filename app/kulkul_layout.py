@@ -14,21 +14,29 @@ from dataclasses import dataclass
 
 REF_WORK_W = 1920
 REF_WORK_H = 1040
-CLUSTER_W = 200
-CLUSTER_H = 80
-CLUSTER_MARGIN = 6
-HELP_W = 240
-HELP_H = 132
+# Thanh compact: đo % working area, kẹp mỏng để không che Word.
+BAR_H_PCT = 65  # 6.5% chiều cao
+BAR_W_PCT = 38  # 3.8% chiều ngang
+BAR_H_MIN, BAR_H_MAX = 52, 72
+BAR_W_MIN, BAR_W_MAX = 52, 72
+HELP_H_PCT = 90  # 9% thêm khi mở hướng dẫn
+HELP_W_PCT = 90
+DOCK_MAX_PCT = 16  # icon + help không quá 16% cạnh ngắn
+CLUSTER_W = 72  # kẹp BAR_W_MAX sau round(1920 * 3.8%)
+CLUSTER_H = 68  # round(1040 * 6.5%)
+CLUSTER_MARGIN = 0
+HELP_W = 173  # round(1920 * 9%)
+HELP_H = 94  # round(1040 * 9%)
 EXPANDED_SIDE_W = 340
 SUMMARY_W = 1020
 SUMMARY_H = 680
 MIN_WORD = 400
-OVERLAY_MIN_W = 80
+OVERLAY_MIN_W = 48
 OVERLAY_MIN_H = 48
 REF_ICON = 32
 REF_ICON_GAP = 2
-REF_CHROME_PAD = 3
-OVERLAY_CAP_PCT = 22
+REF_CHROME_PAD = 4
+OVERLAY_CAP_PCT = 16
 
 
 @dataclass(frozen=True)
@@ -80,36 +88,23 @@ def _scale(reference: int, ratio: float, lo: int, hi: int) -> int:
 
 def measure(work: Rect) -> NavMetrics:
     ratio = fit(work)
-    icon = _scale(REF_ICON, ratio, 26, 40)
-    gap = _scale(REF_ICON_GAP, ratio, 1, 4)
-    pad = _scale(REF_CHROME_PAD, ratio, 2, 6)
-    cap_w = max(160, work.w * OVERLAY_CAP_PCT // 100)
-    cap_h = max(72, work.h * OVERLAY_CAP_PCT // 100)
-    cluster_w = min(
-        240,
-        max(
-            _scale(CLUSTER_W, ratio, 160, min(cap_w, 240)),
-            5 * (icon + 2 * gap) + 2 * pad,
-        ),
-    )
-    cluster_h = min(
-        100,
-        max(
-            _scale(CLUSTER_H, ratio, 64, min(cap_h, 100)),
-            2 * (icon + 2 * gap) + 2 * pad,
-        ),
-    )
-    help_w = _scale(HELP_W, ratio, cluster_w, min(cap_w, 260))
-    help_h = _scale(HELP_H, ratio, 88, min(cap_h, 148))
-    margin = _scale(CLUSTER_MARGIN, ratio, 4, 10)
-    side = _scale(EXPANDED_SIDE_W, ratio, 220, max(220, work.w // 3))
-    edge = max(_scale(200, ratio, 140, 420), int(work.h * 0.22))
+    bar_h = max(BAR_H_MIN, min(BAR_H_MAX, int(round(work.h * BAR_H_PCT / 1000))))
+    bar_w = max(BAR_W_MIN, min(BAR_W_MAX, int(round(work.w * BAR_W_PCT / 1000))))
+    pad = 4
+    gap = 2
+    icon = max(24, min(40, min(bar_h, bar_w) - 2 * pad))
+    cap_w = max(bar_w, work.w * DOCK_MAX_PCT // 100)
+    cap_h = max(bar_h, work.h * DOCK_MAX_PCT // 100)
+    help_w = max(0, min(int(round(work.w * HELP_W_PCT / 1000)), cap_w - bar_w))
+    help_h = max(0, min(int(round(work.h * HELP_H_PCT / 1000)), cap_h - bar_h))
+    side = _scale(EXPANDED_SIDE_W, ratio, 220, max(220, work.w // 4))
+    edge = max(bar_h + help_h, work.h * DOCK_MAX_PCT // 100)
     summary_w = min(_scale(SUMMARY_W, ratio, 480, max(480, work.w - 40)), max(480, work.w - 40))
     summary_h = min(_scale(SUMMARY_H, ratio, 360, max(360, work.h - 40)), max(360, work.h - 40))
     return NavMetrics(
-        cluster_w,
-        cluster_h,
-        margin,
+        bar_w,
+        bar_h,
+        0,
         help_w,
         help_h,
         side,
@@ -206,14 +201,16 @@ def compute(work: Rect, state: str, compact: bool = False, scale: float = 1.0) -
 
 
 def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rect:
-    """Giữ cạnh dài đầy màn hình; dày thêm ô Hướng dẫn, không vượt 22% cạnh ngắn."""
+    """Giữ cạnh dài = 100% working area; dày thêm help, tổng ≤ 16% cạnh ngắn."""
     nav = measure(_scale_work(work, scale))
     state = (state or "bottom").lower()
     if state in ("left", "right"):
-        w = min(_cap(work.w, dock.w + nav.help_w, dock.w), max(dock.w, work.w - MIN_WORD))
+        cap = max(nav.cluster_w, work.w * DOCK_MAX_PCT // 100)
+        w = min(max(dock.w, dock.w + nav.help_w), cap, max(dock.w, work.w - MIN_WORD))
         x = work.x if state == "left" else work.right - w
         return Rect(x, work.y, w, work.h)
-    h = min(_cap(work.h, dock.h + nav.help_h, dock.h), max(dock.h, work.h - MIN_WORD))
+    cap = max(nav.cluster_h, work.h * DOCK_MAX_PCT // 100)
+    h = min(max(dock.h, dock.h + nav.help_h), cap, max(dock.h, work.h - MIN_WORD))
     y = work.y if state == "top" else work.bottom - h
     return Rect(work.x, y, work.w, h)
 

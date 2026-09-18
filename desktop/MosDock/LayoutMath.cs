@@ -26,23 +26,34 @@ public static class LayoutMath
 {
     public const int RefWorkW = 1920;
     public const int RefWorkH = 1040;
-    public const int ClusterW = 200;
-    public const int ClusterH = 80;
-    public const int ClusterMargin = 6;
-    public const int HelpW = 240;
-    public const int HelpH = 132;
+    public const int BarHPct = 65;
+    public const int BarWPct = 38;
+    public const int BarHMin = 52;
+    public const int BarHMax = 72;
+    public const int BarWMin = 52;
+    public const int BarWMax = 72;
+    public const int HelpHPct = 90;
+    public const int HelpWPct = 90;
+    public const int ClusterW = 72;
+    public const int ClusterH = 68;
+    public const int ClusterMargin = 0;
+    public const int HelpW = 173;
+    public const int HelpH = 94;
     public const int SummaryW = 1020;
     public const int SummaryH = 680;
     public const int ExpandedSideW = 340;
     public const int MinWord = 400;
     public const int HubMinW = 960;
     public const int HubMinH = 600;
-    public const int OverlayMinW = 80;
+    public const int OverlayMinW = 48;
     public const int OverlayMinH = 48;
     public const int RefIcon = 32;
     public const int RefIconGap = 2;
-    public const int RefChromePad = 3;
-    public const int OverlayCapPct = 22;
+    public const int RefChromePad = 4;
+    public const int OverlayCapPct = 16;
+
+    public static Rect FromScreen(System.Drawing.Rectangle wa) =>
+        new(wa.X, wa.Y, wa.Width, wa.Height);
 
     public static int Px(int logical, float scale) =>
         Math.Max(1, (int)Math.Round(logical * Math.Max(0.5f, scale)));
@@ -61,26 +72,21 @@ public static class LayoutMath
     public static NavMetrics Measure(Rect work)
     {
         var fit = Fit(work);
-        var icon = Scale(RefIcon, fit, 26, 40);
-        var gap = Scale(RefIconGap, fit, 1, 4);
-        var pad = Scale(RefChromePad, fit, 2, 6);
-        var capW = Math.Max(160, work.W * OverlayCapPct / 100);
-        var capH = Math.Max(72, work.H * OverlayCapPct / 100);
-        var clusterW = Math.Min(
-            240,
-            Math.Max(Scale(ClusterW, fit, 160, Math.Min(capW, 240)), 5 * (icon + 2 * gap) + 2 * pad));
-        var clusterH = Math.Min(
-            100,
-            Math.Max(Scale(ClusterH, fit, 64, Math.Min(capH, 100)), 2 * (icon + 2 * gap) + 2 * pad));
-        var helpW = Scale(HelpW, fit, clusterW, Math.Min(capW, 260));
-        var helpH = Scale(HelpH, fit, 88, Math.Min(capH, 148));
-        var margin = Scale(ClusterMargin, fit, 4, 10);
-        var side = Scale(ExpandedSideW, fit, 220, Math.Max(220, work.W / 3));
-        var edge = Math.Max(Scale(200, fit, 140, 420), (int)(work.H * 0.22));
+        var barH = Math.Clamp((int)Math.Round(work.H * BarHPct / 1000.0), BarHMin, BarHMax);
+        var barW = Math.Clamp((int)Math.Round(work.W * BarWPct / 1000.0), BarWMin, BarWMax);
+        const int pad = 4;
+        const int gap = 2;
+        var icon = Math.Clamp(Math.Min(barH, barW) - 2 * pad, 24, 40);
+        var capW = Math.Max(barW, work.W * OverlayCapPct / 100);
+        var capH = Math.Max(barH, work.H * OverlayCapPct / 100);
+        var helpW = Math.Max(0, Math.Min((int)Math.Round(work.W * HelpWPct / 1000.0), capW - barW));
+        var helpH = Math.Max(0, Math.Min((int)Math.Round(work.H * HelpHPct / 1000.0), capH - barH));
+        var side = Scale(ExpandedSideW, fit, 220, Math.Max(220, work.W / 4));
+        var edge = Math.Max(barH + helpH, work.H * OverlayCapPct / 100);
         var summaryW = Math.Min(Scale(SummaryW, fit, 480, work.W - 40), Math.Max(480, work.W - 40));
         var summaryH = Math.Min(Scale(SummaryH, fit, 360, work.H - 40), Math.Max(360, work.H - 40));
         return new NavMetrics(
-            clusterW, clusterH, margin,
+            barW, barH, 0,
             helpW, helpH,
             side, edge,
             summaryW, summaryH,
@@ -176,12 +182,14 @@ public static class LayoutMath
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right")
         {
-            var w = Math.Min(Cap(work.W, dock.W + nav.HelpW, dock.W), Math.Max(dock.W, work.W - MinWord));
+            var cap = Math.Max(nav.ClusterW, work.W * OverlayCapPct / 100);
+            var w = Math.Min(Math.Max(dock.W, dock.W + nav.HelpW), Math.Min(cap, Math.Max(dock.W, work.W - MinWord)));
             var x = state == "left" ? work.X : work.Right - w;
             return new Rect(x, work.Y, w, work.H);
         }
 
-        var h = Math.Min(Cap(work.H, dock.H + nav.HelpH, dock.H), Math.Max(dock.H, work.H - MinWord));
+        var capH = Math.Max(nav.ClusterH, work.H * OverlayCapPct / 100);
+        var h = Math.Min(Math.Max(dock.H, dock.H + nav.HelpH), Math.Min(capH, Math.Max(dock.H, work.H - MinWord)));
         var y = state == "top" ? work.Y : work.Bottom - h;
         return new Rect(work.X, y, work.W, h);
     }
@@ -196,9 +204,6 @@ public static class LayoutMath
         var s = Math.Max(0.5f, scale);
         return new Rect(work.X, work.Y, Math.Max(1, (int)Math.Round(work.W * s)), Math.Max(1, (int)Math.Round(work.H * s)));
     }
-
-    static int Cap(int workSpan, int wanted, int min) =>
-        Math.Max(min, Math.Min(wanted, workSpan * OverlayCapPct / 100));
 
     static Rect ClampWord(Rect word, Rect work)
     {

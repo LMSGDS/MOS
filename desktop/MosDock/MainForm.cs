@@ -207,7 +207,7 @@ sealed class MainForm : Form
     {
         var screen = IsHandleCreated ? Screen.FromHandle(Handle) : Screen.PrimaryScreen;
         var wa = (screen ?? Screen.PrimaryScreen)?.WorkingArea ?? new Rectangle(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH);
-        return new Rect(wa.X, wa.Y, wa.Width, wa.Height);
+        return LayoutMath.FromScreen(wa);
     }
 
     Button[] DockButtons() =>
@@ -1079,6 +1079,7 @@ sealed class MainForm : Form
         MinimizeBox = true;
         MaximizeBox = true;
         ControlBox = true;
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "MOS-KulKul";
         ApplyExamChrome();
         RestoreHubWindow();
@@ -1612,6 +1613,7 @@ sealed class MainForm : Form
         MinimizeBox = true;
         MaximizeBox = true;
         ControlBox = true;
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "MOS-KulKul";
         RestoreHubWindow();
         if (switching)
@@ -1639,6 +1641,7 @@ sealed class MainForm : Form
         _header.Visible = false;
         FormBorderStyle = FormBorderStyle.None;
         ControlBox = false;
+        AutoScaleMode = AutoScaleMode.None;
         TopMost = _pinned;
         if (!_keepWord.Enabled)
         {
@@ -1673,11 +1676,19 @@ sealed class MainForm : Form
     {
         w = Math.Max(LayoutMath.OverlayMinW, w);
         h = Math.Max(LayoutMath.OverlayMinH, h);
+        AutoScaleMode = AutoScaleMode.None;
         SuspendLayout();
         MaximumSize = Size.Empty;
-        MinimumSize = new Size(LayoutMath.OverlayMinW, LayoutMath.OverlayMinH);
-        Location = new Point(x, y);
-        Size = new Size(w, h);
+        MinimumSize = Size.Empty;
+        if (IsHandleCreated)
+        {
+            SetWindowPos(Handle, IntPtr.Zero, x, y, w, h, SwpNozorder | SwpNoactivate | SwpFramechanged);
+        }
+        else
+        {
+            Bounds = new Rectangle(x, y, w, h);
+        }
+
         MinimumSize = new Size(w, h);
         MaximumSize = new Size(w, h);
         ResumeLayout(true);
@@ -1745,4 +1756,11 @@ sealed class MainForm : Form
 
         return (dock, word);
     }
+
+    const uint SwpNoactivate = 0x0010;
+    const uint SwpNozorder = 0x0004;
+    const uint SwpFramechanged = 0x0020;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 }
