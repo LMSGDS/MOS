@@ -116,6 +116,14 @@ def test_github_webhook_https_hmac(monkeypatch):
     assert ok.json()["dry_run"] is True
 
 
+def test_git_sync_env_example_has_no_secret():
+    example = (ROOT / "data" / "git-sync.env.example").read_text(encoding="utf-8")
+    assert "MOS_GITHUB_TOKEN=" in example
+    assert "github_pat_thay_bang_token" in example
+    assert "github_pat_" in example
+    assert len([ln for ln in example.splitlines() if ln.startswith("MOS_GITHUB_TOKEN=github_pat_") and "thay_bang" not in ln]) == 0
+
+
 def test_github_sync_downloads_installers_over_https():
     root = ROOT
     sync = (root / "scripts" / "sync-installers.sh").read_text(encoding="utf-8")

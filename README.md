@@ -224,15 +224,28 @@ Không SSH, không scp, không sshpass. Đưa mã hoặc bài học sinh đi SSH
 | Bài làm, điểm, bằng chứng | MOS-KulKul → `https://mos.gds.edu.vn/api/v1/` (JWT) |
 | Cập nhật máy chủ | `scripts/git-sync.sh` trên chính server (kéo mã + bộ cài CI), timer systemd, hoặc webhook GitHub `POST /api/v1/hooks/github` |
 
-Trên máy chủ (một lần, tại console máy — không từ Cloud Agent):
+### MOS_GITHUB_TOKEN (máy chủ mos.gds.edu.vn)
+
+Token này **không** cài trong Cursor. Tạo trên GitHub, rồi ghi vào file trên **console máy chủ** (không SSH từ Cloud Agent).
+
+1. GitHub (tài khoản đọc được repo private `LMSGDS/MOS`): **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+2. Đặt tên `MOS-server-git-sync`. **Repository access:** Only select repositories → `MOS`. **Permissions:** Contents = Read, Actions = Read (Metadata tự có). Generate, copy chuỗi `github_pat_…`.
+3. Trên máy chủ:
 
 ```bash
 cd /home/plhien/MOS
 git remote set-url origin https://github.com/LMSGDS/MOS.git
-# data/git-sync.env (chmod 600): MOS_GITHUB_TOKEN, MOS_GITHUB_WEBHOOK_SECRET, MOS_GIT_REF=main
+install -d -m 700 data
+cp -n data/git-sync.env.example data/git-sync.env
+nano data/git-sync.env   # dán MOS_GITHUB_TOKEN=github_pat_…
+chmod 600 data/git-sync.env
+set -a; source data/git-sync.env; set +a
+bash scripts/git-sync.sh
 sudo cp deploy/mos-git-sync.service deploy/mos-git-sync.timer /etc/systemd/system/
 sudo systemctl enable --now mos-git-sync.timer
 ```
+
+`git-sync.sh` dùng token để `git pull` HTTPS và tải bộ cài CI vào `data/installers/`. Không đưa token vào git, chat, hay issue.
 
 Webhook GitHub (HTTPS, chữ ký HMAC): Settings → Webhooks → `https://mos.gds.edu.vn/api/v1/hooks/github` (push). Secret = `MOS_GITHUB_WEBHOOK_SECRET`.
 
