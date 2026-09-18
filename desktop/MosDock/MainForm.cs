@@ -1,7 +1,7 @@
 namespace MosDock;
 
 /// <summary>
-/// MOS-KulKul: trang chủ kiểu GMetrix SMS — Bài mới / Tiếp tục / Đã nộp, rồi mới vào khung bài thi.
+/// MOS-KulKul: trang chủ dashboard — tiến độ, Word/Excel/PowerPoint, bài dở và bài đã nộp.
 /// </summary>
 sealed class MainForm : Form
 {
@@ -12,6 +12,7 @@ sealed class MainForm : Form
     readonly Button _signOut = new();
     readonly Panel _body = new();
     readonly Panel _home = new();
+    readonly HomeDash _dash = new();
     readonly Panel _catalog = new();
     readonly FlowLayoutPanel _products = new();
     readonly FlowLayoutPanel _tests = new();
@@ -361,33 +362,16 @@ sealed class MainForm : Form
     {
         _home.Dock = DockStyle.Fill;
         _home.BackColor = Ui.PageBg;
-        var tiles = new FlowLayoutPanel
+        _dash.Dock = DockStyle.Fill;
+        _dash.OpenProgram = program =>
         {
-            Dock = DockStyle.Fill,
-            WrapContents = true,
-            AutoScroll = true,
-            BackColor = Ui.PageBg,
-            Padding = new Padding(0),
+            ShowCatalog();
+            _ = LoadCatalog(program);
         };
-        tiles.Controls.Add(Ui.Tile(
-            "Bài mới",
-            "Chọn Word, Excel hoặc PowerPoint, rồi Luyện tập hoặc Thi.",
-            Ui.Primary,
-            ShowCatalog));
-        tiles.Controls.Add(Ui.Tile(
-            "Tiếp tục bài",
-            "Mở bài đang làm dở, không tạo lần làm mới.",
-            Ui.Success,
-            () => _ = ShowResume()));
-        tiles.Controls.Add(Ui.Tile(
-            "Bài đã nộp",
-            "Xem điểm đã xác minh và bài đã gửi lên máy chủ.",
-            Ui.Warning,
-            () => _ = ShowCompleted()));
-        _home.Controls.Add(Ui.StackPage(
-            "Trang chủ",
-            "Chọn một ô bên dưới. Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.",
-            tiles));
+        _dash.OpenResumeList = () => _ = ShowResume();
+        _dash.OpenDoneList = () => _ = ShowCompleted();
+        _dash.ResumeAttempt = ResumeOpenAttempt;
+        _home.Controls.Add(_dash);
     }
 
     void BuildCatalog()
@@ -1398,6 +1382,45 @@ sealed class MainForm : Form
     void ShowHome()
     {
         ShowPage(HubPage.Home, "MOS-KulKul");
+        _ = RefreshHomeDashboard();
+    }
+
+    async Task RefreshHomeDashboard()
+    {
+        _dash.ShowLoading();
+        try
+        {
+            var attempts = await ExamHub.ListAttemptsAsync();
+            IReadOnlyDictionary<string, MosProgress> progress;
+            try
+            {
+                progress = await ExamHub.ListProgramProgressAsync();
+            }
+            catch
+            {
+                progress = new Dictionary<string, MosProgress>();
+            }
+
+            _dash.Bind(attempts, progress, ExamSession.DisplayName);
+        }
+        catch (Exception ex)
+        {
+            _dash.ShowError(ex.Message);
+        }
+    }
+
+    async Task ResumeOpenAttempt(MosAttempt attempt)
+    {
+        var (ok, msg) = await ExamHub.ResumeAttemptAsync(attempt);
+        if (!ok)
+        {
+            MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        _app = attempt.Program;
+        ShowExamUi();
+        EnterDock(compact: true);
     }
 
     void ShowCatalog()
@@ -1502,7 +1525,7 @@ sealed class MainForm : Form
             return;
         }
 
-        var filtered = rows.Where(a => running ? a.Status is "running" : a.Status is not "running").ToList();
+        var filtered = rows.Where(a => running ? a.IsOpen : !a.IsOpen).ToList();
         list.Controls.Clear();
         if (filtered.Count == 0)
         {
@@ -1534,19 +1557,7 @@ sealed class MainForm : Form
         {
             go = Ui.PrimaryBtn("Tiếp tục", 120);
             go.BackColor = Ui.Success;
-            go.Click += async (_, _) =>
-            {
-                var (ok, msg) = await ExamHub.ResumeAttemptAsync(attempt);
-                if (!ok)
-                {
-                    MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                _app = attempt.Program;
-                ShowExamUi();
-                EnterDock(compact: true);
-            };
+            go.Click += async (_, _) => await ResumeOpenAttempt(attempt);
         }
 
         return Ui.ListCard(attempt.Title, detail, go);

@@ -24,7 +24,42 @@ readonly record struct MosAttempt(
     double? Pending,
     double MaxScore,
     string StartedAt,
-    string? SubmittedAt);
+    string? SubmittedAt)
+{
+    public bool IsOpen => Status is "running" or "in_progress";
+
+    public int? ProgressPct
+    {
+        get
+        {
+            if (MaxScore <= 0 || Score is null)
+            {
+                return null;
+            }
+
+            return (int)Math.Clamp(Math.Round(Score.Value / MaxScore * 100), 0, 100);
+        }
+    }
+
+    public string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? Ui.AppName(Program) : Title;
+
+    public string ScoreLabel => Score is { } s
+        ? $"{FormatScore(s)}/{FormatScore(MaxScore)}"
+        : "chưa có điểm";
+
+    static string FormatScore(double n) =>
+        Math.Abs(n - Math.Round(n)) < 0.05 ? ((int)Math.Round(n)).ToString() : n.ToString("0.#");
+}
+
+readonly record struct MosProgress(
+    string Program,
+    double CompletionPct,
+    double? OverallScore,
+    int Assigned,
+    int Started,
+    int Completed,
+    string Level,
+    string Summary);
 
 /// <summary>
 /// Tải đề MOS từ PostgreSQL API, mở trên Office máy, nộp bài + telemetry.
@@ -103,6 +138,51 @@ static class ExamHub
         }
 
         return items;
+    }
+
+    public static async Task<MosProgress?> GetProgressAsync(string program)
+    {
+        using var doc = await Portal.GetJsonAsync("/api/v1/progress?program=" + Uri.EscapeDataString(program));
+        if (!doc.RootElement.TryGetProperty("evaluation", out var ev) || ev.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return new MosProgress(
+            program,
+            GetDoubleOrNull(ev, "completion_pct") ?? 0,
+            GetDoubleOrNull(ev, "overall_score") ?? GetDoubleOrNull(ev, "avg_verified"),
+            (int)(GetDoubleOrNull(ev, "exercises_assigned") ?? 0),
+            (int)(GetDoubleOrNull(ev, "exercises_started") ?? 0),
+            (int)(GetDoubleOrNull(ev, "exercises_completed") ?? 0),
+            ev.TryGetProperty("level", out var lv) ? lv.GetString() ?? "" : "",
+            ev.TryGetProperty("summary", out var sm) ? sm.GetString() ?? "" : "");
+    }
+
+    public static async Task<IReadOnlyDictionary<string, MosProgress>> ListProgramProgressAsync()
+    {
+        var map = new Dictionary<string, MosProgress>(StringComparer.OrdinalIgnoreCase);
+        var ids = new[] { "word", "excel", "powerpoint" };
+        var tasks = ids.Select(async id =>
+        {
+            try
+            {
+                return (id, await GetProgressAsync(id));
+            }
+            catch
+            {
+                return (id, (MosProgress?)null);
+            }
+        });
+        foreach (var (id, row) in await Task.WhenAll(tasks))
+        {
+            if (row is { } progress)
+            {
+                map[id] = progress;
+            }
+        }
+
+        return map;
     }
 
     public static async Task<(bool Ok, string Message)> StartProjectAsync(string program, string projectId, string mode, bool launchWord = true)
@@ -561,9 +641,20 @@ static class ExamHub
 
     static double? GetDoubleOrNull(JsonElement el, string name)
     {
-        if (el.TryGetProperty(name, out var p) && p.ValueKind is JsonValueKind.Number && p.TryGetDouble(out var v))
+        if (!el.TryGetProperty(name, out var p))
+        {
+            return null;
+        }
+
+        if (p.ValueKind is JsonValueKind.Number && p.TryGetDouble(out var v))
         {
             return v;
+        }
+
+        if (p.ValueKind is JsonValueKind.String &&
+            double.TryParse(p.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
         }
 
         return null;

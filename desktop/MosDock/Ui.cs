@@ -1,8 +1,8 @@
 namespace MosDock;
 
 /// <summary>
-/// Canvas LMS (Instructure) tokens: nav #394B58, primary #0374B5, page #F5F5F5, text #2D3B45.
-/// Layout uses Dock stacking and measured text — never overlapping Location for titles.
+/// Canvas LMS tokens with a warm-minimalist hub: nav #394B58, primary #0374B5,
+/// page linen #F7F3EE, text #2D3B45. Layout uses Dock stacking — never overlapping titles.
 /// </summary>
 static class Ui
 {
@@ -10,7 +10,9 @@ static class Ui
     public static readonly Color NavDark = Color.FromArgb(43, 57, 67);
     public static readonly Color Primary = Color.FromArgb(3, 116, 181);
     public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
-    public static readonly Color PageBg = Color.FromArgb(245, 245, 245);
+    public static readonly Color PageBg = Color.FromArgb(247, 243, 238);
+    public static readonly Color WarmShadow = Color.FromArgb(226, 214, 200);
+    public static readonly Color BannerBg = Color.FromArgb(227, 240, 248);
     public static readonly Color Card = Color.White;
     public static readonly Color Text = Color.FromArgb(45, 59, 69);
     public static readonly Color Muted = Color.FromArgb(107, 119, 128);
@@ -336,6 +338,224 @@ static class Ui
         return btn;
     }
 
+    public static Panel SoftCard(out Panel inner, int radius = 12)
+    {
+        var shell = new Panel
+        {
+            BackColor = WarmShadow,
+            Padding = new Padding(0, 0, 1, 3),
+            Margin = new Padding(0, 0, 12, 12),
+        };
+        inner = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Card,
+            Padding = new Padding(16, 14, 16, 14),
+        };
+        RoundControl(shell, radius + 2);
+        RoundControl(inner, radius);
+        shell.Controls.Add(inner);
+        return shell;
+    }
+
+    public static Panel InfoBanner(string text)
+    {
+        var bar = new Panel
+        {
+            Height = 40,
+            BackColor = BannerBg,
+            Margin = new Padding(0, 0, 0, 12),
+            Padding = new Padding(10, 6, 12, 6),
+        };
+        RoundControl(bar, 10);
+        var icon = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 28,
+            BackColor = BannerBg,
+        };
+        icon.Paint += (_, e) => PaintInfoMark(e.Graphics, icon.ClientRectangle, Primary);
+        var msg = new Label
+        {
+            Text = text,
+            Font = SmallFont,
+            ForeColor = Text,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false,
+        };
+        bar.Controls.Add(msg);
+        bar.Controls.Add(icon);
+        return bar;
+    }
+
+    public static void PaintInfoMark(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var size = Math.Min(r.Width, r.Height) - 8;
+        var box = new Rectangle(r.X + (r.Width - size) / 2, r.Y + (r.Height - size) / 2, size, size);
+        using var fill = new SolidBrush(color);
+        g.FillEllipse(fill, box);
+        using var pen = new Pen(Color.White, 1.6f);
+        var cx = box.X + box.Width / 2;
+        g.DrawLine(pen, cx, box.Y + 8, cx, box.Bottom - 5);
+        g.FillEllipse(Brushes.White, cx - 1, box.Y + 4, 3, 3);
+    }
+
+    public static void PaintAppGlyph(Graphics g, Rectangle r, Color color, string glyph)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        using var fill = new SolidBrush(color);
+        using var path = RoundedRect(r, 10);
+        g.FillPath(fill, path);
+        TextRenderer.DrawText(
+            g,
+            glyph,
+            new Font("Segoe UI", 14f, FontStyle.Bold),
+            r,
+            Color.White,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
+    public static Label SectionLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Height = 28,
+            Margin = new Padding(0, 4, 0, 8),
+            UseMnemonic = false,
+        };
+    }
+
+    public static Button TextLink(string text, Action onClick)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = true,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.Transparent,
+            ForeColor = Primary,
+            Font = SmallFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            Padding = Padding.Empty,
+            Margin = new Padding(0),
+            Height = 24,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(235, 244, 250);
+        btn.Click += (_, _) => onClick();
+        return btn;
+    }
+
+    public static Panel AppLaunchTile(string title, string lead, Color accent, string glyph, Action onClick)
+    {
+        var shell = SoftCard(out var inner);
+        shell.Margin = new Padding(0, 0, 12, 0);
+        inner.Cursor = Cursors.Hand;
+        inner.Padding = new Padding(14, 12, 14, 12);
+        var bar = new Panel { Dock = DockStyle.Top, Height = 5, BackColor = accent, Cursor = Cursors.Hand };
+        var glyphBox = new Panel
+        {
+            Size = new Size(40, 40),
+            Dock = DockStyle.Top,
+            Height = 44,
+            Cursor = Cursors.Hand,
+            BackColor = Card,
+        };
+        glyphBox.Paint += (_, e) => PaintAppGlyph(e.Graphics, new Rectangle(0, 4, 36, 36), accent, glyph);
+        var h = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = 26,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        var p = new Label
+        {
+            Text = lead,
+            Font = SmallFont,
+            ForeColor = Muted,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        inner.Controls.Add(p);
+        inner.Controls.Add(h);
+        inner.Controls.Add(glyphBox);
+        inner.Controls.Add(bar);
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, inner, bar, glyphBox, h, p })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+        }
+
+        inner.MouseEnter += (_, _) => inner.BackColor = Color.FromArgb(252, 249, 245);
+        inner.MouseLeave += (_, _) => inner.BackColor = Card;
+        return shell;
+    }
+
+    public static Panel MiniScoreRow(string title, string score, Color accent, Action? onClick)
+    {
+        var row = new Panel
+        {
+            Height = 44,
+            Dock = DockStyle.Top,
+            BackColor = Card,
+            Padding = new Padding(0, 4, 0, 4),
+            Cursor = onClick is null ? Cursors.Default : Cursors.Hand,
+        };
+        var mark = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = accent };
+        var pts = new Label
+        {
+            Text = score,
+            Font = HeadFont,
+            ForeColor = Text,
+            Dock = DockStyle.Right,
+            Width = 88,
+            TextAlign = ContentAlignment.MiddleRight,
+            UseMnemonic = false,
+        };
+        var name = new Label
+        {
+            Text = title,
+            Font = BodyFont,
+            ForeColor = Text,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false,
+        };
+        row.Controls.Add(name);
+        row.Controls.Add(pts);
+        row.Controls.Add(mark);
+        if (onClick is not null)
+        {
+            void Click(object? _, EventArgs e) => onClick();
+            foreach (Control c in new Control[] { row, name, pts, mark })
+            {
+                c.Click += Click;
+                c.Cursor = Cursors.Hand;
+            }
+        }
+
+        return row;
+    }
+
     public static Panel StackPage(string title, string subtitle, Control body)
     {
         var page = new Panel
@@ -361,13 +581,15 @@ static class Ui
 
         var shell = new Panel
         {
-            Size = new Size(280, cardH),
-            BackColor = Line,
-            Padding = new Padding(1),
+            Size = new Size(280, cardH + 3),
+            BackColor = WarmShadow,
+            Padding = new Padding(0, 0, 1, 3),
             Margin = new Padding(0, 0, 16, 16),
             Cursor = Cursors.Hand,
         };
         var card = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        RoundControl(shell, 14);
+        RoundControl(card, 12);
         var bar = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = accent, Cursor = Cursors.Hand };
         var inner = new Panel
         {
