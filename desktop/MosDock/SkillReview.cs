@@ -86,24 +86,39 @@ static class SkillReview
 
     public static string Analysis(LocalCriterion hit, JsonCriterion? item)
     {
+        var blocks = AnalysisBlocks(hit, item);
+        return string.Join("\n\n", blocks.Select(b => "**" + b.Title + "**\n" + b.Body));
+    }
+
+    public static IReadOnlyList<ReviewBlock> AnalysisBlocks(LocalCriterion hit, JsonCriterion? item)
+    {
         if (HideScores)
         {
-            return "Trong chế độ Thi, MOS-KulKul không phân tích Đạt / Chưa đạt cho đến khi nộp bài.";
+            return [new ReviewBlock("Kết quả chấm", "Trong chế độ Thi, MOS-KulKul không phân tích Đạt / Chưa đạt cho đến khi nộp bài.", "result")];
         }
 
         if (string.IsNullOrWhiteSpace(hit.Status))
         {
-            return "Chưa chấm. Bấm **Chấm lại** để MOS-KulKul đọc tệp Word đang mở và phân tích từng đề mục.";
+            return [new ReviewBlock("Kết quả chấm", "Chưa chấm. Bấm **Chấm lại** để MOS-KulKul đọc tệp Word đang mở và phân tích từng đề mục.", "result")];
         }
 
         var msg = MarkWordUi(FeedbackText(hit, item));
         return hit.Status switch
         {
-            "pass" => "Học sinh đã làm đúng yêu cầu này.\n\n" + msg + ScoreLine(hit),
-            "fail" => FailAnalysis(msg, item) + ScoreLine(hit),
-            "unverified" => "MOS-KulKul chưa ghi nhận được thao tác (**Find**, **Go To**, **Navigation Pane**…). Không kết luận học sinh làm sai.\n\n" + msg,
-            "error" => "Không đọc được bằng chứng trong tệp:\n\n" + msg,
-            _ => msg,
+            "pass" =>
+            [
+                new ReviewBlock("Kết quả chấm", "Học sinh đã làm đúng yêu cầu này.\n\n" + msg + ScoreLine(hit), "correct"),
+            ],
+            "fail" => FailBlocks(msg, item, hit),
+            "unverified" =>
+            [
+                new ReviewBlock("Kết quả chấm", "MOS-KulKul chưa ghi nhận được thao tác (**Find**, **Go To**, **Navigation Pane**…). Không kết luận học sinh làm sai.\n\n" + msg, "yours"),
+            ],
+            "error" =>
+            [
+                new ReviewBlock("Kết quả chấm", "Không đọc được bằng chứng trong tệp:\n\n" + msg, "pitfall"),
+            ],
+            _ => [new ReviewBlock("Kết quả chấm", msg, "result")],
         };
     }
 
@@ -147,39 +162,44 @@ static class SkillReview
         return raw;
     }
 
-    static string FailAnalysis(string msg, JsonCriterion? item)
+    static ReviewBlock[] FailBlocks(string msg, JsonCriterion? item, LocalCriterion hit)
     {
         var correct = HintSteps(item);
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("**Kết quả chấm**");
-        sb.AppendLine(msg.Length == 0 ? "Tệp Word chưa khớp yêu cầu của mục này." : msg);
-        sb.AppendLine();
-        sb.AppendLine("**Thao tác của bạn**");
-        sb.AppendLine("Bằng chứng trong tệp đang mở chưa đủ / chưa đúng. So sánh với thao tác chuẩn bên dưới.");
-        sb.AppendLine();
-        sb.AppendLine("**Thao tác đúng**");
+        var yours = "Bằng chứng trong tệp đang mở chưa đủ / chưa đúng. So sánh với thao tác chuẩn bên dưới.";
+        var right = new System.Text.StringBuilder();
         if (correct.Count == 0)
         {
-            sb.AppendLine(MarkWordUi(item?.Prompt ?? "Làm đúng yêu cầu trên Ribbon của Word."));
+            right.Append(MarkWordUi(item?.Prompt ?? "Làm đúng yêu cầu trên Ribbon của Word."));
         }
         else
         {
             for (var i = 0; i < correct.Count; i++)
             {
-                sb.Append(i + 1).Append(". ").AppendLine(MarkWordUi(correct[i]));
+                if (i > 0)
+                {
+                    right.AppendLine();
+                }
+
+                right.Append(i + 1).Append(". ").Append(MarkWordUi(correct[i]));
             }
         }
 
-        sb.AppendLine();
-        sb.AppendLine("**Lỗi thường gặp**");
-        sb.AppendLine("• Vào nhầm tab trên **Ribbon** (ví dụ **Home** thay vì **References** / **View**).");
-        sb.AppendLine("• Gõ lệnh tắt nhưng chưa mở đúng ngăn (**Navigation Pane**, **Find**, **Go To**).");
+        var pit = new System.Text.StringBuilder();
+        pit.AppendLine("• Vào nhầm tab trên **Ribbon** (ví dụ **Home** thay vì **References** / **View**).");
+        pit.AppendLine("• Gõ lệnh tắt nhưng chưa mở đúng ngăn (**Navigation Pane**, **Find**, **Go To**).");
         if (correct.Count > 0)
         {
-            sb.Append("• Bỏ bước: ").AppendLine(MarkWordUi(correct[0]));
+            pit.Append("• Bỏ bước: ").Append(MarkWordUi(correct[0]));
         }
 
-        return sb.ToString().TrimEnd();
+        var result = (msg.Length == 0 ? "Tệp Word chưa khớp yêu cầu của mục này." : msg) + ScoreLine(hit);
+        return
+        [
+            new ReviewBlock("Kết quả chấm", result, "result"),
+            new ReviewBlock("Thao tác của bạn", yours, "yours"),
+            new ReviewBlock("Thao tác đúng", right.ToString(), "correct"),
+            new ReviewBlock("Lỗi thường gặp", pit.ToString().TrimEnd(), "pitfall"),
+        ];
     }
 
     static string FeedbackText(LocalCriterion hit, JsonCriterion? item)
@@ -253,3 +273,5 @@ static class SkillReview
         return $"\n\nĐiểm mục này: {hit.Earned:0}/{hit.Possible:0}.";
     }
 }
+
+readonly record struct ReviewBlock(string Title, string Body, string Tone);

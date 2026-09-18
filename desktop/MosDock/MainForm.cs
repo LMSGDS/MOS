@@ -52,11 +52,11 @@ sealed class MainForm : Form
     readonly Label _summaryTitle = new();
     readonly TextBox _summarySearch = new();
     readonly ListView _summaryList = new();
-    readonly Button _summaryCancel = Ui.PrimaryBtn("Hủy", 88);
-    readonly Button _summaryGo = Ui.PrimaryBtn("Chuyển tới câu hỏi", 188);
-    readonly Button _summarySave = Ui.PrimaryBtn("Lưu bài", 120);
-    readonly Button _summaryFinish = Ui.PrimaryBtn("Nộp bài", 120);
-    readonly Button _summaryCheck = Ui.PrimaryBtn("Chấm lại", 120);
+    readonly Button _summaryCancel = Ui.PrimaryBtn("Hủy", 72);
+    readonly Button _summaryGo = Ui.PrimaryBtn("Chuyển tới vị trí câu hỏi", 220);
+    readonly Button _summarySave = Ui.PrimaryBtn("Lưu bài", 88);
+    readonly Button _summaryFinish = Ui.PrimaryBtn("Nộp bài", 88);
+    readonly Button _summaryCheck = Ui.PrimaryBtn("Chấm lại", 88);
     readonly Label _summaryStats = new();
     readonly ProgressBar _summaryBar = new();
     readonly ComboBox _summaryFilter = new();
@@ -64,13 +64,15 @@ sealed class MainForm : Form
     readonly Panel _summaryListPane = new();
     readonly Panel _summaryDetail = new();
     readonly Panel _summaryFooter = new();
+    readonly Panel _summarySearchRow = new();
+    readonly Panel _summaryFilterRow = new();
+    readonly TableLayoutPanel _summaryActions = new();
+    readonly FlowLayoutPanel _detailBlocks = new();
     readonly Label _detailHead = new();
     readonly Label _detailStatus = new();
     readonly Label _detailScore = new();
-    readonly RichTextBox _detailAnalysis = new();
     readonly Button _detailHintBtn = Ui.PrimaryBtn("Xem gợi ý", 148);
     readonly RichTextBox _detailHintBox = new();
-    readonly ImageList _statusIcons = Ui.CreateStatusImages();
     bool _hintExpanded;
     readonly System.Windows.Forms.Timer _keepWord = new();
     LocalAgent? _agent;
@@ -686,31 +688,20 @@ sealed class MainForm : Form
         _summary.Padding = new Padding(12, 10, 12, 10);
         _summary.Visible = false;
 
-        var question = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
-            BackColor = Color.White,
-            Padding = new Padding(0, 4, 0, 0),
-        };
-        var exam = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Right,
-            Width = 268,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            BackColor = Color.White,
-            Padding = new Padding(8, 4, 0, 0),
-        };
-        _summaryCancel.BackColor = Ui.DockBlue;
+        _summaryGo.Text = "Chuyển tới vị trí câu hỏi";
+        _summaryGo.Dock = DockStyle.Top;
+        _summaryGo.Height = 40;
+        _summaryGo.AutoSize = false;
         _summaryGo.BackColor = Color.FromArgb(0, 99, 177);
         _summaryGo.ForeColor = Color.White;
+        _summaryGo.Click += (_, _) => JumpSelectedSummary();
+        Ui.DockTips.SetToolTip(_summaryGo, "Đóng danh sách và mở câu hỏi đang chọn trên thanh bài thi");
+
+        _summaryCancel.BackColor = Ui.DockBlue;
         _summarySave.BackColor = Ui.DockBlue;
         _summaryFinish.BackColor = Ui.DockBlue;
         _summaryCheck.BackColor = Ui.Success;
         _summaryCancel.Click += (_, _) => ShowSummary(false);
-        _summaryGo.Click += (_, _) => JumpSelectedSummary();
         _summarySave.Click += (_, _) =>
         {
             ExamHub.SaveInPlace(_app);
@@ -722,27 +713,40 @@ sealed class MainForm : Form
             await SubmitExam();
         };
         _summaryCheck.Click += async (_, _) => await CheckTasks();
-        Ui.DockTips.SetToolTip(_summaryGo, "Đóng danh sách và mở câu hỏi đang chọn trên thanh bài thi");
         Ui.DockTips.SetToolTip(_summarySave, "Lưu bài, chưa nộp");
         Ui.DockTips.SetToolTip(_summaryFinish, "Nộp bài và kết thúc");
         Ui.DockTips.SetToolTip(_summaryCheck, "Chấm lại tệp Word đang mở");
         Ui.DockTips.SetToolTip(_summaryCancel, "Đóng danh sách, giữ nguyên câu hiện tại");
-        foreach (var btn in new[] { _summaryCancel, _summaryGo, _summaryCheck, _summarySave, _summaryFinish })
+
+        _summaryActions.Dock = DockStyle.Bottom;
+        _summaryActions.Height = 40;
+        _summaryActions.ColumnCount = 4;
+        _summaryActions.RowCount = 1;
+        _summaryActions.BackColor = Color.White;
+        foreach (var btn in new[] { _summaryCancel, _summaryCheck, _summarySave, _summaryFinish })
         {
-            btn.Margin = new Padding(0, 0, 8, 0);
+            btn.Dock = DockStyle.Fill;
+            btn.AutoSize = false;
             btn.Height = 36;
+            btn.Margin = new Padding(0, 0, 6, 0);
         }
 
-        question.Controls.Add(_summaryCancel);
-        question.Controls.Add(_summaryGo);
-        question.Controls.Add(_summaryCheck);
-        exam.Controls.Add(_summarySave);
-        exam.Controls.Add(_summaryFinish);
+        _summaryFinish.Margin = new Padding(0);
+        _summaryActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        _summaryActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        _summaryActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        _summaryActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        _summaryActions.Controls.Add(_summaryCancel, 0, 0);
+        _summaryActions.Controls.Add(_summaryCheck, 1, 0);
+        _summaryActions.Controls.Add(_summarySave, 2, 0);
+        _summaryActions.Controls.Add(_summaryFinish, 3, 0);
+
         _summaryFooter.Dock = DockStyle.Bottom;
-        _summaryFooter.Height = 52;
+        _summaryFooter.Height = 96;
         _summaryFooter.BackColor = Color.White;
-        _summaryFooter.Controls.Add(question);
-        _summaryFooter.Controls.Add(exam);
+        _summaryFooter.Padding = new Padding(0, 8, 0, 0);
+        _summaryFooter.Controls.Add(_summaryGo);
+        _summaryFooter.Controls.Add(_summaryActions);
 
         _summaryList.Dock = DockStyle.Fill;
         _summaryList.View = System.Windows.Forms.View.Details;
@@ -750,8 +754,7 @@ sealed class MainForm : Form
         _summaryList.HideSelection = false;
         _summaryList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         _summaryList.BorderStyle = BorderStyle.None;
-        _summaryList.SmallImageList = _statusIcons;
-        _summaryList.Columns.Add("#", 48);
+        _summaryList.Columns.Add("#", 32);
         _summaryList.Columns.Add("Kỹ năng", 220);
         _summaryList.Columns.Add("Kết quả", 108);
         _summaryList.DoubleClick += (_, _) => JumpSelectedSummary();
@@ -763,7 +766,7 @@ sealed class MainForm : Form
 
         _summaryDetail.Dock = DockStyle.Fill;
         _summaryDetail.BackColor = Ui.PageBg;
-        _summaryDetail.Padding = new Padding(12, 10, 12, 10);
+        _summaryDetail.Padding = new Padding(10, 8, 10, 8);
         _detailHead.Dock = DockStyle.Top;
         _detailHead.Font = Ui.HeadFont;
         _detailHead.ForeColor = Ui.Text;
@@ -793,24 +796,14 @@ sealed class MainForm : Form
         _detailHintBox.DetectUrls = false;
         _detailHintBox.TabStop = false;
         _detailHintBox.Visible = false;
-        _detailAnalysis.Dock = DockStyle.Fill;
-        _detailAnalysis.ReadOnly = true;
-        _detailAnalysis.BorderStyle = BorderStyle.None;
-        _detailAnalysis.BackColor = Color.White;
-        _detailAnalysis.ForeColor = Ui.Text;
-        _detailAnalysis.ScrollBars = RichTextBoxScrollBars.Vertical;
-        _detailAnalysis.WordWrap = true;
-        _detailAnalysis.DetectUrls = false;
-        _detailAnalysis.TabStop = false;
-        _detailAnalysis.Font = Ui.BodyFont;
-        var analysisWrap = new Panel
-        {
-            Dock = DockStyle.Fill,
-            BackColor = Color.White,
-            Padding = new Padding(10),
-        };
-        analysisWrap.Controls.Add(_detailAnalysis);
-        _summaryDetail.Controls.Add(analysisWrap);
+        _detailBlocks.Dock = DockStyle.Fill;
+        _detailBlocks.FlowDirection = FlowDirection.TopDown;
+        _detailBlocks.WrapContents = false;
+        _detailBlocks.AutoScroll = true;
+        _detailBlocks.BackColor = Ui.PageBg;
+        _detailBlocks.Padding = new Padding(0, 8, 0, 0);
+        _detailBlocks.Resize += (_, _) => FitReviewCards();
+        _summaryDetail.Controls.Add(_detailBlocks);
         _summaryDetail.Controls.Add(_detailHintBox);
         _summaryDetail.Controls.Add(_detailHintBtn);
         _summaryDetail.Controls.Add(_detailScore);
@@ -822,19 +815,6 @@ sealed class MainForm : Form
         _summarySplit.Controls.Add(_summaryListPane);
         _summary.Resize += (_, _) => LayoutSummaryChrome();
 
-        var searchRow = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.White };
-        var find = Ui.PrimaryBtn("Tìm", 72);
-        find.Dock = DockStyle.Right;
-        find.Height = 36;
-        find.Click += (_, _) => FillSummary();
-        _summaryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
-        _summaryFilter.Width = 128;
-        _summaryFilter.Dock = DockStyle.Right;
-        _summaryFilter.Items.AddRange(["Tất cả", "Đã đạt", "Chưa đạt", "Chưa xác minh", "Chưa chấm"]);
-        _summaryFilter.SelectedIndex = 0;
-        _summaryFilter.SelectedIndexChanged += (_, _) => FillSummary();
-        _summarySearch.Dock = DockStyle.Fill;
-        _summarySearch.Font = Ui.BodyFont;
         _summarySearch.PlaceholderText = "Tìm tên hoặc mã kỹ năng";
         _summarySearch.KeyDown += (_, e) =>
         {
@@ -844,9 +824,25 @@ sealed class MainForm : Form
                 e.Handled = true;
             }
         };
-        searchRow.Controls.Add(_summarySearch);
-        searchRow.Controls.Add(_summaryFilter);
-        searchRow.Controls.Add(find);
+        var searchHost = Ui.SearchField(_summarySearch, FillSummary);
+        searchHost.Dock = DockStyle.Fill;
+        _summarySearchRow.Dock = DockStyle.Top;
+        _summarySearchRow.Height = 40;
+        _summarySearchRow.BackColor = Color.White;
+        _summarySearchRow.Padding = new Padding(0, 0, 0, 6);
+        _summarySearchRow.Controls.Add(searchHost);
+
+        _summaryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _summaryFilter.Dock = DockStyle.Fill;
+        _summaryFilter.Font = Ui.BodyFont;
+        _summaryFilter.Items.AddRange(["Tất cả", "Đã đạt", "Chưa đạt", "Chưa xác minh", "Chưa chấm"]);
+        _summaryFilter.SelectedIndex = 0;
+        _summaryFilter.SelectedIndexChanged += (_, _) => FillSummary();
+        _summaryFilterRow.Dock = DockStyle.Top;
+        _summaryFilterRow.Height = 34;
+        _summaryFilterRow.BackColor = Color.White;
+        _summaryFilterRow.Padding = new Padding(0, 0, 0, 6);
+        _summaryFilterRow.Controls.Add(_summaryFilter);
 
         var meta = new Panel { Dock = DockStyle.Top, Height = 52, BackColor = Color.White };
         _summaryBar.Dock = DockStyle.Bottom;
@@ -868,7 +864,8 @@ sealed class MainForm : Form
 
         _summary.Controls.Add(_summarySplit);
         _summary.Controls.Add(_summaryFooter);
-        _summary.Controls.Add(searchRow);
+        _summary.Controls.Add(_summaryFilterRow);
+        _summary.Controls.Add(_summarySearchRow);
         _summary.Controls.Add(meta);
         _summary.Controls.Add(_summaryTitle);
     }
@@ -876,15 +873,38 @@ sealed class MainForm : Form
     void LayoutSummaryChrome()
     {
         var vertical = _docking || _summary.ClientSize.Width < 740;
+        var testing = ExamSession.Mode == "testing";
+        _summaryCheck.Visible = !testing;
+        _summaryActions.ColumnCount = testing ? 3 : 4;
+        while (_summaryActions.ColumnStyles.Count < 4)
+        {
+            _summaryActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+        }
+
+        if (testing)
+        {
+            _summaryActions.ColumnStyles[0].Width = 34;
+            _summaryActions.ColumnStyles[1].Width = 0;
+            _summaryActions.ColumnStyles[2].Width = 33;
+            _summaryActions.ColumnStyles[3].Width = 33;
+        }
+        else
+        {
+            _summaryActions.ColumnStyles[0].Width = 25;
+            _summaryActions.ColumnStyles[1].Width = 25;
+            _summaryActions.ColumnStyles[2].Width = 25;
+            _summaryActions.ColumnStyles[3].Width = 25;
+        }
+
+        _summaryFooter.Height = 96;
         if (vertical)
         {
             _summary.Padding = new Padding(8, 8, 8, 8);
             _summaryListPane.Dock = DockStyle.Top;
             _summaryListPane.Padding = new Padding(0, 0, 0, 8);
-            var body = Math.Max(160, _summary.ClientSize.Height - 200);
-            _summaryListPane.Height = Math.Clamp(body * 42 / 100, 140, 280);
+            var body = Math.Max(160, _summary.ClientSize.Height - 250);
+            _summaryListPane.Height = Math.Clamp(body * 38 / 100, 120, 240);
             _summaryTitle.TextAlign = ContentAlignment.MiddleLeft;
-            _summaryFooter.Height = _summary.ClientSize.Width < 520 ? 88 : 52;
         }
         else
         {
@@ -893,12 +913,27 @@ sealed class MainForm : Form
             _summaryListPane.Padding = new Padding(0, 0, 12, 0);
             _summaryListPane.Width = Math.Clamp(_summary.ClientSize.Width * 42 / 100, 280, 480);
             _summaryTitle.TextAlign = ContentAlignment.MiddleCenter;
-            _summaryFooter.Height = 52;
         }
 
-        if (_summaryList.Columns.Count >= 2)
+        if (_summaryList.Columns.Count >= 3)
         {
-            _summaryList.Columns[1].Width = Math.Max(120, _summaryListPane.ClientSize.Width - 180);
+            _summaryList.Columns[0].Width = 32;
+            _summaryList.Columns[2].Width = 108;
+            _summaryList.Columns[1].Width = Math.Max(100, _summaryListPane.ClientSize.Width - 32 - 108 - 24);
+        }
+
+        FitReviewCards();
+    }
+
+    void FitReviewCards()
+    {
+        var w = Math.Max(120, _detailBlocks.ClientSize.Width - 8);
+        foreach (Control child in _detailBlocks.Controls)
+        {
+            if (Equals(child.Tag, "review"))
+            {
+                child.Width = w;
+            }
         }
     }
 
@@ -1036,7 +1071,6 @@ sealed class MainForm : Form
             var row = new ListViewItem([(i + 1).ToString(), name, label])
             {
                 Tag = i,
-                ImageIndex = SkillReview.ImageIndex(status),
             };
             row.ForeColor = SkillReview.ColorOf(status);
             if (i == _taskIndex)
@@ -1075,7 +1109,7 @@ sealed class MainForm : Form
             _detailHead.Text = "Chọn một kỹ năng trong danh sách.";
             _detailStatus.Text = "";
             _detailScore.Text = "";
-            SetDetailAnalysis("Bấm một dòng bên trên để xem lỗi, thao tác đúng và gợi ý.");
+            SetDetailBlocks([new ReviewBlock("Kết quả chấm", "Bấm một dòng bên trên để xem lỗi, thao tác đúng và gợi ý.", "result")]);
             _detailHintBtn.Visible = false;
             _detailHintBox.Visible = false;
             _detailHintBox.Height = 0;
@@ -1097,7 +1131,7 @@ sealed class MainForm : Form
         _detailStatus.Text = SkillReview.Headline(hit.Status);
         _detailStatus.ForeColor = SkillReview.ColorOf(hit.Status);
         _detailScore.Text = string.IsNullOrWhiteSpace(id) ? "" : id + (hit.Possible > 0 && !SkillReview.HideScores ? $"  ·  {hit.Earned:0}/{hit.Possible:0} điểm" : "");
-        SetDetailAnalysis(SkillReview.Analysis(hit, item));
+            SetDetailBlocks(SkillReview.AnalysisBlocks(hit, item));
         var steps = SkillReview.HintSteps(item);
         _detailHintBtn.Visible = ExamSession.Mode != "testing" && steps.Count > 0;
         _detailHintBtn.Text = _hintExpanded ? "Ẩn gợi ý" : "Xem gợi ý";
@@ -1132,16 +1166,17 @@ sealed class MainForm : Form
         _detailHintBox.Height = Math.Min(160, 28 + steps.Count * 28);
     }
 
-    void SetDetailAnalysis(string text)
+    void SetDetailBlocks(IReadOnlyList<ReviewBlock> blocks)
     {
-        try
+        _detailBlocks.SuspendLayout();
+        _detailBlocks.Controls.Clear();
+        foreach (var block in blocks)
         {
-            _detailAnalysis.Rtf = Ui.MarkedDocumentRtf(text, 11f);
+            _detailBlocks.Controls.Add(Ui.ReviewCard(block.Title, block.Body, block.Tone));
         }
-        catch
-        {
-            _detailAnalysis.Text = Ui.StripMarks(text);
-        }
+
+        _detailBlocks.ResumeLayout();
+        FitReviewCards();
     }
 
     void JumpSelectedSummary()

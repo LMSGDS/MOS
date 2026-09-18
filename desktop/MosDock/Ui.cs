@@ -12,7 +12,10 @@ static class Ui
     public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
     public static readonly Color PageBg = Color.FromArgb(247, 243, 238);
     public static readonly Color WarmShadow = Color.FromArgb(226, 214, 200);
-    public static readonly Color BannerBg = Color.FromArgb(227, 240, 248);
+    public static readonly Color ReviewResult = Color.FromArgb(232, 242, 250);
+    public static readonly Color ReviewYours = Color.FromArgb(255, 246, 230);
+    public static readonly Color ReviewCorrect = Color.FromArgb(230, 245, 233);
+    public static readonly Color ReviewPitfall = Color.FromArgb(255, 235, 230);
     public static readonly Color Card = Color.White;
     public static readonly Color Text = Color.FromArgb(45, 59, 69);
     public static readonly Color Muted = Color.FromArgb(107, 119, 128);
@@ -987,6 +990,144 @@ static class Ui
                 sb.Append(@"\b0 ");
             }
         }
+    }
+
+    public static Panel SearchField(TextBox box, Action onFind)
+    {
+        var host = new Panel
+        {
+            Height = 36,
+            BackColor = Line,
+            Padding = new Padding(1),
+        };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var find = new Button
+        {
+            Dock = DockStyle.Right,
+            Width = 34,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Card,
+            Cursor = Cursors.Hand,
+            Text = "",
+            TabStop = false,
+            AccessibleName = "Tìm",
+            UseMnemonic = false,
+        };
+        find.FlatAppearance.BorderSize = 0;
+        find.FlatAppearance.MouseOverBackColor = Color.FromArgb(236, 244, 250);
+        find.Paint += (_, e) => PaintSearchMark(e.Graphics, find.ClientRectangle, Muted);
+        find.Click += (_, _) => onFind();
+        DockTips.SetToolTip(find, "Tìm kỹ năng");
+        box.BorderStyle = BorderStyle.None;
+        box.Dock = DockStyle.Fill;
+        box.Font = BodyFont;
+        inner.Controls.Add(box);
+        inner.Controls.Add(find);
+        host.Controls.Add(inner);
+        RoundControl(host, 8);
+        return host;
+    }
+
+    public static void PaintSearchMark(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var cx = r.X + r.Width / 2 - 1;
+        var cy = r.Y + r.Height / 2 - 1;
+        using var pen = new Pen(color, 1.7f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        g.DrawEllipse(pen, cx - 6, cy - 7, 11, 11);
+        g.DrawLine(pen, cx + 3, cy + 3, cx + 8, cy + 8);
+    }
+
+    public static Color ReviewFill(string tone) => tone switch
+    {
+        "correct" => ReviewCorrect,
+        "pitfall" => ReviewPitfall,
+        "yours" => ReviewYours,
+        "result" => ReviewResult,
+        _ => Card,
+    };
+
+    public static Color ReviewAccent(string tone) => tone switch
+    {
+        "correct" => Success,
+        "pitfall" => Danger,
+        "yours" => Warning,
+        "result" => Primary,
+        _ => Line,
+    };
+
+    public static Panel ReviewCard(string title, string body, string tone)
+    {
+        var fill = ReviewFill(tone);
+        var accent = ReviewAccent(tone);
+        var shell = new Panel
+        {
+            BackColor = fill,
+            Margin = new Padding(0, 0, 0, 8),
+            Padding = Padding.Empty,
+            Tag = "review",
+        };
+        var bar = new Panel { Dock = DockStyle.Left, Width = 5, BackColor = accent };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = fill, Padding = new Padding(10, 8, 10, 8) };
+        var head = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = 22,
+            UseMnemonic = false,
+        };
+        var box = new RichTextBox
+        {
+            Dock = DockStyle.Top,
+            ReadOnly = true,
+            BorderStyle = BorderStyle.None,
+            BackColor = fill,
+            ForeColor = Text,
+            ScrollBars = RichTextBoxScrollBars.None,
+            WordWrap = true,
+            DetectUrls = false,
+            TabStop = false,
+            Font = BodyFont,
+        };
+        try
+        {
+            box.Rtf = MarkedDocumentRtf(body, 10.5f);
+        }
+        catch
+        {
+            box.Text = StripMarks(body);
+        }
+
+        void Fit(object? _, EventArgs e)
+        {
+            var w = Math.Max(80, inner.ClientSize.Width - inner.Padding.Horizontal);
+            var h = MeasureH(StripMarks(body), BodyFont, w) + 12;
+            if (box.Height != h)
+            {
+                box.Height = h;
+            }
+
+            var next = inner.Padding.Vertical + head.Height + box.Height + 4;
+            if (shell.Height != next)
+            {
+                shell.Height = Math.Max(56, next);
+            }
+        }
+
+        inner.Controls.Add(box);
+        inner.Controls.Add(head);
+        shell.Controls.Add(inner);
+        shell.Controls.Add(bar);
+        RoundControl(shell, 8);
+        inner.Resize += Fit;
+        shell.Resize += Fit;
+        Fit(null, EventArgs.Empty);
+        return shell;
     }
 
     public static FlowLayoutPanel DockChip()
