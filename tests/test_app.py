@@ -129,7 +129,12 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.14.9" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "*_results.docx" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.1 / 1.3" not in demo
 
 
 def test_word_window_only_docks_current_exam():

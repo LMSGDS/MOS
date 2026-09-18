@@ -155,6 +155,15 @@ def test_word_11_manifest_checkpoint_and_submit(client):
     starter = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers)
     assert starter.status_code == 200
     assert starter.content[:2] == b"PK"
+    keyed = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers, params={"kind": "results"})
+    assert keyed.status_code == 200
+    assert keyed.content[:2] == b"PK"
+    assert keyed.content != starter.content
+    six = client.get("/api/v1/projects/word-objective-6-2/file", headers=headers, params={"kind": "results"})
+    assert six.status_code == 200
+    assert six.content[:2] == b"PK"
+    denied = client.get("/api/v1/projects/word-objective-6-2/file", params={"kind": "results"})
+    assert denied.status_code == 401
 
     started = client.post(
         "/api/v1/attempts",

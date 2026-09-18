@@ -101,6 +101,54 @@ static class ActionEvidence
         return item;
     }
 
+    public static void RecordRubric(JsonRubric? rubric)
+    {
+        if (rubric?.Criteria is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var item in rubric.Criteria)
+        {
+            if (!string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var kind = (item.Predicate.Type ?? item.Selector.Action ?? "").Trim().ToLowerInvariant();
+            var action = kind switch
+            {
+                "search_query" or "find" => "find",
+                "results_tab" => "results_tab",
+                "search_navigate" or "find_navigate" => "find_navigate",
+                "advanced_find" => "advanced_find",
+                "goto_graphic" => "goto_graphic",
+                "goto_page" => "goto_page",
+                "goto_bookmark" => "goto_bookmark",
+                "save_alternate_format" => "save_alternate_format",
+                "print_settings" => "print_settings",
+                "share_electronic" => "share_electronic",
+                "inspect_document" => "inspect_document",
+                "compatibility_check" => "compatibility_check",
+                _ => kind.Length > 0 ? kind : "event",
+            };
+            Add(
+                action,
+                query: First(item.Predicate.Query, item.Selector.Query, item.Predicate.Text),
+                source: string.IsNullOrWhiteSpace(item.Selector.Source) ? "demo" : item.Selector.Source,
+                matchCase: item.Predicate.MatchCase || item.Selector.MatchCase,
+                wholeWord: item.Predicate.WholeWord || item.Selector.WholeWord,
+                style: First(item.Predicate.Style, item.Selector.Style),
+                hits: Math.Max(item.Predicate.MinHits ?? item.Predicate.Min ?? 1, 1),
+                name: First(item.Predicate.Name, item.Selector.Bookmark),
+                page: item.Predicate.Page ?? item.Selector.Page,
+                format: action == "save_alternate_format" ? "pdf" : null,
+                skill: item.Id,
+                ok: true,
+                detail: "demo_all");
+        }
+    }
+
     public static ActionEvent Add(
         string action,
         string? query = null,

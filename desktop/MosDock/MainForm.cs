@@ -1438,12 +1438,28 @@ sealed class MainForm : Form
                 ApplyDock(waitForWord: true);
             }
 
-            _examStatus.Text = "Đang tự điều khiển Word theo từng nhiệm vụ…";
+            _examStatus.Text = "Đang demo tất cả bài Word…";
             Cursor = Cursors.WaitCursor;
             string report;
             try
             {
-            report = WordActionDemo.Drive(SelectTaskIndex);
+                if (!string.IsNullOrWhiteSpace(ExamSession.AttemptId))
+                {
+                    try
+                    {
+                        WordActionDemo.Drive(SelectTaskIndex);
+                    }
+                    catch
+                    {
+                        // bulk demo still runs from keyed files
+                    }
+                }
+
+                report = await ExamHub.DemoAllAsync(msg =>
+                {
+                    _examStatus.Text = msg;
+                    Application.DoEvents();
+                });
             }
             catch (Exception ex)
             {
@@ -1452,11 +1468,22 @@ sealed class MainForm : Form
 
             Cursor = Cursors.Default;
             _examStatus.Text = report.Split('\n')[0];
-            ApplyDock(waitForWord: false);
+            ShowExamUi();
+            if (!_docking)
+            {
+                EnterDock(compact: true);
+            }
+            else
+            {
+                ApplyDock(waitForWord: true);
+            }
+
             if (!string.IsNullOrWhiteSpace(ExamSession.AttemptId) && !string.IsNullOrWhiteSpace(ExamSession.LocalPath))
             {
                 await CheckTasks();
             }
+
+            ShowSummary(true);
         }
         finally
         {

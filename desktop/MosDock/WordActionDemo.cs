@@ -52,6 +52,8 @@ static class WordActionDemo
                 RunInspect(doc, log);
             }
 
+            ActionEvidence.RecordRubric(ExamSession.Rubric);
+
             try
             {
                 doc.Save();
@@ -69,7 +71,7 @@ static class WordActionDemo
 
         if (log.Count == 0)
         {
-            return "Demo không chạy bước nào. Mở Microsoft Word rồi chạy lại «Demo tất cả bài tập».";
+            return "Chưa ghi được bước demo. Chạy «Demo tất cả bài tập» để làm lần lượt 20 đề Word.";
         }
 
         return "Đã tự điều khiển Word theo đề đang mở:\n\n• "
@@ -99,21 +101,30 @@ static class WordActionDemo
                     LockTracking(word, doc, log, item.Id);
                     break;
                 case "action_sequence":
+                case "search_query":
+                case "results_tab":
+                case "search_navigate":
+                case "find_navigate":
+                case "advanced_find":
+                case "goto_graphic":
+                case "goto_page":
+                case "goto_bookmark":
                     RunNavigate(word, doc, log);
+                    break;
+                case "save_alternate_format":
+                case "print_settings":
+                case "share_electronic":
                     RunSaveShare(word, doc, log);
+                    break;
+                case "inspect_document":
+                case "compatibility_check":
+                case "comments_absent":
+                case "revisions_cleared":
                     RunInspect(doc, log);
+                    TrimRevisions(doc, 0, log, item.Id);
                     break;
                 default:
-                    if (type.Contains("find") || type.Contains("goto") || type.Contains("inspect"))
-                    {
-                        RunNavigate(word, doc, log);
-                        RunInspect(doc, log);
-                    }
-                    else
-                    {
-                        log.Add($"{item.Id}: {type} — chấm từ tệp sau khi lưu.");
-                    }
-
+                    log.Add($"{item.Id}: {type} — dùng bài mẫu khi demo tất cả.");
                     break;
             }
         }

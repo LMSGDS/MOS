@@ -1,7 +1,7 @@
 """Every MOS Word pack reaches 100 with generated demo evidence."""
 from __future__ import annotations
 
-from app.demo_all import evidence_from_rubric, format_report, iter_packs, run_all
+from app.demo_all import evidence_from_rubric, format_report, iter_packs, results_file, run_all
 from app.grade import GRADER_VERSION
 
 
@@ -28,6 +28,15 @@ def test_demo_all_twenty_word_packs_complete():
     text = format_report(rows)
     assert "20/20 bài đạt 100 sau demo." in text
     assert "word-objective-6-2" in text
+
+
+def test_results_file_exists_for_every_word_pack():
+    packs = iter_packs()
+    assert len(packs) == 20
+    for pack in packs:
+        keyed = results_file(pack["project_id"])
+        assert keyed is not None and keyed.is_file(), pack["project_id"]
+        assert keyed.resolve() == pack["results"].resolve()
 
 
 def test_evidence_from_rubric_covers_1_1_find_and_goto():

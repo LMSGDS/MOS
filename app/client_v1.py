@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 
 from app.auth import authenticate
 from app.db import cursor
+from app.demo_all import results_file
 from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.programs import normalize
 from app.progress import record_attempt_event
@@ -467,11 +468,16 @@ def v1_project_rubric(request: Request, project_id: str):
 
 
 @router.get("/projects/{project_id}/file")
-def v1_project_file(request: Request, project_id: str):
+def v1_project_file(request: Request, project_id: str, kind: str = "starter"):
     bearer_user(request)
     row = _project_row(project_id)
     if not row:
         raise HTTPException(status_code=404, detail="project")
+    if kind in ("results", "demo"):
+        demo = results_file(project_id)
+        if demo is None or not demo.is_file():
+            raise HTTPException(status_code=404, detail="results")
+        return FileResponse(demo, filename=demo.name)
     path = Path(row["file_path"])
     if not path.is_file():
         raise HTTPException(status_code=404, detail="file")

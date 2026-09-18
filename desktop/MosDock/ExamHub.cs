@@ -105,7 +105,7 @@ static class ExamHub
         return items;
     }
 
-    public static async Task<(bool Ok, string Message)> StartProjectAsync(string program, string projectId, string mode)
+    public static async Task<(bool Ok, string Message)> StartProjectAsync(string program, string projectId, string mode, bool launchWord = true)
     {
         try
         {
@@ -133,13 +133,126 @@ static class ExamHub
             BindSession(chosen, attemptId, local);
             WriteMeta(dir);
             await TrackAsync("open", new { file = chosen.Filename, program });
-            WordWindow.Launch(program, local);
+            if (launchWord)
+            {
+                WordWindow.Launch(program, local);
+            }
             return (true, chosen.Title);
         }
         catch (Exception ex)
         {
             return (false, ex.Message);
         }
+    }
+
+    public static async Task<string> DemoAllAsync(Action<string>? status = null)
+    {
+        var projects = (await ListProjectsAsync("word"))
+            .Where(p => p.Id.StartsWith("word-objective-", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (projects.Count == 0)
+        {
+            return "Không có bài Word trên máy chủ.";
+        }
+
+        WordCom.CloseExamDocument();
+        var lines = new List<string>();
+        var ok = 0;
+        foreach (var project in projects)
+        {
+            status?.Invoke($"Demo {project.Title}…");
+            var (started, startMsg) = await StartProjectAsync(project.Program, project.Id, "training", launchWord: false);
+            if (!started)
+            {
+                lines.Add($"{project.Title}: lỗi mở — {startMsg}");
+                continue;
+            }
+
+            ActionEvidence.Begin(ExamSession.AttemptId);
+            ActionEvidence.RecordRubric(ExamSession.Rubric);
+            try
+            {
+                await ApplyKeyedResultsAsync();
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{project.Title}: chưa lấy được bài mẫu — {ex.Message}");
+                continue;
+            }
+
+            var (checkOk, summary, criteria) = await CheckTasksAsync(project.Program);
+            var passed = checkOk && (
+                (criteria.Count > 0 && criteria.All(c => c.Status == "pass"))
+                || summary.Contains("100/100", StringComparison.Ordinal));
+
+            if (passed)
+            {
+                ok++;
+            }
+
+            lines.Add($"{project.Title}: {summary}");
+        }
+
+        status?.Invoke($"Xong {ok}/{projects.Count} bài.");
+        if (!string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+        {
+            WordWindow.Launch(ExamSession.Program, ExamSession.LocalPath);
+        }
+
+        return $"Đã demo {ok}/{projects.Count} bài Word.\n\n• " + string.Join("\n• ", lines);
+    }
+
+    public static async Task ApplyKeyedResultsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ExamSession.ProjectId) || string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+        {
+            throw new InvalidOperationException("Chưa mở đề MOS.");
+        }
+
+        WordCom.CloseExamDocument();
+        byte[] bytes;
+        var embedded = FindLocalResults(ExamSession.ProjectId);
+        if (embedded is not null)
+        {
+            bytes = await File.ReadAllBytesAsync(embedded);
+        }
+        else
+        {
+            bytes = await Portal.GetBytesAsync(
+                $"/api/v1/projects/{Uri.EscapeDataString(ExamSession.ProjectId)}/file?kind=results");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(ExamSession.LocalPath)!);
+        await File.WriteAllBytesAsync(ExamSession.LocalPath, bytes);
+    }
+
+    static string? FindLocalResults(string? projectId)
+    {
+        if (string.IsNullOrWhiteSpace(projectId))
+        {
+            return null;
+        }
+
+        foreach (var root in new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "DemoResults"),
+            Path.Combine(AppContext.BaseDirectory, "tests", "fixtures"),
+        })
+        {
+            var dir = Path.Combine(root, projectId);
+            if (!Directory.Exists(dir))
+            {
+                continue;
+            }
+
+            var hits = Directory.GetFiles(dir, "*_results.docx");
+            if (hits.Length > 0)
+            {
+                return hits[0];
+            }
+        }
+
+        return null;
     }
 
     public static async Task<(bool Ok, string Message)> ResumeAttemptAsync(MosAttempt attempt)
@@ -372,6 +485,11 @@ static class ExamHub
         }
 
         var path = OfficeCapture.SaveActive(program);
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            path = ExamSession.LocalPath;
+        }
+
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             return (false, "Không lưu được đúng tài liệu bài thi. Đóng tệp Office khác rồi thử lại.", []);

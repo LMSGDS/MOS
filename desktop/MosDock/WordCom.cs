@@ -53,6 +53,23 @@ static class WordCom
         return TryBind(out _, out _);
     }
 
+    public static void CloseExamDocument()
+    {
+        if (!TryBind(out _, out dynamic? doc) || doc is null)
+        {
+            return;
+        }
+
+        try
+        {
+            doc.Close(0);
+        }
+        catch
+        {
+            // document already closed or busy
+        }
+    }
+
     static dynamic? BindDocument(dynamic word, bool activate)
     {
         dynamic docs = word.Documents;

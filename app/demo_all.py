@@ -15,6 +15,18 @@ ROOT = Path(__file__).resolve().parent.parent
 RUBRIC_DIR = ROOT / "app" / "rubrics"
 FIXTURES = ROOT / "tests" / "fixtures"
 
+
+def results_file(project_id: str) -> Path | None:
+    folder = FIXTURES / project_id
+    if not folder.is_dir():
+        return None
+    tail = project_id.removeprefix("word-objective-")
+    named = folder / f"Word_{tail}_results.docx"
+    if named.is_file():
+        return named
+    hits = sorted(folder.glob("*_results.docx"))
+    return hits[0] if hits else None
+
 ACTION_NAME = {
     "search_query": "find",
     "find": "find",
@@ -75,7 +87,8 @@ def evidence_from_rubric(rubric: dict) -> list[dict]:
 def _docx_pair(folder: Path, project_id: str) -> tuple[Path, Path]:
     tail = project_id.removeprefix("word-objective-")
     starter = folder / f"Word_{tail}.docx"
-    results = folder / f"Word_{tail}_results.docx"
+    keyed = results_file(project_id)
+    results = keyed if keyed is not None else folder / f"Word_{tail}_results.docx"
     if not starter.is_file():
         starter = next(p for p in folder.glob("Word_*.docx") if "_results" not in p.name)
     if not results.is_file():
