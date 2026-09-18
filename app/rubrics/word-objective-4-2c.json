@@ -1,0 +1,88 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-4-2c",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 4.2c — Insert a bibliography",
+  "program": "word",
+  "objective": "4.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.bibliography"
+  ],
+  "criteria": [
+    {
+      "id": "W42C-B01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Chèn Bibliography (ít nhất 3 mục style Bibliography).",
+      "predicate": {
+        "type": "style_used",
+        "style": "Bibliography",
+        "min": 3
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có bibliography.",
+        "fail": "Chưa thấy các mục Bibliography.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ cuối tài liệu.",
+        "**References** > **Bibliography**.",
+        "Chọn kiểu **Bibliography** / **References**."
+      ]
+    },
+    {
+      "id": "W42C-H01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Có tiêu đề References.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "References"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có References.",
+        "fail": "Chưa thấy References.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bibliography thường chèn heading References.",
+        "Nếu thiếu, gõ References và **Heading 1**.",
+        "Không xóa các nguồn."
+      ]
+    },
+    {
+      "id": "W42C-C01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Đổi kiểu citation sang dạng Grimm, Jacob, and Wilhelm Grimm.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Grimm, Jacob, and Wilhelm Grimm"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Citation còn trong bài.",
+        "fail": "Mất trường CITATION.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Không xóa các citation đã chèn.",
+        "Có thể **Style** (APA/Chicago) trên nhóm **Citations & Bibliography**.",
+        "Rồi **Update Citations and Bibliography**."
+      ]
+    }
+  ]
+}

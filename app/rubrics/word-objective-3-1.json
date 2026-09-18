@@ -1,0 +1,112 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-3-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 3.1 — Create tables",
+  "program": "word",
+  "objective": "3.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.tables"
+  ],
+  "criteria": [
+    {
+      "id": "W31-T01",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Chuyển văn bản Distance/Fee thành bảng.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "0-5 miles"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có bảng Distance/Fee.",
+        "fail": "Chưa thấy bảng phí quãng đường.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen khối Distance / Fee.",
+        "Tab **Insert**, nhóm **Tables**, **Table** > **Convert Text to Table**.",
+        "Cột tách theo tab hoặc dấu phân cách, **OK**."
+      ]
+    },
+    {
+      "id": "W31-T02",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Tạo bảng có cột Date, Address, Type.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Mileage fee"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có bảng 5 cột.",
+        "fail": "Chưa thấy bảng Date/Address.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Table** > **Insert Table**.",
+        "Chọn số cột (5) rồi **OK**.",
+        "Gõ Date, Address, Type, Mileage fee, Consultation fee vào hàng đầu."
+      ]
+    },
+    {
+      "id": "W31-T03",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Tạo thêm bảng bằng cách chỉ định hàng/cột (4×3).",
+      "predicate": {
+        "type": "table_dim",
+        "rows": 4,
+        "cols": 3
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có bảng 4 hàng 3 cột.",
+        "fail": "Chưa thấy bảng 4×3.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Table** > **Insert Table**.",
+        "Number of columns: 3, Number of rows: 4.",
+        "Bấm **OK**."
+      ]
+    },
+    {
+      "id": "W31-X01",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Chuyển bảng Location/Hourly Rate thành văn bản.",
+      "predicate": {
+        "type": "table_lacks_text",
+        "text": "Hourly Rate"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã chuyển bảng thành chữ.",
+        "fail": "Bảng Location vẫn chưa chuyển thành văn bản.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm vào bảng Location / Hourly Rate.",
+        "Tab **Layout** (Table Tools) > **Convert to Text**.",
+        "Chọn dấu phân cách rồi **OK**."
+      ]
+    }
+  ]
+}

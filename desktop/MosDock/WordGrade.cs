@@ -22,6 +22,59 @@ sealed class WordFacts
     public bool TrackRevisions { get; set; }
     public int VanishCount { get; set; }
     public string Heading1Sz { get; set; } = "";
+    public string DocumentText { get; set; } = "";
+    public List<ParaFact> Paragraphs { get; } = [];
+    public List<string> TextEffects { get; } = [];
+    public List<SectionFact> Sections { get; } = [];
+    public Dictionary<string, int> Breaks { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<TableFact> Tables { get; } = [];
+    public List<string> NumberingFormats { get; } = [];
+    public int FootnoteCount { get; set; }
+    public List<string> Fields { get; } = [];
+    public Dictionary<string, int> StyleCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> DrawingKinds { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<string> DrawingTexts { get; } = [];
+    public List<string> ArtisticEffects { get; } = [];
+    public List<string> PictureEffects { get; } = [];
+    public List<string> AltTexts { get; } = [];
+    public List<string> Wraps { get; } = [];
+    public List<CommentFact> Comments { get; } = [];
+    public int ResolvedCount { get; set; }
+    public int ReplyCount { get; set; }
+    public bool DocumentProtection { get; set; }
+    public bool Has3d { get; set; }
+    public bool HasSmartArt { get; set; }
+    public bool HasHdPhoto { get; set; }
+}
+
+sealed class ParaFact
+{
+    public string Text { get; init; } = "";
+    public string Style { get; init; } = "";
+    public string Fmt { get; init; } = "";
+}
+
+sealed class SectionFact
+{
+    public int Cols { get; init; } = 1;
+    public string Orient { get; init; } = "portrait";
+}
+
+sealed class TableFact
+{
+    public int Rows { get; init; }
+    public int Cols { get; init; }
+    public bool Header { get; init; }
+    public bool Merged { get; init; }
+    public List<List<string>> Cells { get; init; } = [];
+}
+
+sealed class CommentFact
+{
+    public string Author { get; init; } = "";
+    public string Text { get; init; } = "";
+    public bool Done { get; init; }
+    public bool Reply { get; init; }
 }
 
 sealed class BookmarkFact
@@ -46,6 +99,10 @@ static class WordXml
     static readonly XNamespace CP = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
     static readonly XNamespace DC = "http://purl.org/dc/elements/1.1/";
     static readonly XNamespace VML = "urn:schemas-microsoft-com:vml";
+    static readonly XNamespace A = "http://schemas.openxmlformats.org/drawingml/2006/main";
+    static readonly XNamespace WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+    static readonly XNamespace W14 = "http://schemas.microsoft.com/office/word/2010/wordml";
+    static readonly XNamespace W15 = "http://schemas.microsoft.com/office/word/2012/wordml";
 
     public static string Norm(string? text) =>
         string.Join(" ", (text ?? "").Replace('\u00a0', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -203,6 +260,7 @@ static class WordXml
             }
 
             FillManage(facts, zip, root);
+            FillSkills(facts, zip, root);
             return facts;
         }
         catch (InvalidDataException)
@@ -314,6 +372,272 @@ static class WordXml
         var heading1 = styles?.Elements(W + "style").FirstOrDefault(s => (string?)s.Attribute(W + "styleId") == "Heading1");
         facts.Heading1Sz = (string?)heading1?.Element(W + "rPr")?.Element(W + "sz")?.Attribute(W + "val") ?? "";
     }
+
+    static string LocalName(XName name) => name.LocalName;
+
+    static void FillSkills(WordFacts facts, ZipArchive zip, XElement root)
+    {
+        var numberingMap = new Dictionary<string, string>(StringComparer.Ordinal);
+        var numbering = LoadPart(zip, "word/numbering.xml");
+        if (numbering is not null)
+        {
+            var abstracts = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var abs in numbering.Elements(W + "abstractNum"))
+            {
+                var aid = (string?)abs.Attribute(W + "abstractNumId") ?? "";
+                var lvl0 = abs.Elements(W + "lvl").FirstOrDefault(l => ((string?)l.Attribute(W + "ilvl") ?? "0") == "0");
+                abstracts[aid] = (string?)lvl0?.Element(W + "numFmt")?.Attribute(W + "val") ?? "";
+            }
+
+            foreach (var num in numbering.Elements(W + "num"))
+            {
+                var nid = (string?)num.Attribute(W + "numId") ?? "";
+                var aid = (string?)num.Element(W + "abstractNumId")?.Attribute(W + "val") ?? "";
+                numberingMap[nid] = abstracts.GetValueOrDefault(aid) ?? "";
+            }
+
+            facts.NumberingFormats.AddRange(numberingMap.Values.Where(v => v.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase));
+        }
+
+        var chunks = new List<string>();
+        foreach (var p in root.Descendants(W + "p"))
+        {
+            var style = (string?)p.Element(W + "pPr")?.Element(W + "pStyle")?.Attribute(W + "val") ?? "";
+            var numId = (string?)p.Element(W + "pPr")?.Element(W + "numPr")?.Element(W + "numId")?.Attribute(W + "val") ?? "";
+            var text = Norm(string.Concat(p.Descendants(W + "t").Select(t => t.Value)));
+            if (text.Length > 0)
+            {
+                chunks.Add(text);
+            }
+
+            if (style.Length > 0)
+            {
+                facts.StyleCounts[style] = facts.StyleCounts.GetValueOrDefault(style) + 1;
+            }
+
+            var fmt = numberingMap.GetValueOrDefault(numId) ?? "";
+            if (text.Length > 0 || style.Length > 0 || fmt.Length > 0)
+            {
+                facts.Paragraphs.Add(new ParaFact { Text = text, Style = style, Fmt = fmt });
+            }
+
+            foreach (var instr in p.Descendants(W + "instrText"))
+            {
+                var value = (instr.Value ?? "").Trim();
+                if (value.Length > 0)
+                {
+                    facts.Fields.Add(value);
+                }
+            }
+
+            foreach (var r in p.Elements(W + "r"))
+            {
+                var rpr = r.Element(W + "rPr");
+                if (rpr is not null && (rpr.Element(W14 + "textOutline") is not null || rpr.Element(W14 + "props3d") is not null))
+                {
+                    var run = Norm(string.Concat(r.Elements(W + "t").Select(t => t.Value)));
+                    if (run.Length > 0)
+                    {
+                        facts.TextEffects.Add(run);
+                    }
+                }
+            }
+
+            foreach (var br in p.Descendants(W + "br"))
+            {
+                var kind = (string?)br.Attribute(W + "type") ?? "textWrapping";
+                facts.Breaks[kind] = facts.Breaks.GetValueOrDefault(kind) + 1;
+            }
+        }
+
+        facts.DocumentText = string.Join("\n", chunks);
+        foreach (var sect in root.Descendants(W + "sectPr"))
+        {
+            var cols = int.TryParse((string?)sect.Element(W + "cols")?.Attribute(W + "num"), out var n) ? n : 1;
+            var orient = (string?)sect.Element(W + "pgSz")?.Attribute(W + "orient") ?? "portrait";
+            facts.Sections.Add(new SectionFact { Cols = cols, Orient = orient });
+        }
+
+        facts.Breaks["section"] = facts.Sections.Count;
+        foreach (var tbl in root.Descendants(W + "tbl"))
+        {
+            var rows = tbl.Elements(W + "tr").ToList();
+            var header = false;
+            var merged = false;
+            var cells = new List<List<string>>();
+            foreach (var tr in rows)
+            {
+                if (tr.Element(W + "trPr")?.Element(W + "tblHeader") is not null)
+                {
+                    header = true;
+                }
+
+                var row = new List<string>();
+                foreach (var tc in tr.Elements(W + "tc"))
+                {
+                    row.Add(Norm(string.Concat(tc.Descendants(W + "t").Select(t => t.Value))));
+                    var tcpr = tc.Element(W + "tcPr");
+                    if (tcpr?.Element(W + "gridSpan") is not null || tcpr?.Element(W + "vMerge") is not null || tcpr?.Element(W + "hMerge") is not null)
+                    {
+                        merged = true;
+                    }
+                }
+
+                cells.Add(row);
+            }
+
+            facts.Tables.Add(new TableFact
+            {
+                Rows = rows.Count,
+                Cols = cells.Count == 0 ? 0 : cells.Max(r => r.Count),
+                Header = header,
+                Merged = merged,
+                Cells = cells,
+            });
+        }
+
+        var footnotes = LoadPart(zip, "word/footnotes.xml");
+        if (footnotes is not null)
+        {
+            facts.FootnoteCount = footnotes.Elements(W + "footnote")
+                .Count(el => (string?)el.Attribute(W + "type") is not ("separator" or "continuationSeparator"));
+        }
+
+        foreach (var drawing in root.Descendants(W + "drawing").Concat(root.Descendants(W + "pict")))
+        {
+            var docpr = drawing.Descendants(WP + "docPr").FirstOrDefault();
+            var name = (string?)docpr?.Attribute("name") ?? "";
+            var descr = (string?)docpr?.Attribute("descr") ?? "";
+            if (descr.Length > 0)
+            {
+                facts.AltTexts.Add(descr);
+            }
+
+            var kind = "drawing";
+            var lower = name.ToLowerInvariant();
+            if (lower.Contains("3d") || lower.Contains("model"))
+            {
+                kind = "model3d";
+            }
+            else if (lower.Contains("diagram") || lower.Contains("smart"))
+            {
+                kind = "smartart";
+            }
+            else if (lower.Contains("text box") || lower.Contains("textbox"))
+            {
+                kind = "textbox";
+            }
+            else if (lower.Contains("picture"))
+            {
+                kind = "picture";
+            }
+            else if (name.Length > 0)
+            {
+                kind = "shape";
+            }
+
+            foreach (var el in drawing.Descendants())
+            {
+                var tag = LocalName(el.Name);
+                if (tag.StartsWith("wrap", StringComparison.Ordinal) && tag != "wrapPolygon")
+                {
+                    facts.Wraps.Add(tag);
+                }
+
+                if (tag.StartsWith("artistic", StringComparison.Ordinal))
+                {
+                    facts.ArtisticEffects.Add(tag);
+                }
+
+                if (tag is "innerShdw" or "outerShdw" or "glow" or "softEdge" or "reflection")
+                {
+                    facts.PictureEffects.Add(tag);
+                }
+
+                if ((el.Name == A + "t" || el.Name == W + "t") && !string.IsNullOrWhiteSpace(el.Value))
+                {
+                    facts.DrawingTexts.Add(Norm(el.Value));
+                }
+            }
+
+            foreach (var txbx in drawing.Descendants(W + "txbxContent"))
+            {
+                var txt = Norm(string.Concat(txbx.Descendants(W + "t").Select(t => t.Value)));
+                if (txt.Length > 0)
+                {
+                    facts.DrawingTexts.Add(txt);
+                    if (kind == "drawing")
+                    {
+                        kind = "textbox";
+                    }
+                }
+            }
+
+            facts.DrawingKinds.Add(kind);
+        }
+
+        var ext = LoadPart(zip, "word/commentsExtended.xml");
+        var extByPid = new Dictionary<string, (bool Done, bool Reply)>(StringComparer.OrdinalIgnoreCase);
+        if (ext is not null)
+        {
+            foreach (var ex in ext.Elements())
+            {
+                var pid = (string?)ex.Attribute(W15 + "paraId") ?? "";
+                var done = (string?)ex.Attribute(W15 + "done") == "1";
+                var parent = (string?)ex.Attribute(W15 + "paraIdParent") ?? "";
+                extByPid[pid] = (done, parent.Length > 0);
+                if (done)
+                {
+                    facts.ResolvedCount++;
+                }
+
+                if (parent.Length > 0)
+                {
+                    facts.ReplyCount++;
+                }
+            }
+        }
+
+        var comments = LoadPart(zip, "word/comments.xml");
+        if (comments is not null)
+        {
+            foreach (var c in comments.Descendants(W + "comment"))
+            {
+                var pid = (string?)c.Elements(W + "p").FirstOrDefault()?.Attribute(W14 + "paraId") ?? "";
+                extByPid.TryGetValue(pid, out var meta);
+                facts.Comments.Add(new CommentFact
+                {
+                    Author = (string?)c.Attribute(W + "author") ?? "",
+                    Text = Norm(string.Concat(c.Descendants(W + "t").Select(t => t.Value))),
+                    Done = meta.Done,
+                    Reply = meta.Reply,
+                });
+            }
+        }
+
+        var settings = LoadPart(zip, "word/settings.xml");
+        facts.DocumentProtection = settings?.Element(W + "documentProtection") is not null;
+        foreach (var entry in zip.Entries)
+        {
+            var name = entry.FullName.Replace('\\', '/').ToLowerInvariant();
+            if (name.EndsWith(".glb", StringComparison.Ordinal) || name.Contains("model3d"))
+            {
+                facts.Has3d = true;
+                facts.DrawingKinds.Add("model3d");
+            }
+
+            if (name.Contains("/diagrams/") || name.Contains("diagram"))
+            {
+                facts.HasSmartArt = true;
+                facts.DrawingKinds.Add("smartart");
+            }
+
+            if (name.EndsWith(".wdp", StringComparison.Ordinal) || name.Contains("hdphoto"))
+            {
+                facts.HasHdPhoto = true;
+            }
+        }
+    }
 }
 
 readonly record struct LocalCriterion(string Id, string Status, double Earned, double Possible, string Message);
@@ -375,6 +699,39 @@ static class WordGrade
             "comments_absent" => Flag(facts.CommentCount == 0, item, "Đã xóa comment.", "Vẫn còn comment."),
             "revisions_cleared" => Flag(facts.RevisionCount == 0 && !facts.TrackRevisions, item, "Đã chấp nhận thay đổi.", "Vẫn còn Track Changes."),
             "hidden_text_absent" => Flag(facts.VanishCount == 0, item, "Đã bỏ Hidden text.", "Vẫn còn Hidden text."),
+            "contains_text" => Phrase(facts.DocumentText, item, true),
+            "not_contains_text" => Phrase(facts.DocumentText, item, false),
+            "paragraph_style" => ParaStyle(facts, item),
+            "text_effect" => ContainsList(facts.TextEffects, item.Predicate.Text, item, "Đã có Text Effects.", "Chưa thấy Text Effects."),
+            "section_columns" => Flag(facts.Sections.Any(s => s.Cols >= (item.Predicate.Min ?? 2)), item, "Đã có nhiều cột.", "Chưa thấy section cột."),
+            "page_orientation" => Flag(facts.Sections.Any(s => string.Equals(s.Orient, item.Predicate.Orient ?? "landscape", StringComparison.OrdinalIgnoreCase)), item, "Đúng hướng trang.", "Chưa đúng hướng trang."),
+            "break_present" => Flag(facts.Breaks.GetValueOrDefault(item.Predicate.Name ?? "page") >= (item.Predicate.Min ?? 1), item, "Đã có break.", "Chưa thấy break."),
+            "section_count" => Flag(facts.Sections.Count >= (item.Predicate.Min ?? 2), item, "Đủ section.", "Chưa đủ section."),
+            "table_count" => Flag(facts.Tables.Count >= (item.Predicate.Min ?? 1), item, "Đủ bảng.", "Chưa đủ bảng."),
+            "table_has_text" => TableHas(facts, item, true),
+            "table_lacks_text" => TableHas(facts, item, false),
+            "table_dim" => TableDim(facts, item),
+            "table_repeat_header" => Flag(facts.Tables.Any(t => t.Header), item, "Repeat Header Rows.", "Chưa Repeat Header."),
+            "table_merged" => Flag(facts.Tables.Any(t => t.Merged), item, "Đã gộp ô.", "Chưa gộp ô."),
+            "table_data_starts" => TableStarts(facts, item),
+            "list_format" => ListFmt(facts, item),
+            "footnote_min" => Flag(facts.FootnoteCount >= (item.Predicate.Min ?? 1), item, "Đã có footnote.", "Chưa đủ footnote."),
+            "field_contains" => Flag(facts.Fields.Any(f => (f ?? "").Contains(item.Predicate.Text ?? "", StringComparison.OrdinalIgnoreCase)), item, "Đã có trường.", "Chưa thấy trường."),
+            "style_used" => Flag(facts.StyleCounts.GetValueOrDefault(item.Predicate.Style ?? item.Predicate.Name ?? "") >= (item.Predicate.Min ?? 1), item, "Đã dùng style.", "Chưa dùng style."),
+            "drawing_kind" => DrawingKind(facts, item),
+            "drawing_text" => DrawingText(facts, item),
+            "artistic_effect" => Flag(facts.ArtisticEffects.Any(e => e.Contains(item.Predicate.Name ?? "", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(item.Predicate.Name)), item, "Artistic effect.", "Chưa artistic effect."),
+            "picture_effect" => Flag(facts.PictureEffects.Any(e => e.Contains(item.Predicate.Name ?? "", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(item.Predicate.Name)), item, "Picture effect.", "Chưa picture effect."),
+            "alt_text" => ContainsList(facts.AltTexts, item.Predicate.Text, item, "Alt text đúng.", "Chưa đúng alt text."),
+            "wrap_type" => Flag(facts.Wraps.Any(w => w.Contains(item.Predicate.Wrap ?? "", StringComparison.OrdinalIgnoreCase)), item, "Wrap đúng.", "Chưa đúng wrap."),
+            "comment_text" => Flag(facts.Comments.Any(c => WordXml.Norm(c.Text).Contains(WordXml.Norm(item.Predicate.Text), StringComparison.OrdinalIgnoreCase)), item, "Đã có comment.", "Thiếu comment."),
+            "comment_author" => Flag(facts.Comments.Any(c => WordXml.Same(c.Author, item.Predicate.Author)), item, "Đúng tác giả comment.", "Thiếu tác giả comment."),
+            "comment_absent_text" => Flag(!facts.Comments.Any(c => WordXml.Norm(c.Text).Contains(WordXml.Norm(item.Predicate.Text), StringComparison.OrdinalIgnoreCase)), item, "Đã xóa comment.", "Comment vẫn còn."),
+            "comment_resolved" => Flag(facts.ResolvedCount >= (item.Predicate.Min ?? 1), item, "Đã resolve.", "Chưa resolve."),
+            "comment_reply" => Flag(facts.ReplyCount >= (item.Predicate.Min ?? 1), item, "Đã reply.", "Chưa reply."),
+            "revision_max" => Flag(facts.RevisionCount <= (item.Predicate.Max ?? 0), item, "Revision trong hạn.", "Còn nhiều revision."),
+            "document_protection" => Flag(facts.DocumentProtection, item, "Đã Lock Tracking.", "Chưa Lock Tracking."),
+            "hdphoto" => Flag(facts.HasHdPhoto, item, "Đã remove background.", "Chưa remove background."),
             _ => new LocalCriterion(item.Id, "error", 0, item.Weight, "unknown_predicate"),
         };
     }
@@ -457,6 +814,154 @@ static class WordGrade
             ? Pass(item, "Thuộc tính tài liệu đúng.")
             : Fail(item, "Thuộc tính tài liệu chưa đúng.");
     }
+
+    static bool PhraseIn(string blob, string? needle)
+    {
+        needle = WordXml.Norm(needle);
+        if (needle.Length == 0)
+        {
+            return false;
+        }
+
+        return System.Text.RegularExpressions.Regex.IsMatch(
+            blob ?? "",
+            @"(?<!\w)" + System.Text.RegularExpressions.Regex.Escape(needle) + @"(?!\w)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    static LocalCriterion Phrase(string blob, JsonCriterion item, bool wantPresent) =>
+        PhraseIn(blob, item.Predicate.Text) == wantPresent
+            ? Pass(item, wantPresent ? "Đã có nội dung." : "Đã bỏ nội dung.")
+            : Fail(item, wantPresent ? "Thiếu nội dung." : "Nội dung vẫn còn.");
+
+    static LocalCriterion ParaStyle(WordFacts facts, JsonCriterion item)
+    {
+        var needle = WordXml.Norm(item.Predicate.Text);
+        var style = item.Predicate.Style ?? "";
+        foreach (var para in facts.Paragraphs)
+        {
+            if (!WordXml.Same(para.Style, style))
+            {
+                continue;
+            }
+
+            var text = WordXml.Norm(para.Text);
+            if (WordXml.Same(text, needle) || text.StartsWith(needle, StringComparison.OrdinalIgnoreCase))
+            {
+                return Pass(item, "Style đúng.");
+            }
+        }
+
+        return Fail(item, "Style chưa đúng.");
+    }
+
+    static LocalCriterion TableHas(WordFacts facts, JsonCriterion item, bool wantPresent)
+    {
+        var needle = WordXml.Norm(item.Predicate.Text);
+        var exact = item.Predicate.Exact;
+        var found = facts.Tables.SelectMany(t => t.Cells).SelectMany(r => r).Any(cell =>
+            exact ? WordXml.Same(cell, needle) : WordXml.Norm(cell).Contains(needle, StringComparison.OrdinalIgnoreCase));
+        if (wantPresent)
+        {
+            return found ? Pass(item, "Có trong bảng.") : Fail(item, "Chưa thấy trong bảng.");
+        }
+
+        return found ? Fail(item, "Vẫn còn trong bảng.") : Pass(item, "Đã bỏ khỏi bảng.");
+    }
+
+    static LocalCriterion TableDim(WordFacts facts, JsonCriterion item)
+    {
+        var rows = item.Predicate.Rows ?? 0;
+        var cols = item.Predicate.Cols ?? 0;
+        foreach (var tbl in facts.Tables)
+        {
+            if ((rows == 0 || tbl.Rows == rows) && (cols == 0 || tbl.Cols == cols))
+            {
+                return Pass(item, "Kích thước bảng đúng.");
+            }
+        }
+
+        return Fail(item, "Chưa đúng hàng/cột.");
+    }
+
+    static LocalCriterion TableStarts(WordFacts facts, JsonCriterion item)
+    {
+        var needle = WordXml.Norm(item.Predicate.Text);
+        var headers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id", "customer", "appointment", "lastname", "firstname", "address", "city", "state", "date", "time",
+        };
+        foreach (var tbl in facts.Tables.Where(t => t.Rows >= 4))
+        {
+            foreach (var row in tbl.Cells)
+            {
+                var first = WordXml.Norm(row.FirstOrDefault());
+                if (first.Length == 0 || headers.Contains(first))
+                {
+                    continue;
+                }
+
+                return WordXml.Same(first, needle) ? Pass(item, "Đã sort.") : Fail(item, "Chưa sort đúng.");
+            }
+        }
+
+        return Fail(item, "Chưa sort đúng.");
+    }
+
+    static LocalCriterion ListFmt(WordFacts facts, JsonCriterion item)
+    {
+        var needle = WordXml.Norm(item.Predicate.Text);
+        var fmt = (item.Predicate.Fmt ?? "").ToLowerInvariant();
+        foreach (var para in facts.Paragraphs)
+        {
+            var text = WordXml.Norm(para.Text);
+            if (needle.Length > 0 && !WordXml.Same(text, needle) && !text.Contains(needle, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (fmt.Length > 0 && string.Equals(para.Fmt, fmt, StringComparison.OrdinalIgnoreCase))
+            {
+                return Pass(item, "List đúng.");
+            }
+
+            if (fmt.Length == 0 && para.Fmt.Length > 0)
+            {
+                return Pass(item, "Đã là list.");
+            }
+        }
+
+        if (needle.Length == 0 && fmt.Length > 0 && facts.NumberingFormats.Any(f => string.Equals(f, fmt, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Pass(item, "Có numbering.");
+        }
+
+        return Fail(item, "Chưa đúng list.");
+    }
+
+    static LocalCriterion DrawingKind(WordFacts facts, JsonCriterion item)
+    {
+        var kind = (item.Predicate.Kind ?? "").ToLowerInvariant();
+        if (kind == "model3d" && (facts.Has3d || facts.DrawingKinds.Contains(kind)))
+        {
+            return Pass(item, "Đã có 3D.");
+        }
+
+        if (kind == "smartart" && (facts.HasSmartArt || facts.DrawingKinds.Contains(kind)))
+        {
+            return Pass(item, "Đã có SmartArt.");
+        }
+
+        return facts.DrawingKinds.Contains(kind) ? Pass(item, "Đã chèn đối tượng.") : Fail(item, "Chưa chèn đối tượng.");
+    }
+
+    static LocalCriterion DrawingText(WordFacts facts, JsonCriterion item)
+    {
+        var needle = WordXml.Norm(item.Predicate.Text);
+        var min = item.Predicate.Min ?? 1;
+        var hits = facts.DrawingTexts.Count(t => WordXml.Norm(t).Contains(needle, StringComparison.OrdinalIgnoreCase));
+        return hits >= min ? Pass(item, "Đã gõ chữ lên graphic.") : Fail(item, "Chưa gõ chữ lên graphic.");
+    }
 }
 
 sealed class JsonRubric
@@ -490,6 +995,17 @@ sealed class JsonPredicate
     public string? Heading { get; set; }
     public string? Color { get; set; }
     public string? Sz { get; set; }
+    public int? Min { get; set; }
+    public int? Max { get; set; }
+    public int? Rows { get; set; }
+    public int? Cols { get; set; }
+    public bool Exact { get; set; }
+    public string? Style { get; set; }
+    public string? Wrap { get; set; }
+    public string? Kind { get; set; }
+    public string? Orient { get; set; }
+    public string? Fmt { get; set; }
+    public string? Author { get; set; }
 }
 
 sealed class JsonFeedback

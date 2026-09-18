@@ -1,6 +1,6 @@
 ; MOS-KulKul — cài per-user, không cần Admin
 #define MyAppName "MOS-KulKul"
-#define MyAppVersion "1.13.0"
+#define MyAppVersion "1.14.0"
 #define MyAppPublisher "Trường GDS"
 #define MyAppURL "https://mos.gds.edu.vn/cai-dat"
 #ifndef Dist
@@ -23,7 +23,8 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayIcon={app}\MOS-KulKul.exe
-SetupIconFile=
+SetupIconFile=kulkul.ico
+WizardSmallImageFile=wizard-small.bmp
 DisableProgramGroupPage=yes
 CloseApplications=yes
 RestartApplications=no

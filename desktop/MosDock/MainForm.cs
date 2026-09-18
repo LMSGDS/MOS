@@ -206,6 +206,15 @@ sealed class MainForm : Form
 
         _header.Controls.Add(_crumb);
         _header.Controls.Add(_back);
+        var logo = new PictureBox
+        {
+            Size = new Size(32, 32),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Dock = DockStyle.Left,
+            Image = Ui.BrandMark(32),
+            Margin = new Padding(0, 0, 8, 0),
+        };
+        _header.Controls.Add(logo);
         _header.Controls.Add(_user);
         _header.Controls.Add(_signOut);
     }

@@ -26,7 +26,8 @@ sealed class LoginForm : Form
         AutoScaleDimensions = new SizeF(96f, 96f);
         Font = Ui.BodyFont;
         BackColor = Color.White;
-        ClientSize = new Size(440, 680);
+        ClientSize = new Size(440, 760);
+        Ui.ApplyWindowIcon(this);
 
         _stack.Dock = DockStyle.Fill;
         _stack.FlowDirection = FlowDirection.TopDown;
@@ -89,7 +90,20 @@ sealed class LoginForm : Form
 
     static Panel Brand()
     {
-        var wrap = new Panel { Height = 92, Margin = new Padding(0, 0, 0, 20) };
+        var wrap = new Panel { Height = 164, Margin = new Padding(0, 0, 0, 16) };
+        var logoHost = new Panel { Dock = DockStyle.Top, Height = 84 };
+        var logo = new PictureBox
+        {
+            Size = new Size(72, 72),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            Image = Ui.BrandMark(72),
+        };
+        logoHost.Resize += (_, _) =>
+        {
+            logo.Left = Math.Max(0, (logoHost.Width - logo.Width) / 2);
+            logo.Top = 6;
+        };
+        logoHost.Controls.Add(logo);
         var mark = new Label
         {
             Text = "MOS-KulKul",
@@ -97,23 +111,24 @@ sealed class LoginForm : Form
             ForeColor = Ui.Nav,
             AutoSize = false,
             Dock = DockStyle.Top,
-            Height = 40,
+            Height = 36,
             TextAlign = ContentAlignment.MiddleCenter,
             UseMnemonic = false,
         };
         var tag = new Label
         {
-            Text = "Hệ thống luyện thi MOS",
+            Text = "Hệ thống luyện thi MOS · Word · Excel · PowerPoint",
             Font = Ui.BodyFont,
             ForeColor = Ui.Muted,
             AutoSize = false,
             Dock = DockStyle.Top,
-            Height = 24,
+            Height = 36,
             TextAlign = ContentAlignment.TopCenter,
             UseMnemonic = false,
         };
         wrap.Controls.Add(tag);
         wrap.Controls.Add(mark);
+        wrap.Controls.Add(logoHost);
         return wrap;
     }
 

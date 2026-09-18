@@ -1,0 +1,89 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-4-2b",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 4.2b — Modify a table of contents",
+  "program": "word",
+  "objective": "4.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.toc"
+  ],
+  "criteria": [
+    {
+      "id": "W42B-H01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đổi heading thành Quick Reference (bỏ Shipping).",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Quick Reference",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading Quick Reference đúng.",
+        "fail": "Chưa đổi thành Quick Reference.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Tìm heading Shipping Quick Reference.",
+        "Sửa thành **Quick Reference**.",
+        "Giữ style **Heading 2**."
+      ]
+    },
+    {
+      "id": "W42B-T01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Cập nhật TOC có Quick Reference.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Quick Reference",
+        "style": "TOC2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "TOC đã cập nhật.",
+        "fail": "TOC chưa có Quick Reference.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm vào mục lục.",
+        "**References** > **Update Table**.",
+        "Chọn **Update entire table**, **OK**."
+      ]
+    },
+    {
+      "id": "W42B-N01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Không còn heading Shipping Quick Reference.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "Shipping Quick Reference"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã đổi tên heading.",
+        "fail": "Vẫn còn Shipping Quick Reference.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Xóa chữ **Shipping** trước **Quick Reference**.",
+        "Bấm mục lục rồi **References** > **Update Table**.",
+        "Kiểm tra **Navigation** pane."
+      ]
+    }
+  ]
+}

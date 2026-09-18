@@ -1,0 +1,88 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-5-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 5.4 — Modify graphic elements",
+  "program": "word",
+  "objective": "5.4",
+  "max_score": 100,
+  "capabilities": [
+    "word.alt_text",
+    "word.wrap"
+  ],
+  "criteria": [
+    {
+      "id": "W54-A01",
+      "objective": "5.4",
+      "kind": "artifact",
+      "weight": 35,
+      "prompt": "Alt text ảnh: Photo of a girl in a fancy blue dress.",
+      "predicate": {
+        "type": "alt_text",
+        "text": "Photo of a girl in a fancy blue dress"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Alt text ảnh đúng.",
+        "fail": "Chưa đúng alt text ảnh.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm phải picture > **Edit Alt Text**.",
+        "Hoặc **Picture Format** > **Alt Text**.",
+        "Gõ Photo of a girl in a fancy blue dress."
+      ]
+    },
+    {
+      "id": "W54-A02",
+      "objective": "5.4",
+      "kind": "artifact",
+      "weight": 35,
+      "prompt": "Alt text 3D model: Frog.",
+      "predicate": {
+        "type": "alt_text",
+        "text": "Frog"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Alt text Frog đúng.",
+        "fail": "Chưa có alt text Frog.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm 3D model.",
+        "**Model** / **Format** > **Alt Text**.",
+        "Gõ Frog."
+      ]
+    },
+    {
+      "id": "W54-W01",
+      "objective": "5.4",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Wrap text Tight quanh đối tượng.",
+      "predicate": {
+        "type": "wrap_type",
+        "wrap": "wrapTight"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã wrap Tight.",
+        "fail": "Chưa thấy wrapTight.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn picture hoặc 3D model.",
+        "**Format** > **Wrap Text** > **Tight**.",
+        "Kéo đối tượng vào đoạn văn."
+      ]
+    }
+  ]
+}

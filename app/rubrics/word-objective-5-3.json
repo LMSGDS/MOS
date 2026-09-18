@@ -1,0 +1,66 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-5-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 5.3 — Add text to graphic elements",
+  "program": "word",
+  "objective": "5.3",
+  "max_score": 100,
+  "capabilities": [
+    "word.shapes",
+    "word.smartart"
+  ],
+  "criteria": [
+    {
+      "id": "W53-T01",
+      "objective": "5.3",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Gõ The End! vào shape / text box.",
+      "predicate": {
+        "type": "drawing_text",
+        "text": "The End!",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có The End! trên đối tượng.",
+        "fail": "Chưa thấy The End! trong shape/textbox.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm vào shape scroll hoặc text box.",
+        "Gõ **The End!**.",
+        "Định dạng cỡ chữ nếu đề yêu cầu."
+      ]
+    },
+    {
+      "id": "W53-T02",
+      "objective": "5.3",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "The End! xuất hiện trên nhiều đối tượng (shape + text box).",
+      "predicate": {
+        "type": "drawing_text",
+        "text": "The End!",
+        "min": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã gõ The End! trên nhiều graphic.",
+        "fail": "Chưa đủ đối tượng có The End!.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm chữ vào **SmartArt** bằng **Text Pane**.",
+        "Thêm chữ vào text box thứ hai.",
+        "Kiểm tra không chỉ gõ trên trang thường."
+      ]
+    }
+  ]
+}

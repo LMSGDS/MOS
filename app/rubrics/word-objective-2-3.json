@@ -1,0 +1,139 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-2-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 2.3 — Create and configure document sections",
+  "program": "word",
+  "objective": "2.3",
+  "max_score": 100,
+  "capabilities": [
+    "word.sections",
+    "word.columns",
+    "word.breaks"
+  ],
+  "criteria": [
+    {
+      "id": "W23-C01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Có section định dạng ít nhất 2 cột.",
+      "predicate": {
+        "type": "section_columns",
+        "min": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có 2 cột.",
+        "fail": "Chưa thấy section 2 cột.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ đoạn cần chia cột.",
+        "Tab **Layout**, nhóm **Page Setup**, bấm **Columns**.",
+        "Chọn **Two**."
+      ]
+    },
+    {
+      "id": "W23-O01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Có section khổ ngang (Landscape).",
+      "predicate": {
+        "type": "page_orientation",
+        "orient": "landscape"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có Landscape.",
+        "fail": "Chưa thấy section Landscape.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ tại section cần xoay.",
+        "**Layout** > **Orientation** > **Landscape**.",
+        "Nếu xoay cả tài liệu, chèn **Section Break** trước."
+      ]
+    },
+    {
+      "id": "W23-B01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Chèn Page Break.",
+      "predicate": {
+        "type": "break_present",
+        "name": "page",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có Page Break.",
+        "fail": "Chưa thấy Page Break.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ nơi bắt đầu trang mới.",
+        "**Layout** > **Breaks** > **Page**.",
+        "Hoặc Ctrl+Enter."
+      ]
+    },
+    {
+      "id": "W23-B02",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Chèn Column Break.",
+      "predicate": {
+        "type": "break_present",
+        "name": "column",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có Column Break.",
+        "fail": "Chưa thấy Column Break.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Trong vùng 2 cột, đặt con trỏ.",
+        "**Layout** > **Breaks** > **Column**.",
+        "Phần sau nhảy sang cột kế."
+      ]
+    },
+    {
+      "id": "W23-S01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Tài liệu có nhiều section (ít nhất 4).",
+      "predicate": {
+        "type": "section_count",
+        "min": 4
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có đủ section.",
+        "fail": "Chưa đủ section break.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Layout** > **Breaks** > **Section Breaks**.",
+        "Dùng **Continuous** khi chia cột giữa trang.",
+        "Dùng **Next Page** khi đổi khổ giấy."
+      ]
+    }
+  ]
+}

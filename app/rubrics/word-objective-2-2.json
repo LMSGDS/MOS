@@ -1,0 +1,240 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-2-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 2.2 — Format text and paragraphs",
+  "program": "word",
+  "objective": "2.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.styles",
+    "word.text_effects"
+  ],
+  "criteria": [
+    {
+      "id": "W22-H01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 12,
+      "prompt": "Financial Summary dùng style Heading 1.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Financial Summary",
+        "style": "Heading1"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 1 đúng.",
+        "fail": "Financial Summary chưa phải Heading 1.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Financial Summary.",
+        "Tab **Home**, nhóm **Styles**.",
+        "Bấm **Heading 1**."
+      ]
+    },
+    {
+      "id": "W22-H02",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 12,
+      "prompt": "Financial Statements dùng style Heading 1.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Financial Statements",
+        "style": "Heading1"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 1 đúng.",
+        "fail": "Financial Statements chưa phải Heading 1.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Financial Statements.",
+        "**Home** > **Styles** > **Heading 1**.",
+        "Kiểm tra **Navigation** pane thấy heading."
+      ]
+    },
+    {
+      "id": "W22-H03",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 12,
+      "prompt": "Statement Notes dùng style Heading 1.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Statement Notes",
+        "style": "Heading1"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 1 đúng.",
+        "fail": "Statement Notes chưa phải Heading 1.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Statement Notes.",
+        "**Home** > **Styles** > **Heading 1**.",
+        "Có thể dùng **Format Painter** sau heading đã đúng."
+      ]
+    },
+    {
+      "id": "W22-H04",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Financial Position dùng style Heading 2.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Financial Position",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 2 đúng.",
+        "fail": "Financial Position chưa phải Heading 2.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Financial Position.",
+        "**Home** > **Styles** > **Heading 2**.",
+        "Đảm bảo không để Heading 3."
+      ]
+    },
+    {
+      "id": "W22-H05",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Comprehensive Income (Profits and Losses) dùng Heading 2.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Comprehensive Income (Profits and Losses)",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 2 đúng.",
+        "fail": "Chưa áp Heading 2.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen tiêu đề Comprehensive Income.",
+        "**Home** > **Heading 2**.",
+        "Dùng **Format Painter** cho các Heading 2 còn lại."
+      ]
+    },
+    {
+      "id": "W22-H06",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 8,
+      "prompt": "Changes in Equity dùng Heading 2.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Changes in Equity",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 2 đúng.",
+        "fail": "Changes in Equity chưa phải Heading 2.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Changes in Equity.",
+        "**Home** > **Heading 2**.",
+        "Kiểm tra cấp heading trên **Navigation** pane."
+      ]
+    },
+    {
+      "id": "W22-H07",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 8,
+      "prompt": "Cash Flows dùng Heading 2.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Cash Flows",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Heading 2 đúng.",
+        "fail": "Cash Flows chưa phải Heading 2.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Cash Flows.",
+        "**Home** > **Heading 2**.",
+        "Lặp với các tiêu đề cùng cấp."
+      ]
+    },
+    {
+      "id": "W22-L01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Accounts dùng style Heading 2.",
+      "predicate": {
+        "type": "paragraph_style",
+        "text": "Accounts",
+        "style": "Heading2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Accounts là Heading 2.",
+        "fail": "Accounts chưa phải Heading 2.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Accounts.",
+        "**Home** > **Styles** > **Heading 2**.",
+        "Dùng **Format Painter** cho các tiêu đề cùng cấp."
+      ]
+    },
+    {
+      "id": "W22-E01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 18,
+      "prompt": "A Brief Review of Our Finances có Text Effects (3D/outline).",
+      "predicate": {
+        "type": "text_effect",
+        "text": "A Brief Review"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có text effect.",
+        "fail": "Chưa thấy Text Effects trên dòng phụ đề.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen A Brief Review of Our Finances.",
+        "**Home** > **Text Effects and Typography** (A có khung).",
+        "Chọn hiệu ứng 3D / outline (ví dụ **Fill: Green, Accent color 3**)."
+      ]
+    }
+  ]
+}

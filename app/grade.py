@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.word_xml import extract_word_facts, norm, same
 
-GRADER_VERSION = "1.1.0"
+GRADER_VERSION = "1.2.0"
 RUBRIC_DIR = Path(__file__).resolve().parent / "rubrics"
 
 
@@ -177,6 +177,308 @@ def _hidden_text_absent(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "hidden_text_remains")
 
 
+def _phrase_in(blob: str, needle: str) -> bool:
+    needle = norm(needle)
+    blob = blob or ""
+    if not needle:
+        return False
+    return re.search(r"(?<!\w)" + re.escape(needle) + r"(?!\w)", blob, flags=re.IGNORECASE) is not None
+
+
+def _contains_text(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    blob = facts.get("document_text") or ""
+    if needle and _phrase_in(blob, needle):
+        return _result(criterion, "pass", "text_present")
+    return _result(criterion, "fail", "text_missing")
+
+
+def _not_contains_text(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    blob = facts.get("document_text") or ""
+    if needle and _phrase_in(blob, needle):
+        return _result(criterion, "fail", "text_still_present")
+    return _result(criterion, "pass", "text_absent")
+
+
+def _paragraph_style(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    style = pred.get("style") or ""
+    for para in facts.get("paragraphs") or []:
+        text = para.get("text") or ""
+        if not same(para.get("style"), style):
+            continue
+        if same(text, needle) or (needle and norm(text).casefold().startswith(needle.casefold())):
+            return _result(criterion, "pass", "paragraph_style_matches")
+    return _result(criterion, "fail", "paragraph_style_mismatch")
+
+
+def _text_effect(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    blob = " ".join(facts.get("text_effects") or [])
+    if needle and needle.casefold() in blob.casefold():
+        return _result(criterion, "pass", "text_effect_present")
+    return _result(criterion, "fail", "text_effect_missing")
+
+
+def _section_columns(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 2)
+    if any(int(s.get("cols") or 1) >= minimum for s in facts.get("sections") or []):
+        return _result(criterion, "pass", "section_columns_present")
+    return _result(criterion, "fail", "section_columns_missing")
+
+
+def _page_orientation(facts: dict, criterion: dict) -> dict:
+    expected = ((criterion.get("predicate") or {}).get("orient") or "landscape").casefold()
+    if any((s.get("orient") or "portrait").casefold() == expected for s in facts.get("sections") or []):
+        return _result(criterion, "pass", "page_orientation_matches")
+    return _result(criterion, "fail", "page_orientation_mismatch")
+
+
+def _break_present(facts: dict, criterion: dict) -> dict:
+    kind = (criterion.get("predicate") or {}).get("name") or "page"
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    got = int((facts.get("breaks") or {}).get(kind) or 0)
+    if got >= minimum:
+        return _result(criterion, "pass", "break_present")
+    return _result(criterion, "fail", "break_missing")
+
+
+def _section_count(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 2)
+    if len(facts.get("sections") or []) >= minimum:
+        return _result(criterion, "pass", "section_count_ok")
+    return _result(criterion, "fail", "section_count_low")
+
+
+def _table_count(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    if len(facts.get("tables") or []) >= minimum:
+        return _result(criterion, "pass", "table_count_ok")
+    return _result(criterion, "fail", "table_count_low")
+
+
+def _table_has_text(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    exact = bool(pred.get("exact"))
+    for tbl in facts.get("tables") or []:
+        for row in tbl.get("cells") or []:
+            for cell in row:
+                if not needle:
+                    continue
+                if exact and same(cell, needle):
+                    return _result(criterion, "pass", "table_text_present")
+                if not exact and needle.casefold() in norm(cell).casefold():
+                    return _result(criterion, "pass", "table_text_present")
+    return _result(criterion, "fail", "table_text_missing")
+
+
+def _table_lacks_text(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    for tbl in facts.get("tables") or []:
+        for row in tbl.get("cells") or []:
+            for cell in row:
+                if needle and same(cell, needle):
+                    return _result(criterion, "fail", "table_text_still_present")
+    return _result(criterion, "pass", "table_text_absent")
+
+
+def _table_dim(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    rows = int(pred.get("rows") or 0)
+    cols = int(pred.get("cols") or 0)
+    for tbl in facts.get("tables") or []:
+        ok_rows = rows == 0 or int(tbl.get("rows") or 0) == rows
+        ok_cols = cols == 0 or int(tbl.get("cols") or 0) == cols
+        if ok_rows and ok_cols:
+            return _result(criterion, "pass", "table_dim_matches")
+    return _result(criterion, "fail", "table_dim_mismatch")
+
+
+def _table_data_starts(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    headers = {"id", "customer", "appointment", "lastname", "firstname", "address", "city", "state", "date", "time"}
+    for tbl in facts.get("tables") or []:
+        if int(tbl.get("rows") or 0) < 4:
+            continue
+        for row in tbl.get("cells") or []:
+            first = norm(row[0] if row else "")
+            if not first or first.casefold() in headers:
+                continue
+            if same(first, needle):
+                return _result(criterion, "pass", "table_sorted")
+            return _result(criterion, "fail", "table_not_sorted")
+    return _result(criterion, "fail", "table_not_sorted")
+
+
+def _table_repeat_header(facts: dict, criterion: dict) -> dict:
+    if any(t.get("header") for t in facts.get("tables") or []):
+        return _result(criterion, "pass", "table_header_repeat")
+    return _result(criterion, "fail", "table_header_missing")
+
+
+def _table_merged(facts: dict, criterion: dict) -> dict:
+    if any(t.get("merged") for t in facts.get("tables") or []):
+        return _result(criterion, "pass", "table_merged")
+    return _result(criterion, "fail", "table_not_merged")
+
+
+def _list_format(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    fmt = (pred.get("fmt") or "").casefold()
+    for para in facts.get("paragraphs") or []:
+        if needle and not same(para.get("text"), needle) and needle.casefold() not in norm(para.get("text")).casefold():
+            continue
+        if fmt and (para.get("num_fmt") or "").casefold() == fmt:
+            return _result(criterion, "pass", "list_format_matches")
+        if not fmt and para.get("num_fmt"):
+            return _result(criterion, "pass", "list_present")
+    if not needle and fmt and fmt in [f.casefold() for f in facts.get("numbering_formats") or []]:
+        return _result(criterion, "pass", "list_format_present")
+    return _result(criterion, "fail", "list_format_missing")
+
+
+def _footnote_min(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    if int(facts.get("footnote_count") or 0) >= minimum:
+        return _result(criterion, "pass", "footnotes_present")
+    return _result(criterion, "fail", "footnotes_missing")
+
+
+def _field_contains(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("text") or "").upper()
+    if any(needle in (f or "").upper() for f in facts.get("fields") or []):
+        return _result(criterion, "pass", "field_present")
+    return _result(criterion, "fail", "field_missing")
+
+
+def _style_used(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    style = pred.get("style") or pred.get("name") or ""
+    minimum = int(pred.get("min") or 1)
+    got = int((facts.get("style_counts") or {}).get(style) or 0)
+    if style and got >= minimum:
+        return _result(criterion, "pass", "style_used")
+    return _result(criterion, "fail", "style_unused")
+
+
+def _drawing_kind(facts: dict, criterion: dict) -> dict:
+    kind = ((criterion.get("predicate") or {}).get("kind") or "").casefold()
+    kinds = [k.casefold() for k in facts.get("drawing_kinds") or []]
+    if kind == "model3d" and (facts.get("has_3d") or kind in kinds):
+        return _result(criterion, "pass", "drawing_present")
+    if kind == "smartart" and (facts.get("has_smartart") or kind in kinds):
+        return _result(criterion, "pass", "drawing_present")
+    if kind in kinds:
+        return _result(criterion, "pass", "drawing_present")
+    return _result(criterion, "fail", "drawing_missing")
+
+
+def _drawing_text(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    minimum = int(pred.get("min") or 1)
+    hits = [t for t in facts.get("drawing_texts") or [] if needle and needle.casefold() in norm(t).casefold()]
+    if len(hits) >= minimum:
+        return _result(criterion, "pass", "drawing_text_present")
+    return _result(criterion, "fail", "drawing_text_missing")
+
+
+def _artistic_effect(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("name") or "").casefold()
+    found = [e.casefold() for e in facts.get("artistic_effects") or []]
+    if needle and any(needle in e for e in found):
+        return _result(criterion, "pass", "artistic_effect_present")
+    if not needle and found:
+        return _result(criterion, "pass", "artistic_effect_present")
+    return _result(criterion, "fail", "artistic_effect_missing")
+
+
+def _picture_effect(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("name") or "").casefold()
+    found = [e.casefold() for e in facts.get("picture_effects") or []]
+    if needle and any(needle in e for e in found):
+        return _result(criterion, "pass", "picture_effect_present")
+    if not needle and found:
+        return _result(criterion, "pass", "picture_effect_present")
+    return _result(criterion, "fail", "picture_effect_missing")
+
+
+def _alt_text(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    blob = " ".join(facts.get("alt_texts") or [])
+    if needle and needle.casefold() in blob.casefold():
+        return _result(criterion, "pass", "alt_text_present")
+    return _result(criterion, "fail", "alt_text_missing")
+
+
+def _wrap_type(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("wrap") or "").casefold()
+    found = [w.casefold() for w in facts.get("wraps") or []]
+    if needle and any(needle in w for w in found):
+        return _result(criterion, "pass", "wrap_present")
+    return _result(criterion, "fail", "wrap_missing")
+
+
+def _comment_text(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    if any(needle and needle.casefold() in norm(c.get("text")).casefold() for c in facts.get("comments") or []):
+        return _result(criterion, "pass", "comment_present")
+    return _result(criterion, "fail", "comment_missing")
+
+
+def _comment_author(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("author") or "")
+    if any(same(c.get("author"), needle) for c in facts.get("comments") or []):
+        return _result(criterion, "pass", "comment_author_present")
+    return _result(criterion, "fail", "comment_author_missing")
+
+
+def _comment_absent_text(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    if any(needle and needle.casefold() in norm(c.get("text")).casefold() for c in facts.get("comments") or []):
+        return _result(criterion, "fail", "comment_still_present")
+    return _result(criterion, "pass", "comment_removed")
+
+
+def _comment_resolved(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    if int(facts.get("resolved_count") or 0) >= minimum:
+        return _result(criterion, "pass", "comment_resolved")
+    return _result(criterion, "fail", "comment_unresolved")
+
+
+def _comment_reply(facts: dict, criterion: dict) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    if int(facts.get("reply_count") or 0) >= minimum:
+        return _result(criterion, "pass", "comment_reply_present")
+    return _result(criterion, "fail", "comment_reply_missing")
+
+
+def _revision_max(facts: dict, criterion: dict) -> dict:
+    maximum = int((criterion.get("predicate") or {}).get("max") or 0)
+    if int(facts.get("revision_count") or 0) <= maximum:
+        return _result(criterion, "pass", "revisions_within_max")
+    return _result(criterion, "fail", "revisions_too_many")
+
+
+def _document_protection(facts: dict, criterion: dict) -> dict:
+    if facts.get("document_protection"):
+        return _result(criterion, "pass", "tracking_lock_present")
+    return _result(criterion, "fail", "tracking_lock_missing")
+
+
+def _hdphoto(facts: dict, criterion: dict) -> dict:
+    if facts.get("has_hdphoto"):
+        return _result(criterion, "pass", "hdphoto_present")
+    return _result(criterion, "fail", "hdphoto_missing")
+
+
 def _action_unverified(criterion: dict) -> dict:
     return _result(criterion, "unverified", "missing_observer")
 
@@ -212,6 +514,39 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
             "comments_absent": _comments_absent,
             "revisions_cleared": _revisions_cleared,
             "hidden_text_absent": _hidden_text_absent,
+            "contains_text": _contains_text,
+            "not_contains_text": _not_contains_text,
+            "paragraph_style": _paragraph_style,
+            "text_effect": _text_effect,
+            "section_columns": _section_columns,
+            "page_orientation": _page_orientation,
+            "break_present": _break_present,
+            "section_count": _section_count,
+            "table_count": _table_count,
+            "table_has_text": _table_has_text,
+            "table_lacks_text": _table_lacks_text,
+            "table_data_starts": _table_data_starts,
+            "table_dim": _table_dim,
+            "table_repeat_header": _table_repeat_header,
+            "table_merged": _table_merged,
+            "list_format": _list_format,
+            "footnote_min": _footnote_min,
+            "field_contains": _field_contains,
+            "style_used": _style_used,
+            "drawing_kind": _drawing_kind,
+            "drawing_text": _drawing_text,
+            "artistic_effect": _artistic_effect,
+            "picture_effect": _picture_effect,
+            "alt_text": _alt_text,
+            "wrap_type": _wrap_type,
+            "comment_text": _comment_text,
+            "comment_author": _comment_author,
+            "comment_absent_text": _comment_absent_text,
+            "comment_resolved": _comment_resolved,
+            "comment_reply": _comment_reply,
+            "revision_max": _revision_max,
+            "document_protection": _document_protection,
+            "hdphoto": _hdphoto,
         }
         handler = dispatch.get(pred)
         if handler:

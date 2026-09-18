@@ -72,7 +72,7 @@ static class Ui
 
             if (!File.Exists(png))
             {
-                return null;
+                return PaintBrand(size);
             }
 
             using var src = Image.FromFile(png);
@@ -80,8 +80,46 @@ static class Ui
         }
         catch
         {
-            return null;
+            return PaintBrand(size);
         }
+    }
+
+    public static Image PaintBrand(int size = 72)
+    {
+        size = Math.Max(24, size);
+        var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+        var navy = SignIn;
+        var rect = new Rectangle(0, 0, size - 1, size - 1);
+        using var bg = new SolidBrush(navy);
+        g.FillRounded(rect, size / 5, bg);
+        DrawDoc(g, (int)(size * 0.42), (int)(size * 0.18), (int)(size * 0.46), (int)(size * 0.56), Ppt);
+        DrawDoc(g, (int)(size * 0.28), (int)(size * 0.14), (int)(size * 0.46), (int)(size * 0.56), Excel);
+        DrawDoc(g, (int)(size * 0.12), (int)(size * 0.10), (int)(size * 0.46), (int)(size * 0.56), Word);
+        using var font = new Font("Segoe UI", Math.Max(8f, size * 0.32f), FontStyle.Bold, GraphicsUnit.Pixel);
+        var k = TextRenderer.MeasureText("K", font);
+        TextRenderer.DrawText(g, "K", font, new Point((size - k.Width) / 2, (int)(size * 0.52)), Color.White);
+        return bmp;
+    }
+
+    static void DrawDoc(Graphics g, int x, int y, int w, int h, Color color)
+    {
+        using var fill = new SolidBrush(color);
+        g.FillRounded(new Rectangle(x, y, w, h), Math.Max(4, w / 8), fill);
+    }
+
+    static void FillRounded(this Graphics g, Rectangle rect, int radius, Brush brush)
+    {
+        using var path = new System.Drawing.Drawing2D.GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        g.FillPath(brush, path);
     }
 
     public static Font TitleFont => new("Segoe UI", 22f, FontStyle.Bold);

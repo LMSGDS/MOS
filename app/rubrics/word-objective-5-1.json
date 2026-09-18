@@ -1,0 +1,138 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-5-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 5.1 — Insert illustrations and text boxes",
+  "program": "word",
+  "objective": "5.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.pictures",
+    "word.3d",
+    "word.smartart",
+    "word.shapes"
+  ],
+  "criteria": [
+    {
+      "id": "W51-P01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Chèn Picture.",
+      "predicate": {
+        "type": "drawing_kind",
+        "kind": "picture"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có ảnh.",
+        "fail": "Chưa thấy picture.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ vị trí ảnh.",
+        "**Insert** > **Pictures** > **This Device**.",
+        "Chọn Word_5.1.jpg trong thư mục bài (hoặc ảnh đề cho)."
+      ]
+    },
+    {
+      "id": "W51-D01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Chèn 3D Model.",
+      "predicate": {
+        "type": "drawing_kind",
+        "kind": "model3d"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có 3D model.",
+        "fail": "Chưa thấy 3D model.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **3D Models**.",
+        "Chọn **From a File** (Word_5.1.glb) hoặc **Stock 3D Models**.",
+        "Chèn mô hình ếch / frog."
+      ]
+    },
+    {
+      "id": "W51-S01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Chèn SmartArt.",
+      "predicate": {
+        "type": "drawing_kind",
+        "kind": "smartart"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có SmartArt.",
+        "fail": "Chưa thấy SmartArt.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **SmartArt**.",
+        "Chọn layout (List / Process).",
+        "Bấm **OK**."
+      ]
+    },
+    {
+      "id": "W51-B01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Chèn Text Box.",
+      "predicate": {
+        "type": "drawing_kind",
+        "kind": "textbox"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có text box.",
+        "fail": "Chưa thấy text box.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Text Box**.",
+        "Chọn **Simple Text Box** hoặc vẽ.",
+        "Gõ đoạn trích dẫn vào hộp."
+      ]
+    },
+    {
+      "id": "W51-H01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Chèn Shape (scroll / hình).",
+      "predicate": {
+        "type": "drawing_kind",
+        "kind": "shape"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có shape.",
+        "fail": "Chưa thấy shape.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Shapes**.",
+        "Chọn **Scroll: Vertical** (Stars and Banners) hoặc hình đề yêu cầu.",
+        "Vẽ lên trang."
+      ]
+    }
+  ]
+}

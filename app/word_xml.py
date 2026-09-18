@@ -10,6 +10,10 @@ R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 CP = "{http://schemas.openxmlformats.org/package/2006/metadata/core-properties}"
 DC = "{http://purl.org/dc/elements/1.1/}"
 VML = "{urn:schemas-microsoft-com:vml}"
+A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+WP = "{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}"
+W14 = "{http://schemas.microsoft.com/office/word/2010/wordml}"
+W15 = "{http://schemas.microsoft.com/office/word/2012/wordml}"
 MAX_PART = 8 * 1024 * 1024
 
 
@@ -46,6 +50,38 @@ def _empty(error: str) -> dict:
         "vanish_count": 0,
         "heading1_sz": "",
         "display_background_shape": False,
+        **_skill_defaults(),
+    }
+
+
+def _skill_defaults() -> dict:
+    return {
+        "document_text": "",
+        "paragraphs": [],
+        "text_effects": [],
+        "sections": [],
+        "breaks": {},
+        "tables": [],
+        "numbering_formats": [],
+        "footnote_count": 0,
+        "footnote_texts": [],
+        "fields": [],
+        "style_counts": {},
+        "drawings": [],
+        "drawing_kinds": [],
+        "drawing_texts": [],
+        "artistic_effects": [],
+        "picture_effects": [],
+        "alt_texts": [],
+        "wraps": [],
+        "comments": [],
+        "resolved_count": 0,
+        "reply_count": 0,
+        "document_protection": False,
+        "has_picture": False,
+        "has_3d": False,
+        "has_smartart": False,
+        "has_hdphoto": False,
     }
 
 
@@ -64,19 +100,25 @@ def extract_word_facts(path: Path) -> dict:
     path = Path(path)
     try:
         with zipfile.ZipFile(path) as z:
+            names: list[str] = []
             if "word/document.xml" not in z.namelist():
                 return _empty("not_docx")
             try:
                 xml = _read_zip_part(z, "word/document.xml")
                 rels_xml = _read_zip_part(z, "word/_rels/document.xml.rels")
+                names = list(z.namelist())
                 extra_parts = {
                     name: _read_zip_part(z, name)
-                    for name in z.namelist()
+                    for name in names
                     if name in (
                         "word/settings.xml",
                         "docProps/core.xml",
                         "word/comments.xml",
+                        "word/commentsExtended.xml",
                         "word/styles.xml",
+                        "word/numbering.xml",
+                        "word/footnotes.xml",
+                        "word/endnotes.xml",
                     )
                     or name.startswith("word/header")
                     or name.startswith("word/footer")
@@ -217,6 +259,7 @@ def extract_word_facts(path: Path) -> dict:
         link["target_text"] = bm.get("text") or ""
 
     extra = _manage_document_facts(root, extra_parts)
+    skills = _skill_facts(root, extra_parts, names)
     return {
         "ok": True,
         "bookmarks": bookmarks,
@@ -224,6 +267,7 @@ def extract_word_facts(path: Path) -> dict:
         "external_hyperlinks": [h for h in hyperlinks if h.get("external")],
         "headings": headings,
         **extra,
+        **skills,
     }
 
 
@@ -340,4 +384,258 @@ def _manage_document_facts(root: ET.Element, parts: dict[str, bytes | None]) -> 
         "vanish_count": vanish_count,
         "heading1_sz": heading1_sz,
         "display_background_shape": display_background_shape,
+    }
+
+
+def _parse_xml(raw: bytes | None) -> ET.Element | None:
+    if not raw:
+        return None
+    try:
+        return ET.fromstring(raw)
+    except ET.ParseError:
+        return None
+
+
+def _numbering_formats(raw: bytes | None) -> tuple[dict[str, str], list[str]]:
+    """Map numId -> ilvl0 numFmt; unique format names."""
+    node = _parse_xml(raw)
+    if node is None:
+        return {}, []
+    abstracts: dict[str, str] = {}
+    for absn in node.findall(f"{W}abstractNum"):
+        aid = _attr(absn, "abstractNumId")
+        for lvl in absn.findall(f"{W}lvl"):
+            if _attr(lvl, "ilvl") in ("", "0"):
+                abstracts[aid] = _attr(lvl.find(f"{W}numFmt"), "val")
+                break
+    mapping: dict[str, str] = {}
+    for num in node.findall(f"{W}num"):
+        nid = _attr(num, "numId")
+        aid = _attr(num.find(f"{W}abstractNumId"), "val")
+        mapping[nid] = abstracts.get(aid) or ""
+    formats = sorted({fmt for fmt in mapping.values() if fmt})
+    return mapping, formats
+
+
+def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[str]) -> dict:
+    parts = parts or {}
+    names = names or []
+    numbering_map, numbering_formats = _numbering_formats(parts.get("word/numbering.xml"))
+
+    paragraphs: list[dict] = []
+    text_effects: list[str] = []
+    fields: list[str] = []
+    style_counts: dict[str, int] = {}
+    breaks: dict[str, int] = {}
+    body_chunks: list[str] = []
+
+    for p in root.iter(f"{W}p"):
+        ppr = p.find(f"{W}pPr")
+        style = ""
+        num_id = ""
+        if ppr is not None:
+            style = _attr(ppr.find(f"{W}pStyle"), "val")
+            np = ppr.find(f"{W}numPr")
+            if np is not None:
+                num_id = _attr(np.find(f"{W}numId"), "val")
+        text = norm("".join((t.text or "") for t in p.iter(f"{W}t")))
+        if text:
+            body_chunks.append(text)
+        if style:
+            style_counts[style] = style_counts.get(style, 0) + 1
+        fmt = numbering_map.get(num_id) or ""
+        if text or style or fmt:
+            paragraphs.append({"text": text, "style": style, "num_fmt": fmt})
+        for instr in p.iter(f"{W}instrText"):
+            if instr.text:
+                fields.append(instr.text.strip())
+        for r in p.findall(f"{W}r"):
+            rpr = r.find(f"{W}rPr")
+            if rpr is None:
+                continue
+            if rpr.find(f"{W14}textOutline") is not None or rpr.find(f"{W14}props3d") is not None:
+                run_txt = norm("".join((t.text or "") for t in r.findall(f"{W}t")))
+                if run_txt:
+                    text_effects.append(run_txt)
+        for br in p.iter(f"{W}br"):
+            kind = _attr(br, "type") or "textWrapping"
+            breaks[kind] = breaks.get(kind, 0) + 1
+
+    sections: list[dict] = []
+    for sect in root.iter(f"{W}sectPr"):
+        cols = sect.find(f"{W}cols")
+        pg = sect.find(f"{W}pgSz")
+        sections.append(
+            {
+                "cols": int(_attr(cols, "num") or "1"),
+                "orient": _attr(pg, "orient") or "portrait",
+                "w": _attr(pg, "w"),
+                "h": _attr(pg, "h"),
+            }
+        )
+    breaks["section"] = max(0, len(sections))
+
+    tables: list[dict] = []
+    for tbl in root.iter(f"{W}tbl"):
+        rows = list(tbl.findall(f"{W}tr"))
+        header = False
+        merged = False
+        cells: list[list[str]] = []
+        for tr in rows:
+            trpr = tr.find(f"{W}trPr")
+            if trpr is not None and trpr.find(f"{W}tblHeader") is not None:
+                header = True
+            row: list[str] = []
+            for tc in tr.findall(f"{W}tc"):
+                row.append(norm("".join((t.text or "") for t in tc.iter(f"{W}t"))))
+                tcpr = tc.find(f"{W}tcPr")
+                if tcpr is not None and (
+                    tcpr.find(f"{W}gridSpan") is not None
+                    or tcpr.find(f"{W}vMerge") is not None
+                    or tcpr.find(f"{W}hMerge") is not None
+                ):
+                    merged = True
+            cells.append(row)
+        tables.append(
+            {
+                "rows": len(rows),
+                "cols": max((len(r) for r in cells), default=0),
+                "header": header,
+                "merged": merged,
+                "cells": cells,
+            }
+        )
+
+    footnote_texts: list[str] = []
+    fn = _parse_xml(parts.get("word/footnotes.xml"))
+    if fn is not None:
+        for el in fn.iter(f"{W}footnote"):
+            if el.attrib.get(f"{W}type") in ("separator", "continuationSeparator"):
+                continue
+            txt = norm("".join((t.text or "") for t in el.iter(f"{W}t")))
+            if txt:
+                footnote_texts.append(txt)
+
+    drawings: list[dict] = []
+    drawing_kinds: set[str] = set()
+    drawing_texts: list[str] = []
+    artistic_effects: list[str] = []
+    picture_effects: list[str] = []
+    alt_texts: list[str] = []
+    wraps: list[str] = []
+    for drawing in list(root.iter(f"{W}drawing")) + list(root.iter(f"{W}pict")):
+        docpr = None
+        for el in drawing.iter():
+            if el.tag == f"{WP}docPr":
+                docpr = el
+                break
+        name = (docpr.attrib.get("name") if docpr is not None else "") or ""
+        descr = (docpr.attrib.get("descr") if docpr is not None else "") or ""
+        if descr:
+            alt_texts.append(descr)
+        kind = "drawing"
+        lname = name.casefold()
+        if "3d" in lname or "model" in lname:
+            kind = "model3d"
+        elif "diagram" in lname or "smart" in lname:
+            kind = "smartart"
+        elif "text box" in lname or "textbox" in lname:
+            kind = "textbox"
+        elif "picture" in lname:
+            kind = "picture"
+        elif name:
+            kind = "shape"
+        for el in drawing.iter():
+            tag = _local(el.tag)
+            if tag.startswith("wrap") and tag != "wrapPolygon":
+                wraps.append(tag)
+            if tag.startswith("artistic"):
+                artistic_effects.append(tag)
+            if tag in ("innerShdw", "outerShdw", "glow", "softEdge", "reflection", "effectLst"):
+                if tag != "effectLst":
+                    picture_effects.append(tag)
+            if tag == "t" and el.text:
+                drawing_texts.append(norm(el.text))
+        for txbx in drawing.iter(f"{W}txbxContent"):
+            txt = norm("".join((t.text or "") for t in txbx.iter(f"{W}t")))
+            if txt:
+                drawing_texts.append(txt)
+                kind = "textbox" if kind == "drawing" else kind
+        drawing_kinds.add(kind)
+        drawings.append({"name": name, "descr": descr, "kind": kind})
+
+    comments: list[dict] = []
+    resolved_count = 0
+    reply_count = 0
+    comments_xml = _parse_xml(parts.get("word/comments.xml"))
+    ext_xml = _parse_xml(parts.get("word/commentsExtended.xml"))
+    ext_by_pid: dict[str, dict] = {}
+    if ext_xml is not None:
+        for ex in ext_xml:
+            pid = ex.attrib.get(f"{W15}paraId") or ""
+            ext_by_pid[pid] = {
+                "done": (ex.attrib.get(f"{W15}done") or "0") == "1",
+                "parent": ex.attrib.get(f"{W15}paraIdParent") or "",
+            }
+            if ext_by_pid[pid]["done"]:
+                resolved_count += 1
+            if ext_by_pid[pid]["parent"]:
+                reply_count += 1
+    if comments_xml is not None:
+        for c in comments_xml.iter(f"{W}comment"):
+            pid = ""
+            for p in c.findall(f"{W}p"):
+                pid = p.attrib.get(f"{W14}paraId") or pid
+            meta = ext_by_pid.get(pid) or {}
+            comments.append(
+                {
+                    "author": c.attrib.get(f"{W}author") or "",
+                    "text": norm("".join((t.text or "") for t in c.iter(f"{W}t"))),
+                    "done": bool(meta.get("done")),
+                    "reply": bool(meta.get("parent")),
+                }
+            )
+
+    settings = _parse_xml(parts.get("word/settings.xml"))
+    document_protection = False
+    if settings is not None:
+        document_protection = settings.find(f"{W}documentProtection") is not None
+
+    lower_names = [n.casefold() for n in names]
+    has_picture = any("word/media/" in n and n.endswith((".png", ".jpeg", ".jpg", ".emf", ".wmf")) for n in lower_names)
+    has_3d = any(n.endswith(".glb") or "model3d" in n for n in lower_names)
+    has_smartart = any("/diagrams/" in n or "diagram" in n for n in lower_names)
+    has_hdphoto = any(n.endswith(".wdp") or "hdphoto" in n for n in lower_names)
+    if has_3d:
+        drawing_kinds.add("model3d")
+    if has_smartart:
+        drawing_kinds.add("smartart")
+
+    return {
+        "document_text": "\n".join(body_chunks),
+        "paragraphs": paragraphs,
+        "text_effects": text_effects,
+        "sections": sections,
+        "breaks": breaks,
+        "tables": tables,
+        "numbering_formats": numbering_formats,
+        "footnote_count": len(footnote_texts),
+        "footnote_texts": footnote_texts,
+        "fields": fields,
+        "style_counts": style_counts,
+        "drawings": drawings,
+        "drawing_kinds": sorted(drawing_kinds),
+        "drawing_texts": drawing_texts,
+        "artistic_effects": artistic_effects,
+        "picture_effects": picture_effects,
+        "alt_texts": alt_texts,
+        "wraps": wraps,
+        "comments": comments,
+        "resolved_count": resolved_count,
+        "reply_count": reply_count,
+        "document_protection": document_protection,
+        "has_picture": has_picture,
+        "has_3d": has_3d,
+        "has_smartart": has_smartart,
+        "has_hdphoto": has_hdphoto,
     }

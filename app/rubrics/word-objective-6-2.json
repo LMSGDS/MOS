@@ -1,0 +1,136 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-6-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 6.2 — Manage change tracking",
+  "program": "word",
+  "objective": "6.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.revisions"
+  ],
+  "criteria": [
+    {
+      "id": "W62-T01",
+      "objective": "6.2",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Chấp nhận đổi tiêu đề thành Competitor.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Competitor",
+        "exact": true
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có Competitor.",
+        "fail": "Chưa thấy Competitor.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Tab **Review**, bật **All Markup**.",
+        "Tìm thay đổi Store → Competitor.",
+        "**Accept** > **Accept This Change**."
+      ]
+    },
+    {
+      "id": "W62-T02",
+      "objective": "6.2",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Ô Service còn Adequate, friendly (bỏ but slow).",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Adequate, friendly",
+        "exact": true
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã xử lý markup.",
+        "fail": "Chưa thấy Adequate, friendly.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Tìm cụm Adequate, friendly but slow.",
+        "**Accept** phần xóa but slow.",
+        "Không xóa nhầm Adequate, friendly."
+      ]
+    },
+    {
+      "id": "W62-T03",
+      "objective": "6.2",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Không còn but slow trong nội dung bảng.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "friendly but slow"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã bỏ but slow khỏi ô.",
+        "fail": "Vẫn còn friendly but slow.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Accept** hoặc xóa tracked insert but slow.",
+        "Rà **Next Change**.",
+        "Comment But slow có thể giữ."
+      ]
+    },
+    {
+      "id": "W62-R01",
+      "objective": "6.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Giảm markup còn lại (≤ 2 revision).",
+      "predicate": {
+        "type": "revision_max",
+        "max": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Revision còn lại trong hạn.",
+        "fail": "Vẫn còn nhiều Track Changes.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Review** > **Next Change** / **Previous Change**.",
+        "Accept hoặc Reject từng thay đổi đề yêu cầu.",
+        "Không Accept All nếu đề bảo chỉ một phần."
+      ]
+    },
+    {
+      "id": "W62-L01",
+      "objective": "6.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Lock Tracking (Restrict Editing tracked changes).",
+      "predicate": {
+        "type": "document_protection"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có documentProtection.",
+        "fail": "Chưa thấy Lock Tracking.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Review** > **Lock Tracking** (hoặc **Restrict Editing**).",
+        "Bật khóa theo dõi thay đổi.",
+        "Có thể để trống mật khẩu nếu đề không yêu cầu."
+      ]
+    }
+  ]
+}

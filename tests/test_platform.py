@@ -75,6 +75,11 @@ def test_projects_download_attempt_telemetry_submit(client):
     assert "word-objective-1-2" in ids
     assert "word-objective-1-3" in ids
     assert "word-objective-1-4" in ids
+    assert "word-objective-2-1" in ids
+    assert "word-objective-3-1" in ids
+    assert "word-objective-4-2a" in ids
+    assert "word-objective-5-1" in ids
+    assert "word-objective-6-2" in ids
     blob = client.get("/api/v1/projects/word-mail-merge/file", headers=headers)
     assert blob.status_code == 200
     assert blob.content[:2] == b"PK"
