@@ -441,7 +441,7 @@ sealed class MainForm : Form
         extraSubmit.Click += async (_, _) => await SubmitExam();
         var extraCheck = new ToolStripMenuItem("Kiểm tra nhiệm vụ");
         extraCheck.Click += async (_, _) => await CheckTasks();
-        var extraDemo = new ToolStripMenuItem("Kiểm thử thao tác (demo)");
+        var extraDemo = new ToolStripMenuItem("Demo tất cả bài tập");
         extraDemo.Click += async (_, _) => await RunActionDemo();
         _extraMenu.Items.Add(extraCheck);
         _extraMenu.Items.Add(extraDemo);

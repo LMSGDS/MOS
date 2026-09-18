@@ -41,6 +41,7 @@ static class Protocol
             }
 
             if (arg.Equals("--demo-actions", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--demo-all", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("--demo", StringComparison.OrdinalIgnoreCase))
             {
                 demo = true;

@@ -1,7 +1,7 @@
 namespace MosDock;
 
 /// <summary>
-/// Bộ demo tự chạy trên Word máy học sinh: Find, Navigation, Go To, Save PDF, Inspect.
+/// Bộ demo tự chạy trên Word máy học sinh: Find, Navigation, Go To, Save PDF, Inspect cho mọi bài Word.
 /// Không mở hộp thoại Print/Share để tránh treo.
 /// </summary>
 static class WordActionDemo
@@ -19,7 +19,7 @@ static class WordActionDemo
 
         if (!WordCom.WaitForWord())
         {
-            return "Không kết nối được Microsoft Word. Mở bài MOS Word trên máy rồi chạy lại «Kiểm thử thao tác (demo)».";
+            return "Không kết nối được Microsoft Word. Mở bài MOS Word trên máy rồi chạy lại «Demo tất cả bài tập».";
         }
 
         if (!WordCom.TryBind(out dynamic? word, out dynamic? doc) || word is null || doc is null)
@@ -30,27 +30,9 @@ static class WordActionDemo
         var log = new List<string>();
         try
         {
-            var project = (ExamSession.ProjectId ?? "").ToLowerInvariant();
-            if (project.Length == 0 || project.Contains("1-1") || project.Contains("objective-1-1"))
-            {
-                RunNavigate(word, doc, log);
-            }
-
-            if (project.Contains("1-3"))
-            {
-                RunSaveShare(word, doc, log);
-            }
-
-            if (project.Contains("1-4"))
-            {
-                RunInspect(doc, log);
-            }
-
-            if (project.Length == 0)
-            {
-                RunSaveShare(word, doc, log);
-                RunInspect(doc, log);
-            }
+            RunNavigate(word, doc, log);
+            RunSaveShare(word, doc, log);
+            RunInspect(doc, log);
         }
         catch (Exception ex)
         {
@@ -59,11 +41,12 @@ static class WordActionDemo
 
         if (log.Count == 0)
         {
-            return "Demo không chạy bước nào. Mở bài Word Objective 1.1 / 1.3 / 1.4 rồi thử lại.";
+            return "Demo không chạy bước nào. Mở Microsoft Word rồi chạy lại «Demo tất cả bài tập».";
         }
 
-        return "Đã chạy demo thao tác Word trên máy này:\n\n• " + string.Join("\n• ", log)
-            + "\n\nMOS-KulKul sẽ chấm lại ngay sau đó. Các bước Find / Go To / Inspect được ghi vào bằng chứng thao tác.";
+        return "Đã demo toàn bộ thao tác Word (1.1 Find/Go To, 1.3 Save/Print/Share, 1.4 Inspect):\n\n• "
+            + string.Join("\n• ", log)
+            + "\n\nMOS-KulKul chấm lại ngay. Bài Objective 2–6 chấm từ tệp Word, không cần thao tác COM.";
     }
 
     static void RunNavigate(dynamic word, dynamic doc, List<string> log)

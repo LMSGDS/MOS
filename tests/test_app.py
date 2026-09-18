@@ -57,8 +57,8 @@ def test_install_page_lists_windows_and_macos():
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
     assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
-    assert "Kiểm thử thao tác" in r.text
-    assert "--demo-actions" in r.text
+    assert "Demo tất cả bài tập" in r.text
+    assert "--demo-all" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -122,9 +122,13 @@ def test_windows_sources_include_action_demo():
     demo = (root / "WordActionDemo.cs").read_text(encoding="utf-8")
     form = (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "--demo-actions" in program
+    assert "--demo-all" in program
     assert "Selection.Find" in demo
     assert "WdGoToGraphic" in demo
-    assert "Kiểm thử thao tác (demo)" in form
+    assert "RunNavigate" in demo
+    assert "RunSaveShare" in demo
+    assert "RunInspect" in demo
+    assert "Demo tất cả bài tập" in form
     assert "1.14.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
 
 
