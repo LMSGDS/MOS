@@ -226,15 +226,13 @@ sealed class MainForm : Form
         _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
     ];
 
-        void ApplyNavChrome(NavMetrics nav)
+    void ApplyNavChrome(NavMetrics nav)
     {
         _nav = nav;
-        var thick = _navThickness ?? (LayoutMath.Horizontal(_state) ? nav.ClusterH : nav.ClusterW);
-        var icon = Math.Clamp(thick - 2 * nav.ChromePad, 24, 56);
         _dockChrome.Padding = new Padding(nav.ChromePad);
         foreach (var btn in DockButtons())
         {
-            btn.Size = new Size(icon, icon);
+            btn.Size = new Size(nav.Icon, nav.Icon);
             btn.Margin = new Padding(nav.IconGap);
         }
 
@@ -243,10 +241,14 @@ sealed class MainForm : Form
 
     void OrientNav()
     {
+        var grip = _docking && _compact ? 6 : 0;
+        var keepHelp = _docking && _compact && HelpOpen && !_summaryOpen;
         if (_docking && _compact && _state is "left" or "right")
         {
             _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
-            _dockChrome.Width = Math.Max(8, ClientSize.Width - _navGrip.Width);
+            _dockChrome.Width = keepHelp
+                ? _nav.ClusterW
+                : Math.Max(_nav.ClusterW, Math.Max(8, ClientSize.Width - grip));
             _dockFlow.FlowDirection = FlowDirection.TopDown;
             _dockFlow.WrapContents = false;
             _navGrip.Visible = true;
@@ -258,7 +260,9 @@ sealed class MainForm : Form
         }
 
         _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
-        _dockChrome.Height = Math.Max(8, ClientSize.Height - (_docking && _compact ? _navGrip.Height : 0));
+        _dockChrome.Height = keepHelp
+            ? _nav.ClusterH
+            : Math.Max(_nav.ClusterH, Math.Max(8, ClientSize.Height - grip));
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
         _dockFlow.WrapContents = false;
         _navGrip.Visible = _docking && _compact;
@@ -1740,8 +1744,8 @@ sealed class MainForm : Form
             SetWindowPos(Handle, IntPtr.Zero, x, y, w, h, SwpNozorder | SwpNoactivate | SwpFramechanged);
         }
 
-        MinimumSize = new Size(LayoutMath.OverlayMinW, LayoutMath.OverlayMinH);
-        MaximumSize = Size.Empty;
+        MinimumSize = new Size(w, h);
+        MaximumSize = new Size(w, h);
         ResumeLayout(true);
     }
 

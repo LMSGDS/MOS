@@ -318,3 +318,8 @@ def test_user_can_resize_navigation_thickness():
     grown = with_thickness(dock, WORK, "bottom", 120)
     assert grown.h == 120
     assert grown.w == WORK.w
+    helped = grow_for_help(compute(WORK, "bottom", compact=True)[0], WORK, "bottom")
+    nav = measure(WORK)
+    assert helped.h > nav.cluster_h
+    assert helped.h - nav.cluster_h >= 40
+    assert helped.w == WORK.w
