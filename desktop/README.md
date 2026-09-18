@@ -13,7 +13,7 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 | macOS | `MOS-KulKul-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS-KulKul.command` → Mở |
 | macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple |
 
-Copy vào `data/installers/` trên server. Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
+Copy vào `data/installers/` trên server, hoặc để `scripts/git-sync.sh` tự tải artifact CI (cần `MOS_GITHUB_TOKEN`). Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
 
 ```powershell
 $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows-full' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f

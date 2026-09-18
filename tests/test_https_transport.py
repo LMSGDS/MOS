@@ -116,7 +116,22 @@ def test_github_webhook_https_hmac(monkeypatch):
     assert ok.json()["dry_run"] is True
 
 
-def test_desktop_portal_is_https_only():
+def test_github_sync_downloads_installers_over_https():
+    root = ROOT
+    sync = (root / "scripts" / "sync-installers.sh").read_text(encoding="utf-8")
+    git_sync = (root / "scripts" / "git-sync.sh").read_text(encoding="utf-8")
+    main = (root / "app" / "main.py").read_text(encoding="utf-8")
+    assert '== "main"' in sync
+    assert "dependabot/" in sync
+    assert "https://api.github.com/repos/" in sync
+    assert "MOS-KulKul-Setup-Windows-Full.exe" in sync
+    assert "ssh://" not in sync.lower()
+    assert "scp " not in sync.lower()
+    assert "sshpass" not in sync.lower()
+    assert "sync-installers.sh" in git_sync
+    assert "-GDS.exe" not in main
+    hooks = (root / "app" / "hooks.py").read_text(encoding="utf-8")
+    assert "timeout=300" in hooks
     portal = (ROOT / "desktop" / "MosDock" / "Portal.cs").read_text(encoding="utf-8")
     assert "https://mos.gds.edu.vn" in portal
     assert "ssh://" not in portal.lower()

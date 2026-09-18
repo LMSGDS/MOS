@@ -67,6 +67,8 @@ def test_install_page_lists_windows_and_macos():
     assert "Giữ lại" in r.text
     assert "Unblock-File" in r.text
     assert "/cai-dat/checksums" in r.text
+    assert "1.15.4" in r.text
+    assert "bung hết chiều ngang" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()

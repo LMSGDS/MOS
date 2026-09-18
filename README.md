@@ -222,7 +222,7 @@ Không SSH, không scp, không sshpass. Đưa mã hoặc bài học sinh đi SSH
 | --- | --- |
 | Mã nguồn | GitHub HTTPS (`https://github.com/LMSGDS/MOS.git`) |
 | Bài làm, điểm, bằng chứng | MOS-KulKul → `https://mos.gds.edu.vn/api/v1/` (JWT) |
-| Cập nhật máy chủ | `scripts/git-sync.sh` trên chính server, timer systemd, hoặc webhook GitHub `POST /api/v1/hooks/github` |
+| Cập nhật máy chủ | `scripts/git-sync.sh` trên chính server (kéo mã + bộ cài CI), timer systemd, hoặc webhook GitHub `POST /api/v1/hooks/github` |
 
 Trên máy chủ (một lần, tại console máy — không từ Cloud Agent):
 
