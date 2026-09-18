@@ -10,20 +10,21 @@ from dataclasses import dataclass
 
 REF_WORK_W = 1920
 REF_WORK_H = 1040
-CLUSTER_W = 260
-CLUSTER_H = 108
-CLUSTER_MARGIN = 8
-HELP_W = 300
-HELP_H = 248
+CLUSTER_W = 200
+CLUSTER_H = 80
+CLUSTER_MARGIN = 6
+HELP_W = 240
+HELP_H = 132
 EXPANDED_SIDE_W = 340
 SUMMARY_W = 1020
 SUMMARY_H = 680
 MIN_WORD = 400
 OVERLAY_MIN_W = 80
 OVERLAY_MIN_H = 48
-REF_ICON = 40
-REF_ICON_GAP = 3
-REF_CHROME_PAD = 4
+REF_ICON = 32
+REF_ICON_GAP = 2
+REF_CHROME_PAD = 3
+OVERLAY_CAP_PCT = 22
 
 
 @dataclass(frozen=True)
@@ -75,16 +76,28 @@ def _scale(reference: int, ratio: float, lo: int, hi: int) -> int:
 
 def measure(work: Rect) -> NavMetrics:
     ratio = fit(work)
-    icon = _scale(REF_ICON, ratio, 28, 56)
-    gap = _scale(REF_ICON_GAP, ratio, 2, 6)
-    pad = _scale(REF_CHROME_PAD, ratio, 3, 10)
-    cap_w = max(180, work.w * 2 // 5)
-    cap_h = max(80, work.h * 2 // 5)
-    cluster_w = max(_scale(CLUSTER_W, ratio, 180, cap_w), 5 * (icon + 2 * gap) + 2 * pad)
-    cluster_h = max(_scale(CLUSTER_H, ratio, 80, cap_h), 2 * (icon + 2 * gap) + 2 * pad)
-    help_w = _scale(HELP_W, ratio, cluster_w, cap_w)
-    help_h = _scale(HELP_H, ratio, 160, cap_h)
-    margin = _scale(CLUSTER_MARGIN, ratio, 6, 16)
+    icon = _scale(REF_ICON, ratio, 26, 40)
+    gap = _scale(REF_ICON_GAP, ratio, 1, 4)
+    pad = _scale(REF_CHROME_PAD, ratio, 2, 6)
+    cap_w = max(160, work.w * OVERLAY_CAP_PCT // 100)
+    cap_h = max(72, work.h * OVERLAY_CAP_PCT // 100)
+    cluster_w = min(
+        240,
+        max(
+            _scale(CLUSTER_W, ratio, 160, min(cap_w, 240)),
+            5 * (icon + 2 * gap) + 2 * pad,
+        ),
+    )
+    cluster_h = min(
+        100,
+        max(
+            _scale(CLUSTER_H, ratio, 64, min(cap_h, 100)),
+            2 * (icon + 2 * gap) + 2 * pad,
+        ),
+    )
+    help_w = _scale(HELP_W, ratio, cluster_w, min(cap_w, 260))
+    help_h = _scale(HELP_H, ratio, 88, min(cap_h, 148))
+    margin = _scale(CLUSTER_MARGIN, ratio, 4, 10)
     side = _scale(EXPANDED_SIDE_W, ratio, 220, max(220, work.w // 3))
     edge = max(_scale(200, ratio, 140, 420), int(work.h * 0.22))
     summary_w = min(_scale(SUMMARY_W, ratio, 480, max(480, work.w - 40)), max(480, work.w - 40))
@@ -125,7 +138,7 @@ def _clamp_word(word: Rect, work: Rect) -> Rect:
 
 
 def _cap(work_span: int, wanted: int, minimum: int) -> int:
-    return max(minimum, min(wanted, work_span * 2 // 5))
+    return max(minimum, min(wanted, work_span * OVERLAY_CAP_PCT // 100))
 
 
 def _scale_work(work: Rect, scale: float) -> Rect:
@@ -176,12 +189,12 @@ def compute(work: Rect, state: str, compact: bool = False, scale: float = 1.0) -
 
 
 def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rect:
-    """Gắn thẻ Hướng dẫn vào cụm dock, tỉ lệ theo màn hình, không vượt 2/5 cạnh."""
+    """Gắn thẻ Hướng dẫn vào cụm dock, tỉ lệ theo màn hình, không vượt 22% cạnh."""
     nav = measure(_scale_work(work, scale))
     w = max(dock.w, nav.help_w)
     h = dock.h + nav.help_h
     w = min(w, _cap(work.w, w, nav.cluster_w))
-    h = min(h, _cap(work.h, h, dock.h + max(160, nav.help_h // 2)))
+    h = min(h, _cap(work.h, h, dock.h + max(72, nav.help_h // 2)))
     x = dock.x - (w - dock.w) // 2
     y = dock.y if (state or "").lower() == "top" else dock.y - (h - dock.h)
     if x < work.x:

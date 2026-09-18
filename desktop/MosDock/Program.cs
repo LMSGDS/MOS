@@ -32,15 +32,12 @@ static class Program
         {
             try
             {
-                var report = WordActionDemo.Run();
-                MessageBox.Show(report, "MOS-KulKul — Kiểm thử thao tác", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Protocol.Register();
             }
-            catch (Exception ex)
+            catch
             {
-                ShowError(ex);
+                // protocol optional
             }
-
-            return;
         }
 
         var first = true;
@@ -57,7 +54,8 @@ static class Program
                 parsed.State ?? "bottom",
                 parsed.App ?? "word",
                 first && parsed.Launch,
-                first ? parsed.File : null);
+                first ? parsed.File : null,
+                first && parsed.Demo);
             first = false;
             Application.Run(main);
             Portal.Token = null;

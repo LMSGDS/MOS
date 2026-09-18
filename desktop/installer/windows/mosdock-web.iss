@@ -1,6 +1,6 @@
 ; MOS-KulKul — bộ cài nhỏ (web stub). Khi bấm Cài sẽ tải bản đầy đủ từ máy chủ.
 #define MyAppName "MOS-KulKul"
-#define MyAppVersion "1.14.7"
+#define MyAppVersion "1.14.8"
 #define MyAppPublisher "Trường GDS"
 #define MyAppURL "https://mos.gds.edu.vn/cai-dat"
 #ifndef FullUrl

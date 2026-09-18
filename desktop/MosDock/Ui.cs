@@ -170,7 +170,7 @@ static class Ui
         return TextRenderer.MeasureText(text ?? "", font, new Size(int.MaxValue, 0), TextFormatFlags.SingleLine).Width;
     }
 
-    public static void BindWrap(Label label, int extra = 8)
+    public static void BindWrap(Label label, int extra = 8, int maxHeight = 0)
     {
         void Fit(object? _, EventArgs e)
         {
@@ -187,6 +187,10 @@ static class Ui
             }
 
             var h = MeasureH(label.Text, label.Font, w) + label.Padding.Vertical + extra;
+            if (maxHeight > 0)
+            {
+                h = Math.Min(h, maxHeight);
+            }
             if (label.Height != h)
             {
                 label.Height = h;

@@ -17,7 +17,7 @@ from app.admin import router as admin_router
 from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
 from app.hooks import router as hooks_router
-from app.kulkul_layout import Rect, compute
+from app.kulkul_layout import Rect, compute, grow_for_help, measure
 from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
 
@@ -174,11 +174,24 @@ def api_layout(
     compact: bool = False,
 ):
     dock, word = compute(Rect(x, y, w, h), state, compact=compact)
+    nav = measure(Rect(x, y, w, h))
+    compact_on = compact or state == "minimized"
+    help_box = grow_for_help(dock, Rect(x, y, w, h), state) if compact_on else dock
     return {
         "state": state,
-        "compact": compact or state == "minimized",
+        "compact": compact_on,
+        "fit": nav.fit,
         "dock": {"x": dock.x, "y": dock.y, "w": dock.w, "h": dock.h},
         "word": {"x": word.x, "y": word.y, "w": word.w, "h": word.h},
+        "help": {"x": help_box.x, "y": help_box.y, "w": help_box.w, "h": help_box.h},
+        "nav": {
+            "cluster_w": nav.cluster_w,
+            "cluster_h": nav.cluster_h,
+            "help_w": nav.help_w,
+            "help_h": nav.help_h,
+            "icon": nav.icon,
+            "margin": nav.margin,
+        },
     }
 
 

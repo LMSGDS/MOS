@@ -129,7 +129,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.14.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.14.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
 
 
 def test_brand_icon_is_multi_size_ico():
@@ -183,13 +183,19 @@ def test_layout_api_side_docks_leave_word_visible():
     assert right["word"]["x"] == 0
     assert right["word"]["w"] + right["dock"]["w"] == 1920
     mini = c.get("/api/layout", params={"state": "minimized", "w": 1920, "h": 1040}).json()
-    assert mini["dock"]["h"] == 108
-    assert mini["dock"]["w"] == 260
+    assert mini["dock"]["h"] == 80
+    assert mini["dock"]["w"] == 200
     assert mini["word"]["h"] == 1040
     compact = c.get("/api/layout", params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1}).json()
     assert compact["compact"] is True
-    assert compact["dock"]["h"] == 108
+    assert compact["dock"]["h"] == 80
+    assert compact["dock"]["w"] == 200
     assert compact["word"]["h"] == 1040
+    assert compact["fit"] == 1.0
+    help_box = compact["help"]
+    assert help_box["h"] <= 212
+    assert help_box["h"] < 1040 * 22 / 100
+    assert help_box["w"] <= 240
 
 
 def test_kulkul_home_after_login():

@@ -6,7 +6,12 @@ namespace MosDock;
 /// </summary>
 static class WordActionDemo
 {
-    public static string Run()
+    const int WdAllowOnlyRevisions = 0;
+    const int WdRevisionsMarkupAll = 2;
+
+    public static string Run() => Drive(null);
+
+    public static string Drive(Action<int>? onTask)
     {
         if (!WordCom.TryBind(out _, out _) && !string.IsNullOrWhiteSpace(ExamSession.LocalPath))
         {
@@ -30,9 +35,32 @@ static class WordActionDemo
         var log = new List<string>();
         try
         {
-            RunNavigate(word, doc, log);
-            RunSaveShare(word, doc, log);
-            RunInspect(doc, log);
+            TryMarkupAll(word);
+            var criteria = ExamSession.Rubric?.Criteria;
+            if (criteria is { Count: > 0 })
+            {
+                for (var i = 0; i < criteria.Count; i++)
+                {
+                    onTask?.Invoke(i);
+                    DriveCriterion(word, doc, criteria[i], log);
+                }
+            }
+            else
+            {
+                RunNavigate(word, doc, log);
+                RunSaveShare(word, doc, log);
+                RunInspect(doc, log);
+            }
+
+            try
+            {
+                doc.Save();
+                log.Add("Đã lưu tài liệu bài thi.");
+            }
+            catch (Exception ex)
+            {
+                log.Add("Lưu Word: " + ex.Message);
+            }
         }
         catch (Exception ex)
         {
@@ -44,9 +72,206 @@ static class WordActionDemo
             return "Demo không chạy bước nào. Mở Microsoft Word rồi chạy lại «Demo tất cả bài tập».";
         }
 
-        return "Đã demo toàn bộ thao tác Word (1.1 Find/Go To, 1.3 Save/Print/Share, 1.4 Inspect):\n\n• "
-            + string.Join("\n• ", log)
-            + "\n\nMOS-KulKul chấm lại ngay. Bài Objective 2–6 chấm từ tệp Word, không cần thao tác COM.";
+        return "Đã tự điều khiển Word theo đề đang mở:\n\n• "
+            + string.Join("\n• ", log);
+    }
+
+    static void DriveCriterion(dynamic word, dynamic doc, JsonCriterion item, List<string> log)
+    {
+        var type = (item.Predicate.Type ?? item.Kind ?? "").Trim().ToLowerInvariant();
+        try
+        {
+            switch (type)
+            {
+                case "table_has_text":
+                case "contains_text":
+                case "heading_text":
+                case "body_contains":
+                    EnsureText(word, doc, item.Predicate.Text ?? "", log, item.Id);
+                    break;
+                case "not_contains_text":
+                    RemovePhrase(word, doc, item.Predicate.Text ?? "", log, item.Id);
+                    break;
+                case "revision_max":
+                    TrimRevisions(doc, item.Predicate.Max ?? 0, log, item.Id);
+                    break;
+                case "document_protection":
+                    LockTracking(word, doc, log, item.Id);
+                    break;
+                case "action_sequence":
+                    RunNavigate(word, doc, log);
+                    RunSaveShare(word, doc, log);
+                    RunInspect(doc, log);
+                    break;
+                default:
+                    if (type.Contains("find") || type.Contains("goto") || type.Contains("inspect"))
+                    {
+                        RunNavigate(word, doc, log);
+                        RunInspect(doc, log);
+                    }
+                    else
+                    {
+                        log.Add($"{item.Id}: {type} — chấm từ tệp sau khi lưu.");
+                    }
+
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            log.Add($"{item.Id} lỗi: {ex.Message}");
+        }
+    }
+
+    static void TryMarkupAll(dynamic word)
+    {
+        try
+        {
+            word.ActiveWindow.View.RevisionsFilter.Markup = WdRevisionsMarkupAll;
+        }
+        catch
+        {
+            TryMso(word, "ReviewViewAllMarkup");
+        }
+    }
+
+    static void EnsureText(dynamic word, dynamic doc, string needle, List<string> log, string id)
+    {
+        if (string.IsNullOrWhiteSpace(needle))
+        {
+            return;
+        }
+
+        if (AcceptRevisionsContaining(doc, needle) > 0)
+        {
+            log.Add($"{id}: Accept thay đổi «{needle}».");
+            return;
+        }
+
+        if (Find(word, needle, matchCase: false, wholeWord: false, style: null, source: "demo") > 0)
+        {
+            log.Add($"{id}: Đã thấy «{needle}».");
+            return;
+        }
+
+        try
+        {
+            Home(word);
+            word.Selection.TypeText(needle);
+            log.Add($"{id}: Gõ «{needle}».");
+        }
+        catch (Exception ex)
+        {
+            log.Add($"{id}: chưa đưa được «{needle}» ({ex.Message}).");
+        }
+    }
+
+    static void RemovePhrase(dynamic word, dynamic doc, string needle, List<string> log, string id)
+    {
+        if (string.IsNullOrWhiteSpace(needle))
+        {
+            return;
+        }
+
+        var accepted = AcceptRevisionsContaining(doc, needle);
+        if (accepted > 0)
+        {
+            log.Add($"{id}: Accept markup «{needle}» ({accepted}).");
+        }
+
+        try
+        {
+            Home(word);
+            dynamic find = word.Selection.Find;
+            find.ClearFormatting();
+            find.Text = needle;
+            find.Replacement.Text = "";
+            find.Forward = true;
+            find.Wrap = WordCom.WdFindContinue;
+            find.MatchCase = false;
+            find.MatchWholeWord = false;
+            find.Execute(Replace: 2);
+            log.Add($"{id}: Gỡ «{needle}».");
+        }
+        catch (Exception ex)
+        {
+            log.Add($"{id}: gỡ «{needle}»: {ex.Message}");
+        }
+    }
+
+    static int AcceptRevisionsContaining(dynamic doc, string needle)
+    {
+        var hits = 0;
+        try
+        {
+            dynamic revs = doc.Revisions;
+            int count = (int)revs.Count;
+            for (var i = count; i >= 1; i--)
+            {
+                try
+                {
+                    dynamic rev = revs[i];
+                    string text = (string)(rev.Range.Text ?? "");
+                    if (text.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rev.Accept();
+                        hits++;
+                    }
+                }
+                catch
+                {
+                    // revision gone
+                }
+            }
+        }
+        catch
+        {
+            // no revisions collection
+        }
+
+        return hits;
+    }
+
+    static void TrimRevisions(dynamic doc, int max, List<string> log, string id)
+    {
+        try
+        {
+            dynamic revs = doc.Revisions;
+            var guard = 0;
+            while ((int)revs.Count > Math.Max(0, max) && guard < 80)
+            {
+                revs[1].Accept();
+                guard++;
+            }
+
+            log.Add($"{id}: Còn {(int)revs.Count} revision (tối đa {max}).");
+        }
+        catch (Exception ex)
+        {
+            log.Add($"{id}: revision: {ex.Message}");
+        }
+    }
+
+    static void LockTracking(dynamic word, dynamic doc, List<string> log, string id)
+    {
+        TryMso(word, "ReviewLockTracking");
+        try
+        {
+            doc.Protect(WdAllowOnlyRevisions);
+            log.Add($"{id}: Lock Tracking.");
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                doc.TrackRevisions = true;
+                log.Add($"{id}: Track Changes (chưa khóa: {ex.Message}).");
+            }
+            catch (Exception inner)
+            {
+                log.Add($"{id}: Lock Tracking lỗi: {inner.Message}");
+            }
+        }
     }
 
     static void RunNavigate(dynamic word, dynamic doc, List<string> log)

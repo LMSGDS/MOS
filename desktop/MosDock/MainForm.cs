@@ -75,14 +75,18 @@ sealed class MainForm : Form
     NavMetrics _nav = LayoutMath.Measure(new Rect(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH));
     Rectangle? _savedWorkspace;
     readonly bool _launchOnStart;
+    readonly bool _demoOnStart;
     readonly string? _fileOnStart;
+    readonly Panel _helpHeader = new();
+    readonly FlowLayoutPanel _helpFooter = new();
+    bool _demoRunning;
     IReadOnlyList<MosProject> _items = [];
     enum HubPage { Home, Catalog, Resume, Done, Exam }
     HubPage _view = HubPage.Home;
 
     public bool SignOutRequested { get; private set; }
 
-    public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null)
+    public MainForm(string? initialState, string? initialApp = null, bool launchOnStart = false, string? fileOnStart = null, bool demoOnStart = false)
     {
         if (!string.IsNullOrWhiteSpace(initialState))
         {
@@ -92,6 +96,7 @@ sealed class MainForm : Form
         _app = OfficeApp.Resolve(initialApp).Id;
         _launchOnStart = launchOnStart;
         _fileOnStart = fileOnStart;
+        _demoOnStart = demoOnStart;
         Text = "MOS-KulKul";
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
@@ -140,6 +145,11 @@ sealed class MainForm : Form
                 WordWindow.Launch(_app, _fileOnStart);
                 ShowExamUi();
                 EnterDock(compact: true);
+            }
+
+            if (_demoOnStart && _docking)
+            {
+                BeginInvoke(async () => await RunActionDemo());
             }
 
             try
@@ -507,8 +517,8 @@ sealed class MainForm : Form
         _taskPrompt.AutoSize = false;
         _taskPrompt.UseMnemonic = false;
         _taskPrompt.ForeColor = Ui.Text;
-        _taskPrompt.Padding = new Padding(2, 0, 2, 4);
-        Ui.BindWrap(_taskPrompt, 6);
+        _taskPrompt.Padding = new Padding(2, 0, 2, 2);
+        Ui.BindWrap(_taskPrompt, 4, 36);
 
         var card = new Panel
         {
@@ -522,31 +532,31 @@ sealed class MainForm : Form
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
-        var header = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.White, Padding = new Padding(12, 4, 12, 0) };
-        header.Paint += (_, e) =>
+        _helpHeader.Dock = DockStyle.Top;
+        _helpHeader.Height = 22;
+        _helpHeader.BackColor = Color.White;
+        _helpHeader.Padding = new Padding(8, 0, 8, 0);
+        _helpHeader.Paint += (_, e) =>
         {
             using var pen = new Pen(Color.FromArgb(226, 230, 234));
-            e.Graphics.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
+            e.Graphics.DrawLine(pen, 0, _helpHeader.Height - 1, _helpHeader.Width, _helpHeader.Height - 1);
         };
         _helpTitle.Text = "Hướng dẫn";
         _helpTitle.Dock = DockStyle.Fill;
         _helpTitle.TextAlign = ContentAlignment.MiddleLeft;
         _helpTitle.ForeColor = Ui.Text;
         _helpTitle.UseMnemonic = false;
-        header.Controls.Add(_helpTitle);
+        _helpHeader.Controls.Add(_helpTitle);
 
-        var footer = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Bottom,
-            Height = 40,
-            BackColor = Color.FromArgb(248, 249, 250),
-            Padding = new Padding(8, 4, 8, 4),
-            WrapContents = false,
-        };
-        footer.Paint += (_, e) =>
+        _helpFooter.Dock = DockStyle.Bottom;
+        _helpFooter.Height = 28;
+        _helpFooter.BackColor = Color.FromArgb(248, 249, 250);
+        _helpFooter.Padding = new Padding(6, 2, 6, 2);
+        _helpFooter.WrapContents = false;
+        _helpFooter.Paint += (_, e) =>
         {
             using var pen = new Pen(Color.FromArgb(226, 230, 234));
-            e.Graphics.DrawLine(pen, 0, 0, footer.Width, 0);
+            e.Graphics.DrawLine(pen, 0, 0, _helpFooter.Width, 0);
         };
         _aaaBtn.Margin = new Padding(0, 0, 0, 0);
         _aaaBtn.Click += (_, _) =>
@@ -555,7 +565,7 @@ sealed class MainForm : Form
             ApplyHelpFonts();
             RenderHelp();
         };
-        footer.Controls.Add(_aaaBtn);
+        _helpFooter.Controls.Add(_aaaBtn);
 
         _helpBody.Dock = DockStyle.Fill;
         _helpBody.BorderStyle = BorderStyle.None;
@@ -574,13 +584,13 @@ sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = Color.White,
-            Padding = new Padding(12, 8, 12, 8),
+            Padding = new Padding(8, 4, 8, 4),
         };
         bodyWrap.Controls.Add(_helpBody);
 
         card.Controls.Add(bodyWrap);
-        card.Controls.Add(footer);
-        card.Controls.Add(header);
+        card.Controls.Add(_helpFooter);
+        card.Controls.Add(_helpHeader);
         _helpPane.Controls.Add(card);
         _helpPane.Controls.Add(_taskPrompt);
         ApplyHelpFonts();
@@ -960,9 +970,16 @@ sealed class MainForm : Form
 
     void ApplyHelpFonts()
     {
-        var promptPt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 12f };
-        var bodyPt = _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
-        var titlePt = _helpScale switch { 2 => 20f, 1 => 17f, _ => 15f };
+        var compact = _docking && _compact;
+        var promptPt = compact
+            ? 9.5f
+            : _helpScale switch { 2 => 16f, 1 => 14f, _ => 12f };
+        var bodyPt = compact
+            ? 8.5f
+            : _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
+        var titlePt = compact
+            ? 9f
+            : _helpScale switch { 2 => 20f, 1 => 17f, _ => 15f };
         _taskPrompt.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
         _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Regular);
         _helpBody.Font = new Font("Segoe UI", bodyPt);
@@ -970,7 +987,9 @@ sealed class MainForm : Form
 
     void RenderHelp()
     {
-        var bodyPt = _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
+        var bodyPt = (_docking && _compact)
+            ? 8.5f
+            : _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
         var criteria = ExamSession.Rubric?.Criteria;
         if (criteria is not { Count: > 0 })
         {
@@ -1107,14 +1126,21 @@ sealed class MainForm : Form
         if (showHelp && _compact && _docking)
         {
             _helpPane.Dock = DockStyle.Fill;
-            _helpPane.Padding = new Padding(8, 6, 8, 4);
+            _helpPane.Padding = new Padding(4, 4, 4, 2);
+            _helpHeader.Height = 20;
+            _helpFooter.Visible = false;
+            _helpFooter.Height = 0;
         }
         else
         {
             _helpPane.Dock = DockStyle.Top;
             _helpPane.Height = _nav.HelpH;
-            _helpPane.Padding = new Padding(12, 8, 12, 6);
+            _helpPane.Padding = new Padding(8, 6, 8, 4);
+            _helpHeader.Height = 32;
+            _helpFooter.Visible = true;
+            _helpFooter.Height = 28;
         }
+        ApplyHelpFonts();
         _tasks.Visible = showTasks;
         _examTitle.Visible = showTasks;
         _examMeta.Visible = showTasks;
@@ -1333,6 +1359,10 @@ sealed class MainForm : Form
         _app = project.Program;
         ShowExamUi();
         EnterDock(compact: true);
+        if (_demoOnStart && ExamSession.Mode != "testing")
+        {
+            BeginInvoke(async () => await RunActionDemo());
+        }
     }
 
     void ShowExamUi()
@@ -1385,39 +1415,77 @@ sealed class MainForm : Form
 
     async Task RunActionDemo()
     {
-        if (string.IsNullOrWhiteSpace(ExamSession.LocalPath) && !_docking)
+        if (_demoRunning)
         {
-            var ask = MessageBox.Show(
-                "Chưa mở đề MOS. Demo sẽ điều khiển Microsoft Word đang mở trên máy (nếu có).\n\nTiếp tục?",
-                "Kiểm thử thao tác",
-                MessageBoxButtons.OKCancel,
-                MessageBoxIcon.Question);
-            if (ask != DialogResult.OK)
-            {
-                return;
-            }
+            return;
         }
 
-        _examStatus.Text = "Đang tự chạy thao tác Word (Find, Go To, Inspect)…";
-        Cursor = Cursors.WaitCursor;
-        string report;
+        _demoRunning = true;
         try
         {
-            report = WordActionDemo.Run();
+            _state = string.IsNullOrWhiteSpace(_state) || _state == "minimized" ? "bottom" : _state;
+            _compact = true;
+            _summaryOpen = false;
+            _helpVisible = true;
+            if (!_docking)
+            {
+                ShowExamUi();
+                EnterDock(compact: true);
+            }
+            else
+            {
+                ApplyDock(waitForWord: true);
+            }
+
+            _examStatus.Text = "Đang tự điều khiển Word theo từng nhiệm vụ…";
+            Cursor = Cursors.WaitCursor;
+            string report;
+            try
+            {
+            report = WordActionDemo.Drive(SelectTaskIndex);
+            }
+            catch (Exception ex)
+            {
+                report = "Demo gặp lỗi: " + ex.Message;
+            }
+
+            Cursor = Cursors.Default;
+            _examStatus.Text = report.Split('\n')[0];
+            ApplyDock(waitForWord: false);
+            if (!string.IsNullOrWhiteSpace(ExamSession.AttemptId) && !string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+            {
+                await CheckTasks();
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            report = "Demo gặp lỗi: " + ex.Message;
+            _demoRunning = false;
+        }
+    }
+
+    void SelectTaskIndex(int index)
+    {
+        if (InvokeRequired)
+        {
+            Invoke(() => SelectTaskIndex(index));
+            return;
         }
 
-        Cursor = Cursors.Default;
-        _examStatus.Text = report.Split('\n')[0];
-        if (!string.IsNullOrWhiteSpace(ExamSession.AttemptId) && !string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+        if (_tasks.Items.Count == 0)
         {
-            await CheckTasks();
+            _taskIndex = index;
+            RenderHelp();
+            return;
         }
 
-        MessageBox.Show(report, "MOS-KulKul — Kiểm thử thao tác", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        var i = Math.Clamp(index, 0, _tasks.Items.Count - 1);
+        _tasks.SelectedIndices.Clear();
+        _tasks.Items[i].Selected = true;
+        _tasks.EnsureVisible(i);
+        _taskIndex = i;
+        RenderHelp();
+        ApplyDock(waitForWord: false);
+        Application.DoEvents();
     }
 
     async Task CheckTasks()

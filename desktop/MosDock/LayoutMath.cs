@@ -26,11 +26,11 @@ public static class LayoutMath
 {
     public const int RefWorkW = 1920;
     public const int RefWorkH = 1040;
-    public const int ClusterW = 260;
-    public const int ClusterH = 108;
-    public const int ClusterMargin = 8;
-    public const int HelpW = 300;
-    public const int HelpH = 248;
+    public const int ClusterW = 200;
+    public const int ClusterH = 80;
+    public const int ClusterMargin = 6;
+    public const int HelpW = 240;
+    public const int HelpH = 132;
     public const int SummaryW = 1020;
     public const int SummaryH = 680;
     public const int ExpandedSideW = 340;
@@ -39,9 +39,10 @@ public static class LayoutMath
     public const int HubMinH = 600;
     public const int OverlayMinW = 80;
     public const int OverlayMinH = 48;
-    public const int RefIcon = 40;
-    public const int RefIconGap = 3;
-    public const int RefChromePad = 4;
+    public const int RefIcon = 32;
+    public const int RefIconGap = 2;
+    public const int RefChromePad = 3;
+    public const int OverlayCapPct = 22;
 
     public static int Px(int logical, float scale) =>
         Math.Max(1, (int)Math.Round(logical * Math.Max(0.5f, scale)));
@@ -60,16 +61,20 @@ public static class LayoutMath
     public static NavMetrics Measure(Rect work)
     {
         var fit = Fit(work);
-        var icon = Scale(RefIcon, fit, 28, 56);
-        var gap = Scale(RefIconGap, fit, 2, 6);
-        var pad = Scale(RefChromePad, fit, 3, 10);
-        var capW = Math.Max(180, work.W * 2 / 5);
-        var capH = Math.Max(80, work.H * 2 / 5);
-        var clusterW = Math.Max(Scale(ClusterW, fit, 180, capW), 5 * (icon + 2 * gap) + 2 * pad);
-        var clusterH = Math.Max(Scale(ClusterH, fit, 80, capH), 2 * (icon + 2 * gap) + 2 * pad);
-        var helpW = Scale(HelpW, fit, clusterW, capW);
-        var helpH = Scale(HelpH, fit, 160, capH);
-        var margin = Scale(ClusterMargin, fit, 6, 16);
+        var icon = Scale(RefIcon, fit, 26, 40);
+        var gap = Scale(RefIconGap, fit, 1, 4);
+        var pad = Scale(RefChromePad, fit, 2, 6);
+        var capW = Math.Max(160, work.W * OverlayCapPct / 100);
+        var capH = Math.Max(72, work.H * OverlayCapPct / 100);
+        var clusterW = Math.Min(
+            240,
+            Math.Max(Scale(ClusterW, fit, 160, Math.Min(capW, 240)), 5 * (icon + 2 * gap) + 2 * pad));
+        var clusterH = Math.Min(
+            100,
+            Math.Max(Scale(ClusterH, fit, 64, Math.Min(capH, 100)), 2 * (icon + 2 * gap) + 2 * pad));
+        var helpW = Scale(HelpW, fit, clusterW, Math.Min(capW, 260));
+        var helpH = Scale(HelpH, fit, 88, Math.Min(capH, 148));
+        var margin = Scale(ClusterMargin, fit, 4, 10);
         var side = Scale(ExpandedSideW, fit, 220, Math.Max(220, work.W / 3));
         var edge = Math.Max(Scale(200, fit, 140, 420), (int)(work.H * 0.22));
         var summaryW = Math.Min(Scale(SummaryW, fit, 480, work.W - 40), Math.Max(480, work.W - 40));
@@ -163,7 +168,7 @@ public static class LayoutMath
         var w = Math.Max(dock.W, nav.HelpW);
         var h = dock.H + nav.HelpH;
         w = Math.Min(w, Cap(work.W, w, nav.ClusterW));
-        h = Math.Min(h, Cap(work.H, h, dock.H + Math.Max(160, nav.HelpH / 2)));
+        h = Math.Min(h, Cap(work.H, h, dock.H + Math.Max(72, nav.HelpH / 2)));
         var x = dock.X - (w - dock.W) / 2;
         var y = state is "top" ? dock.Y : dock.Y - (h - dock.H);
         if (x < work.X)
@@ -201,7 +206,7 @@ public static class LayoutMath
     }
 
     static int Cap(int workSpan, int wanted, int min) =>
-        Math.Max(min, Math.Min(wanted, workSpan * 2 / 5));
+        Math.Max(min, Math.Min(wanted, workSpan * OverlayCapPct / 100));
 
     static Rect ClampWord(Rect word, Rect work)
     {
