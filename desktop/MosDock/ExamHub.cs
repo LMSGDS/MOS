@@ -240,10 +240,12 @@ static class ExamHub
 
         try
         {
+            await FlushActionsAsync();
             await FlushOrQueueAsync();
             using var submitted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/submit",
-                path);
+                path,
+                EvidenceFields());
             var scoreEl = submitted.RootElement.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
                 ? v
@@ -294,6 +296,63 @@ static class ExamHub
         }
     }
 
+    public static async Task FlushActionsAsync()
+    {
+        var events = ActionEvidence.Events;
+        if (string.IsNullOrWhiteSpace(ExamSession.AttemptId) || events.Count == 0)
+        {
+            return;
+        }
+
+        var payload = new
+        {
+            events = events.Select(e => new
+            {
+                event_id = e.Id,
+                skill = e.Skill ?? "",
+                action = e.Action,
+                detail = new
+                {
+                    query = e.Query,
+                    source = e.Source,
+                    match_case = e.MatchCase,
+                    whole_word = e.WholeWord,
+                    style = e.Style,
+                    hits = e.Hits,
+                    name = e.Name,
+                    page = e.Page,
+                    format = e.Format,
+                    ok = e.Ok,
+                    detail = e.Detail,
+                },
+            }).ToArray(),
+        };
+        try
+        {
+            using var posted = await Portal.PostJsonAsync(
+                $"/api/v1/attempts/{ExamSession.AttemptId}/telemetry",
+                payload);
+            await OfflineQueue.FlushAsync();
+        }
+        catch
+        {
+            OfflineQueue.Enqueue(ExamSession.AttemptId, payload);
+        }
+    }
+
+    static Dictionary<string, string>? EvidenceFields()
+    {
+        if (ActionEvidence.Events.Count == 0)
+        {
+            return null;
+        }
+
+        return new Dictionary<string, string>
+        {
+            ["evidence"] = ActionEvidence.ToJson(),
+        };
+    }
+
     public static async Task<(bool Ok, string Summary, IReadOnlyList<LocalCriterion> Criteria)> CheckTasksAsync(string program)
     {
         if (string.IsNullOrWhiteSpace(ExamSession.AttemptId) || string.IsNullOrWhiteSpace(ExamSession.LocalPath))
@@ -312,12 +371,14 @@ static class ExamHub
         var snap = Path.Combine(snapDir, DateTime.UtcNow.ToString("yyyyMMddHHmmss") + Path.GetExtension(path));
         File.Copy(path, snap, overwrite: true);
 
-        var local = WordGrade.Evaluate(snap, ExamSession.Rubric);
+        var local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
         try
         {
+            await FlushActionsAsync();
             using var posted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/checkpoints",
-                snap);
+                snap,
+                EvidenceFields());
             var root = posted.RootElement;
             if (root.TryGetProperty("score", out var scoreEl))
             {

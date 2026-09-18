@@ -23,11 +23,26 @@ static class Program
         using var mutex = new Mutex(true, MutexName, out var created);
         if (!created)
         {
-            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word", parsed.Launch, parsed.File);
+            ForwardToRunningInstance(parsed.State ?? "bottom", parsed.App ?? "word", parsed.Launch, parsed.File, parsed.Demo);
             return;
         }
 
         ApplicationConfiguration.Initialize();
+        if (parsed.Demo)
+        {
+            try
+            {
+                var report = WordActionDemo.Run();
+                MessageBox.Show(report, "MOS-KulKul — Kiểm thử thao tác", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex);
+            }
+
+            return;
+        }
+
         var first = true;
         while (true)
         {
@@ -63,12 +78,12 @@ static class Program
             MessageBoxIcon.Error);
     }
 
-    static void ForwardToRunningInstance(string state, string app, bool launch, string? file)
+    static void ForwardToRunningInstance(string state, string app, bool launch, string? file, bool demo)
     {
         try
         {
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var path = launch ? "open" : "place";
+            var path = demo ? "demo" : launch ? "open" : "place";
             var url = $"http://127.0.0.1:{LocalAgent.Port}/{path}?state={Uri.EscapeDataString(state)}&app={Uri.EscapeDataString(app)}";
             if (!string.IsNullOrWhiteSpace(file))
             {

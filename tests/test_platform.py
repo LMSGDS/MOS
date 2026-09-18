@@ -264,3 +264,32 @@ def test_cannot_write_another_students_attempt(client):
     )
     assert dup.status_code == 200
     assert dup.json()["accepted"] == 1
+
+
+def test_word_11_checkpoint_with_demo_evidence(client):
+    import json
+
+    from tests.test_word_actions import DEMO_W11
+
+    token = _token(client, "hocsinh")
+    headers = {"Authorization": f"Bearer {token}"}
+    started = client.post(
+        "/api/v1/attempts",
+        headers=headers,
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    attempt_id = started.json()["attempt_id"]
+    check = client.post(
+        f"/api/v1/attempts/{attempt_id}/checkpoints",
+        headers=headers,
+        files={"file": ("Word_1-1_results.docx", WORD11_RESULTS.read_bytes(), WORD_MIME)},
+        data={"evidence": json.dumps({"events": DEMO_W11})},
+    )
+    assert check.status_code == 200
+    score = check.json()["score"]
+    assert score["verified"] == 100
+    assert score["pending"] == 0
+    assert score["complete"] is True
+    statuses = {c["criterion_id"]: c["status"] for c in score["criteria"]}
+    assert statuses["W11-S01"] == "pass"
+    assert statuses["W11-N03"] == "pass"

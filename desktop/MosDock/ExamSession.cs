@@ -29,5 +29,7 @@ static class ExamSession
         RubricVersion = null;
         Rubric = null;
         LastCheck = [];
+        ActionEvidence.Clear();
+        WordActionProbe.Reset();
     }
 }

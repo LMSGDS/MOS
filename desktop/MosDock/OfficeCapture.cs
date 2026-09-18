@@ -114,7 +114,7 @@ static class OfficeCapture
         return null;
     }
 
-    static bool SamePath(string? a, string? b)
+    public static bool SamePath(string? a, string? b)
     {
         if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
         {
@@ -130,6 +130,8 @@ static class OfficeCapture
             return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
     }
+
+    public static object? TryGet(string progId) => Active(progId);
 
     static object? Active(string progId)
     {

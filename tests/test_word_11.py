@@ -231,7 +231,9 @@ def test_broken_file_is_error_not_fail():
 
 
 def test_action_evidence_without_observer_stays_unverified():
-    graded = evaluate_facts(extract_word_facts(RESULTS), RUBRIC, evidence=[{"action": "find"}])
+    graded = evaluate_facts(extract_word_facts(RESULTS), RUBRIC, evidence=None)
     by_id = {c["criterion_id"]: c for c in graded["criteria"]}
     assert by_id["W11-S01"]["status"] == "unverified"
     assert by_id["W11-N01"]["status"] == "unverified"
+    empty = evaluate_facts(extract_word_facts(RESULTS), RUBRIC, evidence=[])
+    assert empty["pending"] == 38

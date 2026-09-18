@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.word_xml import extract_word_facts, norm, same
 
-GRADER_VERSION = "1.2.0"
+GRADER_VERSION = "1.3.0"
 RUBRIC_DIR = Path(__file__).resolve().parent / "rubrics"
 
 
@@ -483,18 +483,171 @@ def _action_unverified(criterion: dict) -> dict:
     return _result(criterion, "unverified", "missing_observer")
 
 
+def _field(event: dict, *keys):
+    for key in keys:
+        if not isinstance(event, dict):
+            return None
+        if key in event and event[key] is not None and event[key] != "":
+            return event[key]
+    return None
+
+
+def _as_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _key(value: str | None) -> str:
+    return re.sub(r"[\s_\-]+", "", (value or "")).casefold()
+
+
+def _query_same(got, expected, match_case: bool) -> bool:
+    got = str(got or "").strip()
+    expected = str(expected or "").strip()
+    if not expected:
+        return True
+    if match_case:
+        return got == expected
+    return got.casefold() == expected.casefold()
+
+
+def _style_same(got, expected) -> bool:
+    want = _key(expected)
+    if not want:
+        return True
+    return _key(got) == want
+
+
+def _source_ok(required, got, action: str) -> bool:
+    want = _key(required)
+    if not want:
+        return True
+    have = _key(got)
+    if want in {"navigationpane", "nav", "pane"}:
+        return have in {"navigationpane", "nav", "pane", "find"} or action in {"find", "navigation_pane"}
+    return have == want or want in have
+
+
+def _coerce_evidence(evidence) -> list[dict]:
+    if evidence is None:
+        return []
+    if isinstance(evidence, str):
+        evidence = evidence.strip()
+        if not evidence:
+            return []
+        evidence = json.loads(evidence)
+    if isinstance(evidence, dict):
+        evidence = evidence.get("events") or evidence.get("actions") or evidence.get("evidence") or []
+    if not isinstance(evidence, list):
+        return []
+    out: list[dict] = []
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        detail = item.get("detail")
+        if isinstance(detail, dict):
+            merged = dict(detail)
+            for key, value in item.items():
+                if key == "detail":
+                    continue
+                merged.setdefault(key, value)
+            out.append(merged)
+        else:
+            out.append(item)
+    return out
+
+
+def _grade_action(criterion: dict, events: list[dict]) -> dict:
+    if not events:
+        return _action_unverified(criterion)
+    pred = criterion.get("predicate") or {}
+    sel = criterion.get("selector") or {}
+    kind = str(pred.get("type") or sel.get("action") or "").casefold()
+    query = pred.get("query") or sel.get("query") or pred.get("text")
+    style = pred.get("style") or sel.get("style")
+    name = pred.get("name") or sel.get("bookmark")
+    page = pred.get("page") if pred.get("page") is not None else sel.get("page")
+    min_hits = int(pred.get("min_hits") or pred.get("min") or 1)
+    match_case = _as_bool(pred.get("match_case") or sel.get("match_case"))
+    whole_word = _as_bool(pred.get("whole_word") or sel.get("whole_word"))
+    source = sel.get("source")
+    for ev in events:
+        if ev.get("ok") is False:
+            continue
+        action = str(_field(ev, "action", "type") or "").casefold()
+        ev_query = _field(ev, "query", "text")
+        ev_style = _field(ev, "style")
+        ev_name = _field(ev, "name", "bookmark", "query")
+        ev_page = _field(ev, "page")
+        ev_hits = int(ev.get("hits") or 1)
+        ev_source = _field(ev, "source")
+        if kind in {"search_query", "find"}:
+            if action not in {"find", "search", "navigation_pane"}:
+                continue
+            if not _query_same(ev_query, query, match_case):
+                continue
+            if match_case and not _as_bool(ev.get("match_case") or ev.get("matchCase")):
+                continue
+            if whole_word and not _as_bool(ev.get("whole_word") or ev.get("wholeWord")):
+                continue
+            if not _source_ok(source, ev_source, action):
+                continue
+            return _result(criterion, "pass", "action_observed", [f"action:{action}"])
+        if kind == "results_tab" and action in {"results_tab", "results"}:
+            return _result(criterion, "pass", "action_observed", ["action:results_tab"])
+        if kind in {"search_navigate", "find_navigate"}:
+            if action not in {"find_navigate", "find", "search"}:
+                continue
+            if not _query_same(ev_query, query, False):
+                continue
+            if ev_hits >= min_hits:
+                return _result(criterion, "pass", "action_observed", [f"action:{action}"])
+        if kind == "advanced_find":
+            if action not in {"advanced_find", "find"}:
+                continue
+            if not _query_same(ev_query, query, False):
+                continue
+            if not _style_same(ev_style, style):
+                continue
+            return _result(criterion, "pass", "action_observed", ["action:advanced_find"])
+        if kind == "goto_graphic" and (action == "goto_graphic" or (action == "goto" and _style_same(_field(ev, "detail", "what"), "graphic"))):
+            return _result(criterion, "pass", "action_observed", ["action:goto_graphic"])
+        if kind == "goto_page":
+            if action not in {"goto_page", "goto"}:
+                continue
+            if page is None or str(ev_page) == str(page) or ev_page == page:
+                return _result(criterion, "pass", "action_observed", ["action:goto_page"])
+        if kind == "goto_bookmark":
+            if action not in {"goto_bookmark", "goto"}:
+                continue
+            if _query_same(ev_name, name, False):
+                return _result(criterion, "pass", "action_observed", ["action:goto_bookmark"])
+        if kind == "save_alternate_format" and action in {"save_alternate_format", "save_as", "export_pdf"}:
+            return _result(criterion, "pass", "action_observed", ["action:save_as"])
+        if kind == "print_settings" and action in {"print_settings", "print"}:
+            return _result(criterion, "pass", "action_observed", ["action:print"])
+        if kind == "share_electronic" and action in {"share_electronic", "share"}:
+            return _result(criterion, "pass", "action_observed", ["action:share"])
+        if kind == "inspect_document" and action in {"inspect_document", "inspect"}:
+            return _result(criterion, "pass", "action_observed", ["action:inspect"])
+        if kind == "compatibility_check" and action in {"compatibility_check", "compatibility"}:
+            return _result(criterion, "pass", "action_observed", ["action:compatibility"])
+    return _result(criterion, "fail", "action_missing")
+
+
 def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> dict:
     criteria = list(rubric.get("criteria") or [])
     results: list[dict] = []
     parse_error = not facts.get("ok")
     error_code = str(facts.get("error") or "parse_error")
+    events = _coerce_evidence(evidence)
     for criterion in criteria:
         kind = criterion.get("kind") or "artifact"
         if kind == "action_sequence":
-            if evidence:
-                results.append(_result(criterion, "unverified", "observer_not_capable"))
-            else:
-                results.append(_action_unverified(criterion))
+            results.append(_grade_action(criterion, events))
             continue
         if parse_error:
             results.append(_result(criterion, "error", error_code))

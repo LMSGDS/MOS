@@ -644,7 +644,13 @@ readonly record struct LocalCriterion(string Id, string Status, double Earned, d
 
 static class WordGrade
 {
-    public static (double Verified, double Pending, IReadOnlyList<LocalCriterion> Criteria) Evaluate(string path, JsonRubric? rubric)
+    public static (double Verified, double Pending, IReadOnlyList<LocalCriterion> Criteria) Evaluate(string path, JsonRubric? rubric) =>
+        Evaluate(path, rubric, ActionEvidence.Events);
+
+    public static (double Verified, double Pending, IReadOnlyList<LocalCriterion> Criteria) Evaluate(
+        string path,
+        JsonRubric? rubric,
+        IReadOnlyList<ActionEvent>? evidence)
     {
         var facts = WordXml.Extract(path);
         var results = new List<LocalCriterion>();
@@ -658,7 +664,7 @@ static class WordGrade
             var weight = item.Weight;
             if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
             {
-                results.Add(new LocalCriterion(item.Id, "unverified", 0, weight, item.Feedback.Unverified ?? "Chưa xác minh thao tác."));
+                results.Add(ActionEvidence.Grade(item, evidence));
                 continue;
             }
 
@@ -985,6 +991,13 @@ sealed class JsonSelector
 {
     public string? Bookmark { get; set; }
     public string? TocLabel { get; set; }
+    public string? Action { get; set; }
+    public string? Query { get; set; }
+    public string? Source { get; set; }
+    public bool MatchCase { get; set; }
+    public bool WholeWord { get; set; }
+    public string? Style { get; set; }
+    public int? Page { get; set; }
 }
 
 sealed class JsonPredicate
@@ -1006,6 +1019,11 @@ sealed class JsonPredicate
     public string? Orient { get; set; }
     public string? Fmt { get; set; }
     public string? Author { get; set; }
+    public string? Query { get; set; }
+    public bool MatchCase { get; set; }
+    public bool WholeWord { get; set; }
+    public int? MinHits { get; set; }
+    public int? Page { get; set; }
 }
 
 sealed class JsonFeedback

@@ -12,12 +12,14 @@ sealed class LocalAgent : IDisposable
     public const int Port = 17331;
     readonly HttpListener _http = new();
     readonly Action<string, string, bool, string?, bool> _onPlace;
+    readonly Action? _onDemo;
     readonly Control _ui;
 
-    public LocalAgent(Control ui, Action<string, string, bool, string?, bool> onPlace)
+    public LocalAgent(Control ui, Action<string, string, bool, string?, bool> onPlace, Action? onDemo = null)
     {
         _ui = ui;
         _onPlace = onPlace;
+        _onDemo = onDemo;
         _http.Prefixes.Add($"http://127.0.0.1:{Port}/");
         _http.Start();
         _ = Listen();
@@ -68,6 +70,13 @@ sealed class LocalAgent : IDisposable
             if (path is "/health" or "/")
             {
                 await WriteJson(res, 200, """{"ok":true,"service":"mos-dock"}""");
+                return;
+            }
+
+            if (path is "/demo" or "/demo-actions")
+            {
+                _ui.BeginInvoke(() => _onDemo?.Invoke());
+                await WriteJson(res, 200, """{"ok":true,"demo":true}""");
                 return;
             }
 

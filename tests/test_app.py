@@ -57,6 +57,8 @@ def test_install_page_lists_windows_and_macos():
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
     assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
+    assert "Kiểm thử thao tác" in r.text
+    assert "--demo-actions" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -110,6 +112,20 @@ def test_windows_web_stub_iss_downloads_full_from_server():
     assert "{#Dist}" not in stub
     assert "OutputBaseFilename=MOS-KulKul-Setup-Windows-Full" in full
     assert "{#Dist}\\*" in full
+
+
+def test_windows_sources_include_action_demo():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    program = (root / "Protocol.cs").read_text(encoding="utf-8")
+    demo = (root / "WordActionDemo.cs").read_text(encoding="utf-8")
+    form = (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "--demo-actions" in program
+    assert "Selection.Find" in demo
+    assert "WdGoToGraphic" in demo
+    assert "Kiểm thử thao tác (demo)" in form
+    assert "1.14.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
 
 
 def test_brand_icon_is_multi_size_ico():

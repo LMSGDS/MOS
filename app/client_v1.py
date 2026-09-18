@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 
 from app.auth import authenticate
 from app.db import cursor
-from app.grade import GRADER_VERSION, sha256_file
+from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.programs import normalize
 from app.scoring import score_file
 from app.security import bearer_user
@@ -114,21 +114,55 @@ def _grade_payload(scored: dict) -> dict:
     }
 
 
-async def _read_upload(request: Request) -> tuple[bytes | None, str]:
+async def _read_upload(request: Request) -> tuple[bytes | None, str, list | None]:
     ctype = (request.headers.get("content-type") or "").lower()
     if "multipart/form-data" not in ctype:
-        return None, ""
+        return None, "", None
     form = await request.form()
     upload = form.get("file")
     if upload is None or not hasattr(upload, "read"):
-        return None, ""
+        return None, "", _form_evidence(form)
     filename = Path(getattr(upload, "filename", None) or "bai").name
     if filename in ("", ".", "..") or "/" in filename or "\\" in filename:
         filename = "bai.bin"
     data = await upload.read()
     if len(data) > MAX_UPLOAD:
         raise HTTPException(status_code=413, detail="too_large")
-    return data, filename
+    return data, filename, _form_evidence(form)
+
+
+def _form_evidence(form) -> list | None:
+    raw = form.get("evidence")
+    if raw is None:
+        return None
+    if hasattr(raw, "read"):
+        return None
+    events = _coerce_evidence(raw)
+    return events or None
+
+
+def _telemetry_evidence(attempt_id: str) -> list[dict]:
+    with cursor() as cur:
+        cur.execute(
+            "SELECT skill, action, detail FROM telemetry WHERE attempt_id = %s ORDER BY id",
+            (attempt_id,),
+        )
+        rows = cur.fetchall()
+    skip = {"submit", "submit-offline", "open", "event"}
+    packed = []
+    for row in rows:
+        action = str(row["action"] or "")
+        if action.casefold() in skip:
+            continue
+        packed.append({"skill": row.get("skill") or "", "action": action, "detail": row.get("detail") or {}})
+    return _coerce_evidence(packed)
+
+
+def _combined_evidence(uploaded: list | None, attempt_id: str) -> list | None:
+    tel = _telemetry_evidence(attempt_id)
+    uploaded = uploaded or []
+    merged = uploaded + [e for e in tel if e not in uploaded]
+    return merged or None
 
 
 def _save_bytes(dest: Path, data: bytes) -> Path:
@@ -425,12 +459,12 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     row_user = _require_user(user)
     attempt = _load_attempt(attempt_id)
     _assert_owner(attempt, row_user, write=True)
-    data, filename = await _read_upload(request)
+    data, filename, evidence = await _read_upload(request)
     if not data:
         raise HTTPException(status_code=400, detail="file")
     dest = RESULTS / attempt_id / f"checkpoint-{secrets.token_hex(6)}-{filename}"
     saved = _save_bytes(dest, data)
-    scored = _score_saved(saved, attempt)
+    scored = _score_saved(saved, attempt, _combined_evidence(evidence, attempt_id))
     payload = _grade_payload(scored)
     training = attempt.get("mode") != "testing"
     if not training:
@@ -459,7 +493,7 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         if existing:
             stored = _as_dict(existing["payload"])
             return {"ok": True, "submission_id": existing["id"], "score": stored, "replayed": True}
-    data, filename = await _read_upload(request)
+    data, filename, evidence = await _read_upload(request)
     saved = None
     digest = None
     submission_id = secrets.token_hex(12)
@@ -467,7 +501,7 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         dest = RESULTS / attempt_id / f"{submission_id}-{filename}"
         saved = _save_bytes(dest, data)
         digest = sha256_file(saved)
-    scored = _score_saved(saved, attempt)
+    scored = _score_saved(saved, attempt, _combined_evidence(evidence, attempt_id))
     payload = _grade_payload(scored)
     started = attempt["started_at"]
     now = datetime.now(timezone.utc)

@@ -127,7 +127,7 @@ sealed class MainForm : Form
             Protocol.Register();
             try
             {
-                _agent = new LocalAgent(this, OnPlaceRequest);
+                _agent = new LocalAgent(this, OnPlaceRequest, () => _ = RunActionDemo());
             }
             catch
             {
@@ -160,7 +160,18 @@ sealed class MainForm : Form
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         DpiChanged += (_, _) => RelayoutDock();
         _keepWord.Interval = 700;
-        _keepWord.Tick += (_, _) => ApplyWordOnly();
+        _keepWord.Tick += (_, _) =>
+        {
+            ApplyWordOnly();
+            try
+            {
+                WordActionProbe.Poll();
+            }
+            catch
+            {
+                // Word busy
+            }
+        };
     }
 
     void OnDisplaySettingsChanged(object? sender, EventArgs e) => RelayoutDock();
@@ -430,7 +441,10 @@ sealed class MainForm : Form
         extraSubmit.Click += async (_, _) => await SubmitExam();
         var extraCheck = new ToolStripMenuItem("Kiểm tra nhiệm vụ");
         extraCheck.Click += async (_, _) => await CheckTasks();
+        var extraDemo = new ToolStripMenuItem("Kiểm thử thao tác (demo)");
+        extraDemo.Click += async (_, _) => await RunActionDemo();
         _extraMenu.Items.Add(extraCheck);
+        _extraMenu.Items.Add(extraDemo);
         _extraMenu.Items.Add(extraSubmit);
         _extraMenu.Items.Add(new ToolStripSeparator());
         _extraMenu.Items.Add(extraUndock);
@@ -1332,6 +1346,8 @@ sealed class MainForm : Form
         _helpVisible = train;
         _summaryOpen = false;
         ExamSession.LastCheck = [];
+        ActionEvidence.Begin(ExamSession.AttemptId);
+        WordActionProbe.Reset();
         _taskIndex = 0;
         _examStatus.Text = train
             ? "Bóng đèn: hướng dẫn. Danh sách: tổng hợp nhiệm vụ. Đĩa: lưu và thoát."
@@ -1365,6 +1381,43 @@ sealed class MainForm : Form
         }
 
         ShowPage(HubPage.Exam, "Bài thi");
+    }
+
+    async Task RunActionDemo()
+    {
+        if (string.IsNullOrWhiteSpace(ExamSession.LocalPath) && !_docking)
+        {
+            var ask = MessageBox.Show(
+                "Chưa mở đề MOS. Demo sẽ điều khiển Microsoft Word đang mở trên máy (nếu có).\n\nTiếp tục?",
+                "Kiểm thử thao tác",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (ask != DialogResult.OK)
+            {
+                return;
+            }
+        }
+
+        _examStatus.Text = "Đang tự chạy thao tác Word (Find, Go To, Inspect)…";
+        Cursor = Cursors.WaitCursor;
+        string report;
+        try
+        {
+            report = WordActionDemo.Run();
+        }
+        catch (Exception ex)
+        {
+            report = "Demo gặp lỗi: " + ex.Message;
+        }
+
+        Cursor = Cursors.Default;
+        _examStatus.Text = report.Split('\n')[0];
+        if (!string.IsNullOrWhiteSpace(ExamSession.AttemptId) && !string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+        {
+            await CheckTasks();
+        }
+
+        MessageBox.Show(report, "MOS-KulKul — Kiểm thử thao tác", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     async Task CheckTasks()
