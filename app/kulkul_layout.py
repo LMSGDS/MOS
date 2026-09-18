@@ -6,7 +6,7 @@ kích thước thanh Navigation ở left / right / top / bottom.
 Nguyên tắc cạnh:
 - top / bottom: bung hết chiều ngang màn hình; dày ClusterH (mặc định) hoặc thickness do người dùng kéo.
 - left / right: bung hết chiều dọc màn hình; rộng ClusterW hoặc thickness đã chỉnh.
-Người dùng có thể kéo mép thanh (52px … 16% cạnh ngắn). Word luôn chiếm phần working area còn lại — thanh Navigation không đè lên tài liệu.
+Người dùng có thể kéo mép thanh (52px … 16% cạnh ngắn). Khi mở hướng dẫn, khung cuộn thêm ~22% (tối đa 36%). Word luôn chiếm phần working area còn lại.
 """
 from __future__ import annotations
 
@@ -19,14 +19,15 @@ BAR_H_PCT = 65  # 6.5% chiều cao
 BAR_W_PCT = 38  # 3.8% chiều ngang
 BAR_H_MIN, BAR_H_MAX = 52, 72
 BAR_W_MIN, BAR_W_MAX = 52, 72
-HELP_H_PCT = 90  # 9% thêm khi mở hướng dẫn
-HELP_W_PCT = 90
-DOCK_MAX_PCT = 16  # icon + help không quá 16% cạnh ngắn
+HELP_H_PCT = 220  # 22% chiều cao cho ô cuộn hướng dẫn
+HELP_W_PCT = 180  # 18% chiều ngang khi dock trái/phải
+DOCK_MAX_PCT = 16  # icon-only: không quá 16% cạnh ngắn
+HELP_CAP_PCT = 36  # icon + ô hướng dẫn
 CLUSTER_W = 72  # kẹp BAR_W_MAX sau round(1920 * 3.8%)
 CLUSTER_H = 68  # round(1040 * 6.5%)
 CLUSTER_MARGIN = 0
-HELP_W = 173  # round(1920 * 9%)
-HELP_H = 94  # round(1040 * 9%)
+HELP_W = 346  # round(1920 * 18%)
+HELP_H = 229  # round(1040 * 22%)
 EXPANDED_SIDE_W = 340
 SUMMARY_W = 1020
 SUMMARY_H = 680
@@ -93,8 +94,8 @@ def measure(work: Rect) -> NavMetrics:
     pad = 4
     gap = 2
     icon = max(24, min(40, min(bar_h, bar_w) - 2 * pad))
-    cap_w = max(bar_w, work.w * DOCK_MAX_PCT // 100)
-    cap_h = max(bar_h, work.h * DOCK_MAX_PCT // 100)
+    cap_w = max(bar_w, work.w * HELP_CAP_PCT // 100)
+    cap_h = max(bar_h, work.h * HELP_CAP_PCT // 100)
     help_w = max(0, min(int(round(work.w * HELP_W_PCT / 1000)), cap_w - bar_w))
     help_h = max(0, min(int(round(work.h * HELP_H_PCT / 1000)), cap_h - bar_h))
     side = _scale(EXPANDED_SIDE_W, ratio, 220, max(220, work.w // 4))
@@ -242,15 +243,15 @@ def pin_to_work(dock: Rect, work: Rect, state: str | None) -> Rect:
 
 
 def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rect:
-    """Giữ cạnh dài = 100% working area; dày thêm help, tổng ≤ 16% cạnh ngắn."""
+    """Giữ cạnh dài = 100% working area; dày thêm ô cuộn hướng dẫn, tổng ≤ 36%."""
     nav = measure(_scale_work(work, scale))
     state = (state or "bottom").lower()
     if state in ("left", "right"):
-        cap = max(nav.cluster_w, work.w * DOCK_MAX_PCT // 100)
+        cap = max(nav.cluster_w, work.w * HELP_CAP_PCT // 100)
         w = min(max(dock.w, dock.w + nav.help_w), cap, max(dock.w, work.w - MIN_WORD))
         x = work.x if state == "left" else work.right - w
         return pin_to_work(Rect(x, work.y, w, work.h), work, state)
-    cap = max(nav.cluster_h, work.h * DOCK_MAX_PCT // 100)
+    cap = max(nav.cluster_h, work.h * HELP_CAP_PCT // 100)
     h = min(max(dock.h, dock.h + nav.help_h), cap, max(dock.h, work.h - MIN_WORD))
     y = work.y if state == "top" else work.bottom - h
     return pin_to_work(Rect(work.x, y, work.w, h), work, state)

@@ -575,7 +575,7 @@ sealed class MainForm : Form
         _taskPrompt.UseMnemonic = false;
         _taskPrompt.ForeColor = Ui.Text;
         _taskPrompt.Padding = new Padding(2, 0, 2, 2);
-        Ui.BindWrap(_taskPrompt, 4, 36);
+        Ui.BindWrap(_taskPrompt, 6, 80);
 
         var card = new Panel
         {
@@ -632,6 +632,7 @@ sealed class MainForm : Form
         _helpBody.BackColor = Color.White;
         _helpBody.ForeColor = Ui.Text;
         _helpBody.ScrollBars = RichTextBoxScrollBars.Vertical;
+        _helpBody.WordWrap = true;
         _helpBody.HideSelection = true;
         _helpBody.ShortcutsEnabled = false;
         _helpBody.Cursor = Cursors.Default;
@@ -1027,16 +1028,9 @@ sealed class MainForm : Form
 
     void ApplyHelpFonts()
     {
-        var compact = _docking && _compact;
-        var promptPt = compact
-            ? 9.5f
-            : _helpScale switch { 2 => 16f, 1 => 14f, _ => 12f };
-        var bodyPt = compact
-            ? 8.5f
-            : _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
-        var titlePt = compact
-            ? 9f
-            : _helpScale switch { 2 => 20f, 1 => 17f, _ => 15f };
+        var promptPt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 12.5f };
+        var bodyPt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
+        var titlePt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 13f };
         _taskPrompt.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
         _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Regular);
         _helpBody.Font = new Font("Segoe UI", bodyPt);
@@ -1044,9 +1038,7 @@ sealed class MainForm : Form
 
     void RenderHelp()
     {
-        var bodyPt = (_docking && _compact)
-            ? 8.5f
-            : _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
+        var bodyPt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
         var criteria = ExamSession.Rubric?.Criteria;
         if (criteria is not { Count: > 0 })
         {
@@ -1186,10 +1178,10 @@ sealed class MainForm : Form
         if (showHelp && _compact && _docking)
         {
             _helpPane.Dock = DockStyle.Fill;
-            _helpPane.Padding = new Padding(4, 4, 4, 2);
-            _helpHeader.Height = 20;
-            _helpFooter.Visible = false;
-            _helpFooter.Height = 0;
+            _helpPane.Padding = new Padding(8, 6, 8, 6);
+            _helpHeader.Height = 28;
+            _helpFooter.Visible = true;
+            _helpFooter.Height = 32;
         }
         else
         {

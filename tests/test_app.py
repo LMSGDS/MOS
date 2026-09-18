@@ -192,13 +192,17 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.6" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "keepHelp" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "_dockChrome.Height = keepHelp" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "MaximumSize = new Size(w, h)" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "HelpCapPct" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert r"\pard\ql" in (root / "Ui.cs").read_text(encoding="utf-8")
+    assert "WordWrap = true" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "_helpFooter.Visible = true" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
@@ -290,14 +294,14 @@ def test_layout_api_side_docks_leave_word_visible():
     assert compact["fit"] == 1.0
     help_box = compact["help"]
     assert help_box["w"] == 1920
-    assert help_box["h"] == 162
-    assert help_box["h"] <= 1040 * 16 / 100
+    assert help_box["h"] == 297
+    assert help_box["h"] <= 1040 * 36 / 100
     left_c = c.get("/api/layout", params={"state": "left", "w": 1920, "h": 1040, "compact": 1}).json()
     assert left_c["dock"]["w"] == 72
     assert left_c["dock"]["h"] == 1040
     assert left_c["word"]["x"] == 72
     assert left_c["help"]["h"] == 1040
-    assert left_c["help"]["w"] <= 1920 * 16 / 100
+    assert left_c["help"]["w"] <= 1920 * 36 / 100
     sized = c.get(
         "/api/layout",
         params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1, "thickness": 120},

@@ -627,7 +627,7 @@ static class Ui
         var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
         var sb = new System.Text.StringBuilder();
         sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}");
-        sb.Append(@"\pard\qc\cf0\f0\fs").Append(fs).Append(' ');
+        sb.Append(@"\pard\ql\sa120\li120\ri120\cf0\f0\fs").Append(fs).Append(' ');
         for (var i = 0; i < steps.Count; i++)
         {
             sb.Append(i + 1).Append(". ");

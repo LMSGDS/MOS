@@ -32,13 +32,14 @@ public static class LayoutMath
     public const int BarHMax = 72;
     public const int BarWMin = 52;
     public const int BarWMax = 72;
-    public const int HelpHPct = 90;
-    public const int HelpWPct = 90;
+    public const int HelpHPct = 220;
+    public const int HelpWPct = 180;
     public const int ClusterW = 72;
     public const int ClusterH = 68;
     public const int ClusterMargin = 0;
-    public const int HelpW = 173;
-    public const int HelpH = 94;
+    public const int HelpW = 346;
+    public const int HelpH = 229;
+    public const int HelpCapPct = 36;
     public const int SummaryW = 1020;
     public const int SummaryH = 680;
     public const int ExpandedSideW = 340;
@@ -77,8 +78,8 @@ public static class LayoutMath
         const int pad = 4;
         const int gap = 2;
         var icon = Math.Clamp(Math.Min(barH, barW) - 2 * pad, 24, 40);
-        var capW = Math.Max(barW, work.W * OverlayCapPct / 100);
-        var capH = Math.Max(barH, work.H * OverlayCapPct / 100);
+        var capW = Math.Max(barW, work.W * HelpCapPct / 100);
+        var capH = Math.Max(barH, work.H * HelpCapPct / 100);
         var helpW = Math.Max(0, Math.Min((int)Math.Round(work.W * HelpWPct / 1000.0), capW - barW));
         var helpH = Math.Max(0, Math.Min((int)Math.Round(work.H * HelpHPct / 1000.0), capH - barH));
         var side = Scale(ExpandedSideW, fit, 220, Math.Max(220, work.W / 4));
@@ -237,13 +238,13 @@ public static class LayoutMath
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right")
         {
-            var cap = Math.Max(nav.ClusterW, work.W * OverlayCapPct / 100);
+            var cap = Math.Max(nav.ClusterW, work.W * HelpCapPct / 100);
             var w = Math.Min(Math.Max(dock.W, dock.W + nav.HelpW), Math.Min(cap, Math.Max(dock.W, work.W - MinWord)));
             var x = state == "left" ? work.X : work.Right - w;
             return PinToWork(new Rect(x, work.Y, w, work.H), work, state);
         }
 
-        var capH = Math.Max(nav.ClusterH, work.H * OverlayCapPct / 100);
+        var capH = Math.Max(nav.ClusterH, work.H * HelpCapPct / 100);
         var h = Math.Min(Math.Max(dock.H, dock.H + nav.HelpH), Math.Min(capH, Math.Max(dock.H, work.H - MinWord)));
         var y = state == "top" ? work.Y : work.Bottom - h;
         return PinToWork(new Rect(work.X, y, work.W, h), work, state);
