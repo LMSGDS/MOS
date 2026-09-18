@@ -40,10 +40,13 @@ sealed class MainForm : Form
     readonly ContextMenuStrip _dockMenuStrip = new();
     readonly ContextMenuStrip _extraMenu = new();
     readonly Panel _helpPane = new();
-    readonly Label _taskPrompt = new();
+    readonly Panel _promptCard = new();
+    readonly Label _promptTitle = new();
+    readonly TextBox _promptBody = new();
     readonly Label _helpTitle = new();
     readonly RichTextBox _helpBody = new();
-    readonly Button _aaaBtn = Ui.AaaButton();
+    readonly Button _aaSmaller = Ui.AaSizeButton("A−", "Thu nhỏ nội dung hướng dẫn");
+    readonly Button _aaBigger = Ui.AaSizeButton("A+", "Phóng to nội dung hướng dẫn");
     readonly Panel _summary = new();
     readonly Label _summaryTitle = new();
     readonly TextBox _summarySearch = new();
@@ -76,7 +79,7 @@ sealed class MainForm : Form
     int? _navThickness;
     int _navResizeOrigin;
     int _navResizeStart;
-    int _helpScale;
+    int _helpScale = 1;
     int _taskIndex;
     NavMetrics _nav = LayoutMath.Measure(new Rect(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH));
     Rectangle? _savedWorkspace;
@@ -567,62 +570,78 @@ sealed class MainForm : Form
         _helpPane.Dock = DockStyle.Top;
         _helpPane.Height = LayoutMath.HelpH;
         _helpPane.BackColor = Color.FromArgb(245, 247, 249);
-        _helpPane.Padding = new Padding(8, 6, 8, 4);
+        _helpPane.Padding = new Padding(8, 6, 8, 6);
         _helpPane.Visible = false;
 
-        _taskPrompt.Dock = DockStyle.Top;
-        _taskPrompt.AutoSize = false;
-        _taskPrompt.UseMnemonic = false;
-        _taskPrompt.ForeColor = Ui.Text;
-        _taskPrompt.Padding = new Padding(2, 0, 2, 2);
-        Ui.BindWrap(_taskPrompt, 6, 80);
+        _promptCard.Dock = DockStyle.Top;
+        _promptCard.Height = 112;
+        _promptCard.BackColor = Color.White;
+        _promptCard.Padding = new Padding(1);
+        _promptCard.Paint += PaintCardBorder;
 
-        var card = new Panel
+        var promptHead = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 26,
+            BackColor = Color.FromArgb(232, 244, 252),
+            Padding = new Padding(8, 0, 8, 0),
+        };
+        _promptTitle.Text = "Đề bài";
+        _promptTitle.Dock = DockStyle.Fill;
+        _promptTitle.TextAlign = ContentAlignment.MiddleLeft;
+        _promptTitle.ForeColor = Ui.Text;
+        _promptTitle.UseMnemonic = false;
+        promptHead.Controls.Add(_promptTitle);
+
+        _promptBody.Dock = DockStyle.Fill;
+        _promptBody.Multiline = true;
+        _promptBody.ReadOnly = true;
+        _promptBody.WordWrap = true;
+        _promptBody.ScrollBars = ScrollBars.Vertical;
+        _promptBody.BorderStyle = BorderStyle.None;
+        _promptBody.TabStop = false;
+        _promptBody.BackColor = Color.White;
+        _promptBody.ForeColor = Ui.Text;
+        _promptBody.Margin = new Padding(0);
+        var promptWrap = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(8, 4, 8, 6),
+        };
+        promptWrap.Controls.Add(_promptBody);
+        _promptCard.Controls.Add(promptWrap);
+        _promptCard.Controls.Add(promptHead);
+
+        var helpCard = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Color.White,
             Padding = new Padding(1),
         };
-        card.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(210, 214, 218));
-            e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-        };
+        helpCard.Paint += PaintCardBorder;
 
         _helpHeader.Dock = DockStyle.Top;
-        _helpHeader.Height = 22;
+        _helpHeader.Height = 32;
         _helpHeader.BackColor = Color.White;
-        _helpHeader.Padding = new Padding(8, 0, 8, 0);
-        _helpHeader.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 230, 234));
-            e.Graphics.DrawLine(pen, 0, _helpHeader.Height - 1, _helpHeader.Width, _helpHeader.Height - 1);
-        };
+        _helpHeader.Padding = new Padding(8, 2, 6, 2);
         _helpTitle.Text = "Hướng dẫn";
         _helpTitle.Dock = DockStyle.Fill;
         _helpTitle.TextAlign = ContentAlignment.MiddleLeft;
         _helpTitle.ForeColor = Ui.Text;
         _helpTitle.UseMnemonic = false;
+        _aaSmaller.Dock = DockStyle.Right;
+        _aaBigger.Dock = DockStyle.Right;
+        _aaSmaller.Margin = new Padding(0, 0, 4, 0);
+        _aaBigger.Click += (_, _) => NudgeHelpScale(1);
+        _aaSmaller.Click += (_, _) => NudgeHelpScale(-1);
         _helpHeader.Controls.Add(_helpTitle);
+        _helpHeader.Controls.Add(_aaSmaller);
+        _helpHeader.Controls.Add(_aaBigger);
 
         _helpFooter.Dock = DockStyle.Bottom;
-        _helpFooter.Height = 28;
-        _helpFooter.BackColor = Color.FromArgb(248, 249, 250);
-        _helpFooter.Padding = new Padding(6, 2, 6, 2);
-        _helpFooter.WrapContents = false;
-        _helpFooter.Paint += (_, e) =>
-        {
-            using var pen = new Pen(Color.FromArgb(226, 230, 234));
-            e.Graphics.DrawLine(pen, 0, 0, _helpFooter.Width, 0);
-        };
-        _aaaBtn.Margin = new Padding(0, 0, 0, 0);
-        _aaaBtn.Click += (_, _) =>
-        {
-            _helpScale = (_helpScale + 1) % 3;
-            ApplyHelpFonts();
-            RenderHelp();
-        };
-        _helpFooter.Controls.Add(_aaaBtn);
+        _helpFooter.Height = 0;
+        _helpFooter.Visible = false;
 
         _helpBody.Dock = DockStyle.Fill;
         _helpBody.BorderStyle = BorderStyle.None;
@@ -642,16 +661,33 @@ sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = Color.White,
-            Padding = new Padding(8, 4, 8, 4),
+            Padding = new Padding(8, 4, 8, 8),
         };
         bodyWrap.Controls.Add(_helpBody);
+        helpCard.Controls.Add(bodyWrap);
+        helpCard.Controls.Add(_helpHeader);
 
-        card.Controls.Add(bodyWrap);
-        card.Controls.Add(_helpFooter);
-        card.Controls.Add(_helpHeader);
-        _helpPane.Controls.Add(card);
-        _helpPane.Controls.Add(_taskPrompt);
+        var gap = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 6,
+            BackColor = Color.FromArgb(245, 247, 249),
+        };
+        _helpPane.Controls.Add(helpCard);
+        _helpPane.Controls.Add(gap);
+        _helpPane.Controls.Add(_promptCard);
         ApplyHelpFonts();
+    }
+
+    static void PaintCardBorder(object? sender, PaintEventArgs e)
+    {
+        if (sender is not Control box)
+        {
+            return;
+        }
+
+        using var pen = new Pen(Color.FromArgb(196, 205, 213));
+        e.Graphics.DrawRectangle(pen, 0, 0, box.Width - 1, box.Height - 1);
     }
 
     void BuildSummaryPane()
@@ -1030,10 +1066,20 @@ sealed class MainForm : Form
     {
         var promptPt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 12.5f };
         var bodyPt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
-        var titlePt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 13f };
-        _taskPrompt.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
-        _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Regular);
+        var titlePt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
+        _promptTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Bold);
+        _promptBody.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
+        _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Bold);
         _helpBody.Font = new Font("Segoe UI", bodyPt);
+        _aaSmaller.Enabled = _helpScale > 0;
+        _aaBigger.Enabled = _helpScale < 2;
+    }
+
+    void NudgeHelpScale(int delta)
+    {
+        _helpScale = Math.Clamp(_helpScale + delta, 0, 2);
+        ApplyHelpFonts();
+        RenderHelp();
     }
 
     void RenderHelp()
@@ -1042,7 +1088,7 @@ sealed class MainForm : Form
         var criteria = ExamSession.Rubric?.Criteria;
         if (criteria is not { Count: > 0 })
         {
-            _taskPrompt.Text = ExamSession.ProjectTitle ?? "Bài MOS";
+            _promptBody.Text = ExamSession.ProjectTitle ?? "Bài MOS";
             SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
             return;
         }
@@ -1050,7 +1096,7 @@ sealed class MainForm : Form
         _taskIndex = Math.Clamp(_taskIndex, 0, criteria.Count - 1);
         var item = criteria[_taskIndex];
         var prompt = string.IsNullOrWhiteSpace(item.Prompt) ? item.Id : item.Prompt;
-        _taskPrompt.Text = Ui.StripMarks(prompt);
+        _promptBody.Text = Ui.StripMarks(prompt);
         if (item.HelpSteps is { Count: > 0 })
         {
             SetHelpBody(item.HelpSteps, bodyPt);
@@ -1179,18 +1225,20 @@ sealed class MainForm : Form
         {
             _helpPane.Dock = DockStyle.Fill;
             _helpPane.Padding = new Padding(8, 6, 8, 6);
-            _helpHeader.Height = 28;
-            _helpFooter.Visible = true;
-            _helpFooter.Height = 32;
+            _promptCard.Height = 112;
+            _helpHeader.Height = 32;
+            _helpFooter.Visible = false;
+            _helpFooter.Height = 0;
         }
         else
         {
             _helpPane.Dock = DockStyle.Top;
-            _helpPane.Height = _nav.HelpH;
-            _helpPane.Padding = new Padding(8, 6, 8, 4);
+            _helpPane.Height = Math.Max(_nav.HelpH, 280);
+            _helpPane.Padding = new Padding(8, 6, 8, 6);
+            _promptCard.Height = 120;
             _helpHeader.Height = 32;
-            _helpFooter.Visible = true;
-            _helpFooter.Height = 28;
+            _helpFooter.Visible = false;
+            _helpFooter.Height = 0;
         }
         ApplyHelpFonts();
         _tasks.Visible = showTasks;

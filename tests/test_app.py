@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -200,9 +200,13 @@ def test_windows_sources_include_action_demo():
     assert "_dockChrome.Height = keepHelp" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "MaximumSize = new Size(w, h)" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HelpCapPct" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert r"\pard\ql" in (root / "Ui.cs").read_text(encoding="utf-8")
+    assert r"\pard\widctlpar\ql" in (root / "Ui.cs").read_text(encoding="utf-8")
     assert "WordWrap = true" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "_helpFooter.Visible = true" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert '_promptTitle.Text = "Đề bài"' in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "NudgeHelpScale" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "Thu nhỏ nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "Phóng to nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "AaSizeButton" in (root / "Ui.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")

@@ -588,6 +588,28 @@ static class Ui
         return tip;
     }
 
+    public static Button AaSizeButton(string text, string tip)
+    {
+        var btn = new Button
+        {
+            Size = new Size(40, 26),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = DockBlue,
+            ForeColor = Color.White,
+            Text = text,
+            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            AccessibleName = tip,
+            Margin = new Padding(4, 0, 0, 0),
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 99, 177);
+        DockTips.SetToolTip(btn, tip);
+        RoundControl(btn, 6);
+        return btn;
+    }
+
     public static Button AaaButton()
     {
         var btn = new Button
@@ -626,8 +648,8 @@ static class Ui
     {
         var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
         var sb = new System.Text.StringBuilder();
-        sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}");
-        sb.Append(@"\pard\ql\sa120\li120\ri120\cf0\f0\fs").Append(fs).Append(' ');
+        sb.Append(@"{\rtf1\ansi\deff0\viewkind4\uc1{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}}");
+        sb.Append(@"\pard\widctlpar\ql\sl360\slmult1\sa120\li0\ri200\wrapdefault\cf0\f0\fs").Append(fs).Append(' ');
         for (var i = 0; i < steps.Count; i++)
         {
             sb.Append(i + 1).Append(". ");
