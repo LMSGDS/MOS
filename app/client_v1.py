@@ -271,10 +271,28 @@ def _store_attempt_check(attempt_id: str, payload: dict, events: list | None, *,
         )
 
 
+def _event_key(event: dict) -> tuple:
+    return (
+        str(event.get("action") or "").casefold(),
+        str(event.get("query") or "").casefold(),
+        str(event.get("name") or "").casefold(),
+        str(event.get("page") or ""),
+        str(event.get("style") or "").casefold(),
+    )
+
+
 def _combined_evidence(uploaded: list | None, attempt_id: str) -> list | None:
     tel = _telemetry_evidence(attempt_id)
-    uploaded = uploaded or []
-    merged = uploaded + [e for e in tel if e not in uploaded]
+    merged: list[dict] = []
+    seen: set[tuple] = set()
+    for event in (uploaded or []) + tel:
+        if not isinstance(event, dict):
+            continue
+        key = _event_key(event)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(event)
     return merged or None
 
 
