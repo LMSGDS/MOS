@@ -266,8 +266,8 @@ INSTALL_README = """MOS-KulKul — Trường GDS (mos.gds.edu.vn)
 Không tải .exe/.zip bằng Chrome/Edge: trình duyệt luôn quét virus vì bộ cài
 chưa mua chữ ký Authenticode (không phải mã độc).
 
-Cách nên dùng — PowerShell (không đi qua thanh tải trình duyệt):
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"
+Cách nên dùng — đã mở PowerShell thì dán (không gói powershell -Command):
+  $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
 
 Nếu đã giải nén file này:
 1. Chuột phải file .exe → Thuộc tính → bỏ chọn Chặn / Bỏ chặn → OK.

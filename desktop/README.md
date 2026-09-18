@@ -16,7 +16,7 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 Copy vào `data/installers/` trên server. Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"
+$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
 ```
 
 ### Windows

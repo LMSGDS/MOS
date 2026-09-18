@@ -11,12 +11,12 @@
     <li>Bấm <strong>Bắt đầu</strong>, gõ <strong>PowerShell</strong>, mở <strong>Windows PowerShell</strong>.</li>
     <li>Dán lệnh rồi Enter:</li>
   </ol>
-  <pre class="codebox" id="win-cmd">powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"</pre>
+  <pre class="codebox" id="win-cmd">$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f</pre>
   <div class="actions" style="flex-direction:row;flex-wrap:wrap;gap:12px">
     <button type="button" class="primary" id="copy-win">Sao chép lệnh</button>
     <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải cài đặt macOS (.zip)</a>
   </div>
-  <p class="hint">Lệnh chỉ chạy trên máy của học sinh, tải ZIP từ <code>https://mos.gds.edu.vn</code>, đối chiếu SHA-256, rồi mở trình cài. Nếu Windows SmartScreen: <strong>Thông tin thêm → Chạy anyway</strong>. Sau khi cài: mở MOS-KulKul, đăng nhập, menu <strong>⋮ → Demo tất cả bài tập</strong>.</p>
+  <p class="hint">Đã mở cửa sổ PowerShell thì <strong>dán nguyên dòng trên</strong> (đừng gõ thêm <code>powershell -Command</code>). Máy tải <code>/cai-dat/windows</code> sẵn có trên server. Nếu Windows SmartScreen: <strong>Thông tin thêm → Chạy anyway</strong>. Sau khi cài: mở MOS-KulKul, đăng nhập, menu <strong>⋮ → Demo tất cả bài tập</strong>.</p>
 
   <details style="margin-top:20px">
     <summary>Cách cũ: tải file (Chrome/Edge sẽ quét virus)</summary>

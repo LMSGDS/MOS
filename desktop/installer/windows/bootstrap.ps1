@@ -1,8 +1,7 @@
-# MOS-KulKul — cài Windows, không tải .exe qua trình duyệt.
-# Chrome/Edge quét virus khi bấm nút Tải; lệnh này tải bằng PowerShell từ máy chủ nhà trường.
+# MOS-KulKul — cài Windows, không tải file qua trình duyệt.
+# Máy chủ hiện tại có /cai-dat/windows (exe). ZIP và windows.ps1 chỉ có sau khi server git pull.
 #
-# Mở PowerShell rồi dán:
-#   powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"
+# Đã mở PowerShell thì dán khối lệnh trên trang /cai-dat (không gõ thêm powershell -Command).
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -22,13 +21,14 @@ if (-not $allowed) {
 Write-Host "Dang tai MOS-KulKul tu $Base (khong qua Chrome/Edge)..."
 $tmp = Join-Path $env:TEMP ("MOS-KulKul-" + [guid]::NewGuid().ToString("n"))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-$zip = Join-Path $tmp "MOS-KulKul-Setup-Windows.zip"
+$blob = Join-Path $tmp "download.bin"
 
 $downloaded = $false
-foreach ($rel in @("/cai-dat/windows.zip", "/cai-dat/windows-full.zip")) {
+foreach ($rel in @("/cai-dat/windows", "/cai-dat/windows.zip", "/cai-dat/windows-full")) {
     try {
-        Invoke-WebRequest -Uri ($Base + $rel) -OutFile $zip -UseBasicParsing
-        if ((Get-Item $zip).Length -gt 1000) {
+        Invoke-WebRequest -Uri ($Base + $rel) -OutFile $blob -UseBasicParsing
+        if ((Get-Item $blob).Length -gt 1000) {
+            Write-Host "Tai xong: $rel"
             $downloaded = $true
             break
         }
@@ -41,26 +41,24 @@ if (-not $downloaded) {
     throw "Khong tai duoc bo cai. Mo $Base/cai-dat hoac kiem tra mang."
 }
 
-Unblock-File -Path $zip -ErrorAction SilentlyContinue
-try {
-    $meta = Invoke-RestMethod -Uri ($Base + "/cai-dat/checksums")
-    $want = @($meta.files | Where-Object { $_.name -match "Windows.*\.zip$" } | Select-Object -First 1).sha256
-    if ($want) {
-        $got = (Get-FileHash -Path $zip -Algorithm SHA256).Hash
-        if ($got.ToLower() -ne $want.ToLower()) {
-            throw "SHA-256 khong khop. Xoa $zip roi chay lai lenh."
-        }
-        Write-Host "SHA-256 khop."
-    }
+Unblock-File -Path $blob -ErrorAction SilentlyContinue
+$header = Get-Content -LiteralPath $blob -Encoding Byte -TotalCount 2
+$isZip = ($header.Count -ge 2 -and $header[0] -eq 80 -and $header[1] -eq 75)
+$setup = $null
+if ($isZip) {
+    $zip = Join-Path $tmp "MOS-KulKul-Setup-Windows.zip"
+    Move-Item -Force $blob $zip
+    Expand-Archive -LiteralPath $zip -DestinationPath $tmp -Force
+    $setup = Get-ChildItem -Path $tmp -Filter "*.exe" -File | Select-Object -First 1
 }
-catch {
-    if ($_.Exception.Message -match "SHA-256") { throw }
+else {
+    $setup = Get-Item $blob
+    $renamed = Join-Path $tmp "MOS-KulKul-Setup.exe"
+    Move-Item -Force $setup.FullName $renamed
+    $setup = Get-Item $renamed
 }
-
-Expand-Archive -LiteralPath $zip -DestinationPath $tmp -Force
-$setup = Get-ChildItem -Path $tmp -Filter "*.exe" -File | Select-Object -First 1
 if (-not $setup) {
-    throw "Khong thay file cai .exe trong goi ZIP."
+    throw "Khong thay file cai .exe."
 }
 Unblock-File -Path $setup.FullName -ErrorAction SilentlyContinue
 Write-Host "Da tai. Neu Windows SmartScreen: Thong tin them -> Chay anyway."
