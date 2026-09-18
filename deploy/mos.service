@@ -1,5 +1,5 @@
 [Unit]
-Description=MOS GDS web (mos.gds.edu.vn)
+Description=MOS-KulKul web (mos.gds.edu.vn)
 After=network.target
 
 [Service]
