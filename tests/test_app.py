@@ -15,6 +15,7 @@ def test_login_page():
     assert "/cai-dat" in r.text
     assert "đã cài trên máy" in r.text
     assert "Tải MOS-KulKul" in r.text
+    assert "kulkul.png?v=" in r.text
 
 
 def test_api_login_and_programs():
@@ -109,6 +110,20 @@ def test_windows_web_stub_iss_downloads_full_from_server():
     assert "{#Dist}" not in stub
     assert "OutputBaseFilename=MOS-KulKul-Setup-Windows-Full" in full
     assert "{#Dist}\\*" in full
+
+
+def test_brand_icon_is_multi_size_ico():
+    from pathlib import Path
+    import struct
+
+    root = Path(__file__).resolve().parent.parent
+    ico = (root / "app" / "static" / "favicon.ico").read_bytes()
+    assert ico[:4] == b"\x00\x00\x01\x00"
+    count = struct.unpack_from("<H", ico, 4)[0]
+    assert count >= 6
+    png = root / "app" / "static" / "kulkul.png"
+    assert png.is_file() and png.stat().st_size > 1000
+    assert (root / "desktop" / "MosDock" / "Assets" / "kulkul.ico").stat().st_size == len(ico)
 
 
 def test_home_requires_login():

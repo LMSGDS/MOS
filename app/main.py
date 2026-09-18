@@ -37,7 +37,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul7")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul8")
 SESSION_SECRET = _session_secret()
 
 @asynccontextmanager

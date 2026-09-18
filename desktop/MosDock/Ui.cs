@@ -90,24 +90,51 @@ static class Ui
         var bmp = new Bitmap(size, size);
         using var g = Graphics.FromImage(bmp);
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
         g.Clear(Color.Transparent);
-        var navy = SignIn;
         var rect = new Rectangle(0, 0, size - 1, size - 1);
-        using var bg = new SolidBrush(navy);
-        g.FillRounded(rect, size / 5, bg);
-        DrawDoc(g, (int)(size * 0.42), (int)(size * 0.18), (int)(size * 0.46), (int)(size * 0.56), Ppt);
-        DrawDoc(g, (int)(size * 0.28), (int)(size * 0.14), (int)(size * 0.46), (int)(size * 0.56), Excel);
-        DrawDoc(g, (int)(size * 0.12), (int)(size * 0.10), (int)(size * 0.46), (int)(size * 0.56), Word);
-        using var font = new Font("Segoe UI", Math.Max(8f, size * 0.32f), FontStyle.Bold, GraphicsUnit.Pixel);
-        var k = TextRenderer.MeasureText("K", font);
-        TextRenderer.DrawText(g, "K", font, new Point((size - k.Width) / 2, (int)(size * 0.52)), Color.White);
+        using (var bg = new SolidBrush(SignIn))
+        {
+            g.FillRounded(rect, size / 5, bg);
+        }
+
+        var cx = size * 0.50f;
+        var cy = size * 0.50f;
+        var len = size * 0.64f;
+        var thick = size * 0.30f;
+        DrawBlade(g, cx + size * 0.04f, cy - size * 0.06f, len, thick, -48f, Word);
+        DrawBlade(g, cx - size * 0.06f, cy + size * 0.10f, len * 0.78f, thick * 0.88f, 205f, Excel);
+        DrawBlade(g, cx + size * 0.08f, cy + size * 0.12f, len * 0.80f, thick * 0.88f, 22f, Ppt);
+        DrawSpark(g, cx, cy, size * 0.09f);
         return bmp;
     }
 
-    static void DrawDoc(Graphics g, int x, int y, int w, int h, Color color)
+    static void DrawBlade(Graphics g, float cx, float cy, float len, float thick, float angle, Color color)
     {
+        var state = g.Save();
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(angle);
+        using var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddEllipse(-len * 0.18f, -thick / 2f, len, thick);
         using var fill = new SolidBrush(color);
-        g.FillRounded(new Rectangle(x, y, w, h), Math.Max(4, w / 8), fill);
+        g.FillPath(fill, path);
+        using var hi = new SolidBrush(Color.FromArgb(40, Color.White));
+        g.FillEllipse(hi, -len * 0.05f, -thick * 0.28f, len * 0.55f, thick * 0.42f);
+        g.Restore(state);
+    }
+
+    static void DrawSpark(Graphics g, float cx, float cy, float r)
+    {
+        using var fill = new SolidBrush(Color.White);
+        var pts = new PointF[8];
+        for (var i = 0; i < 8; i++)
+        {
+            var a = (float)(Math.PI / 2 + i * Math.PI / 4);
+            var rad = i % 2 == 0 ? r : r * 0.38f;
+            pts[i] = new PointF(cx + rad * (float)Math.Cos(a), cy - rad * (float)Math.Sin(a));
+        }
+
+        g.FillPolygon(fill, pts);
     }
 
     static void FillRounded(this Graphics g, Rectangle rect, int radius, Brush brush)
