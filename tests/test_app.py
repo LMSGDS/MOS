@@ -51,14 +51,19 @@ def test_install_page_lists_windows_and_macos():
     assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
+    assert "/cai-dat/windows.zip" in r.text
     assert "/cai-dat/windows-full" in r.text
+    assert "/cai-dat/windows-full.zip" in r.text
     assert "/cai-dat/macos" in r.text
     assert "MOS-KulKul-Setup-macOS.zip" in r.text
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
     assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
     assert "Demo tất cả bài tập" in r.text
-    assert "--demo-all" in r.text
+    assert "quét virus" in r.text.lower() or "SmartScreen" in r.text
+    assert "Giữ lại" in r.text
+    assert "Unblock-File" in r.text
+    assert "/cai-dat/checksums" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -69,6 +74,18 @@ def test_install_page_lists_windows_and_macos():
         assert missing.headers.get("content-disposition", "").lower().find("windows") >= 0 or "kulkul" in missing.headers.get("content-disposition", "").lower()
     else:
         assert missing.status_code == 404
+    zipped = c.get("/cai-dat/windows.zip")
+    if win_ready:
+        assert zipped.status_code == 200
+        assert zipped.content[:2] == b"PK"
+        assert "zip" in (zipped.headers.get("content-type") or "").lower()
+        assert "attachment" in (zipped.headers.get("content-disposition") or "").lower()
+    else:
+        assert zipped.status_code == 404
+    sums = c.get("/cai-dat/checksums")
+    assert sums.status_code == 200
+    assert sums.json()["ok"] is True
+    assert "files" in sums.json()
     missing_mac = c.get("/cai-dat/macos")
     mac_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -97,6 +114,27 @@ def test_install_page_lists_windows_and_macos():
         assert "full" in (full.headers.get("content-disposition") or "").lower()
     else:
         assert full.status_code == 404
+
+
+def test_wrap_installer_zip_includes_readme(tmp_path):
+    from app.main import sha256_path, wrap_installer_zip
+
+    exe = tmp_path / "MOS-KulKul-Setup-Windows.exe"
+    exe.write_bytes(b"MZ-fake-installer")
+    zipped = wrap_installer_zip(exe)
+    assert zipped.suffix == ".zip"
+    assert zipped.is_file()
+    import zipfile
+
+    with zipfile.ZipFile(zipped) as zf:
+        names = set(zf.namelist())
+        assert "MOS-KulKul-Setup-Windows.exe" in names
+        assert "HUONG-DAN-CAI.txt" in names
+        guide = zf.read("HUONG-DAN-CAI.txt").decode("utf-8")
+        assert "SmartScreen" in guide
+        assert "mos.gds.edu.vn" in guide
+    assert wrap_installer_zip(exe) == zipped
+    assert len(sha256_path(zipped)) == 64
 
 
 def test_windows_web_stub_iss_downloads_full_from_server():

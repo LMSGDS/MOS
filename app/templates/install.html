@@ -4,20 +4,31 @@
 <section class="card hero" style="width:min(720px,100%)">
   <h1>Cài MOS-KulKul</h1>
   <p class="lead">Đăng nhập và chọn Word / Excel / PowerPoint ngay trong MOS-KulKul trên máy. Trình duyệt không kéo được cửa sổ Office.</p>
+  <p class="notice">Chrome/Edge <strong>quét virus khi tải .exe</strong> vì bộ cài nhà trường chưa mua chữ ký Authenticode — không phải mã độc. Nên tải <strong>gói ZIP</strong>, giải nén, rồi chạy. Nếu SmartScreen: <strong>Thông tin thêm → Chạy anyway</strong>. Chrome: <strong>Giữ lại</strong> tệp.</p>
   <div class="actions" style="flex-direction:row;flex-wrap:wrap;gap:12px">
-    <a class="primary" href="/cai-dat/windows" style="text-align:center;text-decoration:none">Tải bộ cài nhỏ Windows</a>
-    <a class="secondary" href="/cai-dat/windows-full" style="text-align:center;text-decoration:none">Tải bản đầy đủ (offline)</a>
+    <a class="primary" href="/cai-dat/windows.zip" style="text-align:center;text-decoration:none">Tải gói ZIP Windows</a>
+    <a class="secondary" href="/cai-dat/windows-full.zip" style="text-align:center;text-decoration:none">ZIP bản đầy đủ (offline)</a>
     <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải cài đặt macOS (.zip)</a>
   </div>
+  <p class="hint">Tải .exe trực tiếp (trình duyệt sẽ quét): <a href="/cai-dat/windows">bộ cài nhỏ</a> · <a href="/cai-dat/windows-full">bản đầy đủ</a>. Chỉ lấy từ <code>https://mos.gds.edu.vn/cai-dat</code>.</p>
 
-  <h2 style="margin-top:28px;font-size:18px">Windows</h2>
+  <h2 style="margin-top:28px;font-size:18px">Windows — nếu trình duyệt đang quét / chặn</h2>
   <ol class="lead">
-    <li>Tải <strong>MOS-KulKul-Setup-Windows.exe</strong> (file nhỏ, chỉ chứa liên kết máy chủ). Không cần Admin.</li>
-    <li>Chạy file, bấm <strong>Cài đặt</strong> — máy tải bản đầy đủ từ <code>mos.gds.edu.vn</code> rồi mở trình cài MOS-KulKul.</li>
-    <li>Không có mạng: dùng <a href="/cai-dat/windows-full">bản đầy đủ offline</a> (~50MB).</li>
-    <li>Mở <strong>MOS-KulKul</strong>, chọn Word / Excel / PowerPoint, đăng nhập.</li>
-    <li>Demo tất cả bài tập: mở Word, menu <strong>⋮</strong> → <strong>Demo tất cả bài tập</strong>. MOS-KulKul tự chạy Find / Go To / Save PDF / Inspect rồi chấm. Hoặc <code>MOS-KulKul.exe --demo-all</code>.</li>
+    <li>Đợi Chrome/Edge <strong>quét xong</strong>. Cảnh báo «tệp không phổ biến» → <strong>Giữ lại</strong> (Keep), không bấm Discard.</li>
+    <li>Giải nén ZIP. Chuột phải file .exe → <strong>Thuộc tính</strong> → bỏ chọn <strong>Chặn</strong> / Bỏ chặn → OK.</li>
+    <li>Hoặc PowerShell: <code>Unblock-File .\MOS-KulKul-Setup-Windows.exe</code></li>
+    <li>SmartScreen «Windows đã bảo vệ máy tính»: <strong>Thông tin thêm</strong> → <strong>Chạy anyway</strong>.</li>
+    <li>Không cần Admin. Mở <strong>MOS-KulKul</strong>, chọn Word / Excel / PowerPoint, đăng nhập.</li>
+    <li>Demo tất cả bài tập: menu <strong>⋮</strong> → <strong>Demo tất cả bài tập</strong>.</li>
   </ol>
+
+  {% if installers %}
+  <h2 style="margin-top:20px;font-size:18px">Mã SHA-256 để đối chiếu</h2>
+  <p class="lead">Sau khi tải, so hash với bảng này. Nếu khác, xóa file và tải lại từ mos.gds.edu.vn.</p>
+  <pre class="codebox">{% for f in installers %}{{ f.sha256 }}  {{ f.name }}  ({{ f.size }} bytes)
+{% endfor %}</pre>
+  <p class="hint"><a href="/cai-dat/checksums">JSON checksums</a></p>
+  {% endif %}
 
   <h2 style="margin-top:20px;font-size:18px">macOS</h2>
   <p class="notice">macOS chặn gói <code>.pkg</code> chưa ký Apple. Tải <strong>.zip</strong>.</p>

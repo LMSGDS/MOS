@@ -45,12 +45,21 @@ jobs:
           Write-Host "stub=$($stub.Length) full=$($full.Length)"
           if ($stub.Length -gt 8MB) { throw "Web stub too large: $($stub.Length)" }
           if ($full.Length -lt 20MB) { throw "Full installer too small: $($full.Length)" }
+          Compress-Archive -Path $stub.FullName -DestinationPath dist-installer\MOS-KulKul-Setup-Windows.zip -Force
+          Compress-Archive -Path $full.FullName -DestinationPath dist-installer\MOS-KulKul-Setup-Windows-Full.zip -Force
+          Get-FileHash dist-installer\MOS-KulKul-Setup-Windows.zip, dist-installer\MOS-KulKul-Setup-Windows-Full.zip, $stub.FullName, $full.FullName -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), $_.Path } |
+            Set-Content -Encoding ascii dist-installer\SHA256.txt
+          Get-Content dist-installer\SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: MOS-KulKul-Setup-Windows
           path: |
             dist-installer/MOS-KulKul-Setup-Windows.exe
+            dist-installer/MOS-KulKul-Setup-Windows.zip
             dist-installer/MOS-KulKul-Setup-Windows-Full.exe
+            dist-installer/MOS-KulKul-Setup-Windows-Full.zip
+            dist-installer/SHA256.txt
             dist-win/MOS-KulKul.exe
             dist-win/install.ps1
 

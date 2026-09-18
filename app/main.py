@@ -1,8 +1,10 @@
 """Cổng MOS — đăng nhập và mở Microsoft Word trên máy cá nhân."""
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
+import zipfile
 from pathlib import Path
 
 from contextlib import asynccontextmanager
@@ -249,10 +251,57 @@ def login(
 
 @app.get("/cai-dat", response_class=HTMLResponse)
 def install_page(request: Request):
-    return TEMPLATES.TemplateResponse(request, "install.html", _ctx(request))
+    return TEMPLATES.TemplateResponse(
+        request,
+        "install.html",
+        _ctx(request, {"installers": _installer_meta()}),
+    )
 
 
 INSTALLER_DIR = ROOT / "data" / "installers"
+_HASH_CACHE: dict[str, tuple[float, int, str]] = {}
+
+INSTALL_README = """MOS-KulKul — Trường GDS (mos.gds.edu.vn)
+
+File .exe nhà trường tự phát hành, chưa mua chữ ký Authenticode.
+Chrome/Edge sẽ quét virus — đây là bước bình thường, không phải phần mềm độc hại.
+
+Sau khi giải nén:
+1. Chuột phải file .exe → Thuộc tính → bỏ chọn Chặn / Bỏ chặn → OK.
+   PowerShell: Unblock-File .\\MOS-KulKul-Setup-Windows.exe
+2. Nếu SmartScreen «Windows đã bảo vệ máy tính»: Thông tin thêm → Chạy anyway.
+3. Chrome «Tệp không phổ biến»: Giữ lại / Keep.
+
+Không tắt antivirus của nhà trường. Chỉ tải từ https://mos.gds.edu.vn/cai-dat
+"""
+
+
+def sha256_path(path: Path) -> str:
+    st = path.stat()
+    key = str(path.resolve())
+    hit = _HASH_CACHE.get(key)
+    if hit and hit[0] == st.st_mtime and hit[1] == st.st_size:
+        return hit[2]
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    hexed = digest.hexdigest()
+    _HASH_CACHE[key] = (st.st_mtime, st.st_size, hexed)
+    return hexed
+
+
+def wrap_installer_zip(source: Path, dest: Path | None = None) -> Path:
+    dest = dest or source.with_suffix(".zip")
+    if dest.is_file() and dest.stat().st_mtime >= source.stat().st_mtime and dest.stat().st_size > 22:
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".partial")
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(source, source.name)
+        zf.writestr("HUONG-DAN-CAI.txt", INSTALL_README)
+    tmp.replace(dest)
+    return dest
 
 
 def _installer_file(*names: str) -> Path | None:
@@ -263,7 +312,24 @@ def _installer_file(*names: str) -> Path | None:
     return None
 
 
-def _send_installer(*names: str, media: str | None = None):
+def _installer_meta() -> list[dict]:
+    names = (
+        "MOS-KulKul-Setup-Windows.zip",
+        "MOS-KulKul-Setup-Windows.exe",
+        "MOS-KulKul-Setup-Windows-Full.zip",
+        "MOS-KulKul-Setup-Windows-Full.exe",
+        "MOS-KulKul-Setup-macOS.zip",
+    )
+    rows = []
+    for name in names:
+        path = INSTALLER_DIR / name
+        if not path.is_file() or path.stat().st_size <= 0:
+            continue
+        rows.append({"name": name, "size": path.stat().st_size, "sha256": sha256_path(path)})
+    return rows
+
+
+def _send_installer(*names: str, media: str | None = None, as_zip: bool = False):
     path = _installer_file(*names)
     if path is None:
         listed = " / ".join(names)
@@ -271,14 +337,30 @@ def _send_installer(*names: str, media: str | None = None):
             f"Chưa có {listed} trên server. Copy artifact CI vào data/installers/.",
             status_code=404,
         )
+    if as_zip and path.suffix.lower() != ".zip":
+        path = wrap_installer_zip(path)
     chosen = media
     if path.suffix == ".zip":
         chosen = "application/zip"
     elif path.suffix == ".exe":
-        chosen = "application/vnd.microsoft.portable-executable"
+        chosen = "application/octet-stream"
     elif path.suffix == ".pkg":
         chosen = "application/octet-stream"
-    return FileResponse(path, media_type=chosen or "application/octet-stream", filename=path.name)
+    download_name = path.name
+    if path.suffix.lower() == ".exe":
+        download_name = path.stem + "-GDS.exe"
+    elif path.suffix.lower() == ".zip" and "Windows" in path.name:
+        download_name = path.stem + "-GDS.zip"
+    return FileResponse(
+        path,
+        media_type=chosen or "application/octet-stream",
+        filename=download_name,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "X-Download-Options": "noopen",
+            "Cache-Control": "private, max-age=120",
+        },
+    )
 
 
 @app.get("/cai-dat/windows")
@@ -290,12 +372,37 @@ def install_windows():
     )
 
 
+@app.get("/cai-dat/windows.zip")
+def install_windows_zip():
+    """Gói ZIP — trình duyệt không chặn .exe khi tải."""
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows.zip",
+        "MOS-KulKul-Setup-Windows.exe",
+        "MOS-Dock-Setup-Windows.exe",
+        as_zip=True,
+    )
+
+
 @app.get("/cai-dat/windows-full")
 def install_windows_full():
     """Bản cài đầy đủ (~50MB) — stub và máy offline tải từ đây."""
     return _send_installer(
         "MOS-KulKul-Setup-Windows-Full.exe",
     )
+
+
+@app.get("/cai-dat/windows-full.zip")
+def install_windows_full_zip():
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows-Full.zip",
+        "MOS-KulKul-Setup-Windows-Full.exe",
+        as_zip=True,
+    )
+
+
+@app.get("/cai-dat/checksums")
+def install_checksums():
+    return JSONResponse({"ok": True, "files": _installer_meta()})
 
 
 @app.get("/cai-dat/macos")

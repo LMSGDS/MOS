@@ -37,8 +37,9 @@ Chứng chỉ Cloudflare Origin CA **không** nằm trong git. Đặt tại `/et
 
 Ứng dụng trên máy: **đăng nhập**, **chọn Word / Excel / PowerPoint**, **luyện tập / thi**, tải đề PostgreSQL và mở Office trên PC (không WebView2, không Office Online).
 
-- Windows bộ cài nhỏ: [`MOS-KulKul-Setup-Windows.exe`](/cai-dat/windows) (khi bấm Cài sẽ tải bản đầy đủ từ máy chủ)
-- Windows offline: [`MOS-KulKul-Setup-Windows-Full.exe`](/cai-dat/windows-full)
+- Windows **gói ZIP (nên dùng, trình duyệt ít cảnh báo virus):** [`MOS-KulKul-Setup-Windows.zip`](/cai-dat/windows.zip)
+- Windows .exe trực tiếp: [`MOS-KulKul-Setup-Windows.exe`](/cai-dat/windows) (Chrome/Edge sẽ quét — chọn Giữ lại)
+- Windows offline ZIP: [`MOS-KulKul-Setup-Windows-Full.zip`](/cai-dat/windows-full.zip)
 - macOS: [`MOS-KulKul-Setup-macOS.zip`](/cai-dat/macos)
 
 | Môi trường | Việc làm |
