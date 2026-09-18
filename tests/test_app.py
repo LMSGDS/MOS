@@ -116,6 +116,16 @@ def test_install_page_lists_windows_and_macos():
         assert full.status_code == 404
 
 
+def test_install_page_checksums_link_without_artifacts(monkeypatch):
+    import app.main as main
+
+    monkeypatch.setattr(main, "_installer_meta", lambda: [])
+    r = TestClient(app).get("/cai-dat")
+    assert r.status_code == 200
+    assert "/cai-dat/checksums" in r.text
+    assert "SHA-256" in r.text
+
+
 def test_wrap_installer_zip_includes_readme(tmp_path):
     from app.main import sha256_path, wrap_installer_zip
 

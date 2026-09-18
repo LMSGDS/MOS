@@ -22,12 +22,13 @@
     <li>Demo tất cả bài tập: menu <strong>⋮</strong> → <strong>Demo tất cả bài tập</strong>.</li>
   </ol>
 
-  {% if installers %}
   <h2 style="margin-top:20px;font-size:18px">Mã SHA-256 để đối chiếu</h2>
-  <p class="lead">Sau khi tải, so hash với bảng này. Nếu khác, xóa file và tải lại từ mos.gds.edu.vn.</p>
+  <p class="lead">Sau khi tải, so hash với bảng này hoặc <a href="/cai-dat/checksums">JSON checksums</a>. Nếu khác, xóa file và tải lại từ mos.gds.edu.vn.</p>
+  {% if installers %}
   <pre class="codebox">{% for f in installers %}{{ f.sha256 }}  {{ f.name }}  ({{ f.size }} bytes)
 {% endfor %}</pre>
-  <p class="hint"><a href="/cai-dat/checksums">JSON checksums</a></p>
+  {% else %}
+  <p class="hint">Bảng hash hiện khi server có file trong <code>data/installers/</code>. JSON: <a href="/cai-dat/checksums">/cai-dat/checksums</a>.</p>
   {% endif %}
 
   <h2 style="margin-top:20px;font-size:18px">macOS</h2>
