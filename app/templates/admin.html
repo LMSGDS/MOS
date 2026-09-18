@@ -1,15 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Quản trị MOS-KulKul{% endblock %}
 {% block body %}
-<section class="card hero" style="width:min(960px,100%)">
+<section class="card hero admin-wide">
   <h1>Bảng điều khiển MOS-KulKul</h1>
-  <p class="lead">Quản trị web — lớp, giáo viên, học sinh, điểm và kỹ năng yếu. Không cần cài app.</p>
+  <p class="lead">Cơ sở dữ liệu bài tập, liên kết học sinh, tiến trình — tiến độ — tiến bộ và đánh giá toàn diện.</p>
+  {% include "admin_nav.html" %}
   <div class="program-grid" style="margin-top:12px">
     <div class="program-tile"><span class="pname">Học sinh<br><strong>{{ stats.students }}</strong></span></div>
     <div class="program-tile"><span class="pname">Lớp<br><strong>{{ stats.classes }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Bài tập<br><strong>{{ stats.exercises }}</strong></span></div>
     <div class="program-tile"><span class="pname">Bài đã nộp<br><strong>{{ stats.submitted }}</strong></span></div>
     <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ stats.avg }}</strong></span></div>
   </div>
+
+  <h2 style="margin-top:28px;font-size:18px">Đánh giá học sinh (Word)</h2>
+  <table class="grid">
+    <thead><tr><th>Mã</th><th>Học sinh</th><th>Lớp</th><th>Tiến độ</th><th>Điểm TB</th><th>Tiến bộ</th><th>Mức</th></tr></thead>
+    <tbody>
+      {% for s in roster %}
+      <tr>
+        <td>{{ s.student_code or "—" }}</td>
+        <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
+        <td>{{ s.class_name or "—" }}</td>
+        <td>{{ s.exercises_completed or 0 }}/{{ s.exercises_assigned or 0 }} · {{ "%.0f"|format(s.completion_pct or 0) }}%</td>
+        <td>{{ "%.0f"|format(s.overall_score or 0) }}</td>
+        <td>{{ "%+.0f"|format(s.avg_growth or 0) }}</td>
+        <td><span class="badge badge-{{ s.level or 'chua_bat_dau' }}">{{ s.level_label }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Chưa liên kết học sinh.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
   <h2 style="margin-top:28px;font-size:18px">Kỹ năng (Objective Domains)</h2>
   <table class="grid">

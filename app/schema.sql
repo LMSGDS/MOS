@@ -158,3 +158,115 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_attempt ON telemetry(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON enrollments(user_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_attempt ON submissions(attempt_id);
 CREATE INDEX IF NOT EXISTS idx_criterion_run ON criterion_results(grading_run_id);
+
+-- Học sinh, bài tập, tiến độ, tiến bộ, đánh giá
+ALTER TABLE users ADD COLUMN IF NOT EXISTS student_code TEXT;
+ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS published BOOLEAN NOT NULL DEFAULT TRUE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_student_code
+  ON users (student_code)
+  WHERE student_code IS NOT NULL AND student_code <> '';
+
+CREATE TABLE IF NOT EXISTS assignments (
+  id            SERIAL PRIMARY KEY,
+  project_id    TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  class_id      INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  assigned_by   INTEGER REFERENCES users(id),
+  mode          TEXT NOT NULL DEFAULT 'training' CHECK (mode IN ('training', 'testing')),
+  due_at        TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (project_id, class_id)
+);
+
+CREATE TABLE IF NOT EXISTS assignment_students (
+  assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (assignment_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS exercise_progress (
+  user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id        TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  class_id          INTEGER REFERENCES classes(id),
+  assignment_id     INTEGER REFERENCES assignments(id) ON DELETE SET NULL,
+  attempt_id        TEXT REFERENCES attempts(id) ON DELETE SET NULL,
+  status            TEXT NOT NULL DEFAULT 'not_started'
+                    CHECK (status IN ('not_started', 'in_progress', 'submitted', 'mastered')),
+  best_verified     DOUBLE PRECISION NOT NULL DEFAULT 0,
+  first_verified    DOUBLE PRECISION,
+  last_verified     DOUBLE PRECISION,
+  last_pending      DOUBLE PRECISION,
+  last_score        DOUBLE PRECISION,
+  attempt_count     INTEGER NOT NULL DEFAULT 0,
+  checkpoint_count  INTEGER NOT NULL DEFAULT 0,
+  evidence_count    INTEGER NOT NULL DEFAULT 0,
+  criteria_passed   INTEGER NOT NULL DEFAULT 0,
+  criteria_total    INTEGER NOT NULL DEFAULT 0,
+  growth            DOUBLE PRECISION NOT NULL DEFAULT 0,
+  first_started_at  TIMESTAMPTZ,
+  last_activity_at  TIMESTAMPTZ,
+  completed_at      TIMESTAMPTZ,
+  mastery_at        TIMESTAMPTZ,
+  payload           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  PRIMARY KEY (user_id, project_id)
+);
+
+CREATE TABLE IF NOT EXISTS skill_progress (
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id      TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  criterion_id    TEXT NOT NULL,
+  skill_label     TEXT NOT NULL DEFAULT '',
+  status          TEXT NOT NULL DEFAULT 'unverified',
+  earned          DOUBLE PRECISION NOT NULL DEFAULT 0,
+  possible        DOUBLE PRECISION NOT NULL DEFAULT 0,
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  first_pass_at   TIMESTAMPTZ,
+  last_attempt_id TEXT,
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, project_id, criterion_id)
+);
+
+CREATE TABLE IF NOT EXISTS progress_events (
+  id               BIGSERIAL PRIMARY KEY,
+  user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_id       TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  attempt_id       TEXT REFERENCES attempts(id) ON DELETE SET NULL,
+  event            TEXT NOT NULL,
+  verified         DOUBLE PRECISION,
+  pending          DOUBLE PRECISION,
+  score            DOUBLE PRECISION,
+  criteria_passed  INTEGER,
+  criteria_total   INTEGER,
+  detail           JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS student_evaluations (
+  user_id              INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  program              TEXT NOT NULL DEFAULT 'word',
+  class_id             INTEGER REFERENCES classes(id),
+  overall_score        DOUBLE PRECISION,
+  exercises_assigned   INTEGER NOT NULL DEFAULT 0,
+  exercises_started    INTEGER NOT NULL DEFAULT 0,
+  exercises_completed  INTEGER NOT NULL DEFAULT 0,
+  exercises_mastered   INTEGER NOT NULL DEFAULT 0,
+  completion_pct       DOUBLE PRECISION NOT NULL DEFAULT 0,
+  avg_verified         DOUBLE PRECISION,
+  avg_growth           DOUBLE PRECISION,
+  weak_skills          JSONB NOT NULL DEFAULT '[]'::jsonb,
+  strong_skills        JSONB NOT NULL DEFAULT '[]'::jsonb,
+  level                TEXT NOT NULL DEFAULT 'chua_bat_dau',
+  summary              TEXT NOT NULL DEFAULT '',
+  computed_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, program)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assignments_class ON assignments(class_id);
+CREATE INDEX IF NOT EXISTS idx_progress_class ON exercise_progress(class_id);
+CREATE INDEX IF NOT EXISTS idx_progress_status ON exercise_progress(status);
+CREATE INDEX IF NOT EXISTS idx_progress_events_user ON progress_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_skill_progress_user ON skill_progress(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_evaluations_level ON student_evaluations(level);

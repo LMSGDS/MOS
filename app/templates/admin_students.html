@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Học sinh · MOS-KulKul{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Học sinh và liên kết lớp</h1>
+  <p class="lead">Mỗi học sinh gắn với lớp, bài tập được giao, tiến độ và mức đánh giá.</p>
+  {% include "admin_nav.html" %}
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Mã HS</th><th>Họ tên</th><th>Tài khoản</th><th>Lớp</th>
+        <th>Tiến độ</th><th>Hoàn thành</th><th>Điểm TB</th><th>Tiến bộ</th><th>Đánh giá</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in roster %}
+      <tr>
+        <td>{{ s.student_code or "—" }}</td>
+        <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
+        <td>{{ s.username }}</td>
+        <td>{{ s.class_name or "Chưa xếp lớp" }}</td>
+        <td>
+          <div class="bar"><span style="width:{{ [s.completion_pct or 0, 100]|min }}%"></span></div>
+          {{ "%.0f"|format(s.completion_pct or 0) }}%
+        </td>
+        <td>{{ s.exercises_completed or 0 }}/{{ s.exercises_assigned or 0 }}</td>
+        <td>{{ "%.0f"|format(s.overall_score or 0) }}</td>
+        <td>{{ "%+.0f"|format(s.avg_growth or 0) }}</td>
+        <td><span class="badge badge-{{ s.level or 'chua_bat_dau' }}">{{ s.level_label }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">Chưa có học sinh.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

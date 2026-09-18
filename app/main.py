@@ -17,6 +17,7 @@ from app.admin import router as admin_router
 from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
 from app.kulkul_layout import Rect, compute
+from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,7 +38,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul8")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul9")
 SESSION_SECRET = _session_secret()
 
 @asynccontextmanager
@@ -55,6 +56,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(client_v1_router)
+app.include_router(progress_router)
 app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,

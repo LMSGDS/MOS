@@ -451,3 +451,64 @@ body.kulkul {
 body.exam-running .word-sim-page {
   font-weight: 700;
 }
+
+.admin-wide { width: min(1080px, 100%) !important; }
+.admin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+.admin-nav a {
+  text-decoration: none;
+  color: var(--gds-dark);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #e8f5fd;
+}
+.admin-nav a[aria-current="page"] {
+  background: var(--gds);
+  color: #fff;
+}
+.bar, .bar.big {
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+  display: inline-block;
+  width: 88px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.bar.big { display: block; width: 100%; height: 12px; margin: 16px 0 0; }
+.bar span {
+  display: block;
+  height: 100%;
+  background: var(--gds);
+  border-radius: inherit;
+}
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.badge-chua_bat_dau { background: #e2e8f0; color: #475569; }
+.badge-bat_dau { background: #dbeafe; color: #1e3a8a; }
+.badge-dang_tien_bo { background: #fef3c7; color: #92400e; }
+.badge-dat { background: #dcfce7; color: #166534; }
+.badge-xuat_sac { background: #d1fae5; color: #065f46; }
+.eval-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  .eval-split { grid-template-columns: 1fr; }
+}
+.skill-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+.grid a { color: var(--gds-dark); font-weight: 700; text-decoration: none; }

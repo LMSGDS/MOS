@@ -14,6 +14,7 @@ from app.auth import authenticate
 from app.db import cursor
 from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.programs import normalize
+from app.progress import record_attempt_event
 from app.scoring import score_file
 from app.security import bearer_user
 from app.tokens import issue
@@ -502,13 +503,18 @@ async def v1_start_attempt(request: Request):
         cur.execute("SELECT class_id FROM enrollments WHERE user_id = %s LIMIT 1", (row["id"],))
         enr = cur.fetchone()
         attempt_id = secrets.token_hex(12)
+        class_id = enr["class_id"] if enr else None
         cur.execute(
             """
             INSERT INTO attempts (id, user_id, project_id, class_id, mode, status, project_version_id)
             VALUES (%s, %s, %s, %s, %s, 'running', %s)
             """,
-            (attempt_id, row["id"], project_id, enr["class_id"] if enr else None, mode, version["id"] if version else None),
+            (attempt_id, row["id"], project_id, class_id, mode, version["id"] if version else None),
         )
+    record_attempt_event(
+        {"id": attempt_id, "user_id": row["id"], "project_id": project_id, "class_id": class_id, "status": "running"},
+        event="start",
+    )
     return {
         "ok": True,
         "attempt_id": attempt_id,
@@ -728,6 +734,11 @@ def _regrade_with_evidence(attempt: dict, events: list | None) -> dict | None:
     )
     if submitted:
         _refresh_latest_submission(str(attempt["id"]), scored, payload)
+    record_attempt_event(
+        attempt,
+        event="evidence",
+        payload={**payload, "evidence_count": len(events or [])},
+    )
     return payload
 
 
@@ -749,6 +760,7 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     payload = _grade_payload(scored)
     training = attempt.get("mode") != "testing"
     _store_attempt_check(attempt_id, payload, events, training=training, evidence_path=evidence_path)
+    record_attempt_event(attempt, event="checkpoint", payload={**payload, "evidence_count": len(events)})
     if not training:
         return {
             "ok": True,
@@ -864,6 +876,11 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
                 json.dumps({"score": payload.get("score"), "pending": payload.get("pending"), "submission_id": submission_id}, ensure_ascii=False),
             ),
         )
+    record_attempt_event(
+        {**attempt, "status": "submitted"},
+        event="submit",
+        payload=payload,
+    )
     return {"ok": True, "submission_id": submission_id, "score": payload, "duration_sec": duration}
 
 
