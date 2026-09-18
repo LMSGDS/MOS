@@ -228,6 +228,8 @@ def test_windows_sources_include_action_demo():
     hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "Tổng quan tiến độ" in home
     assert "không dùng Office Online" in home
+    assert "DockStyle.Fill" in home
+    assert "mức đánh giá" in home
     assert "Kỹ năng theo chương trình" in home
     assert "Đã hoàn thành" in home
     assert "Bảng điều khiển" in home or "bảng điều khiển" in home

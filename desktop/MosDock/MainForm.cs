@@ -133,7 +133,7 @@ sealed class MainForm : Form
 
         _body.Dock = DockStyle.Fill;
         _body.BackColor = Ui.PageBg;
-        _body.Padding = new Padding(28, 20, 28, 24);
+        _body.Padding = new Padding(20, 14, 20, 16);
         _body.Controls.Add(_home);
         _body.Controls.Add(_catalog);
         _body.Controls.Add(_resume);

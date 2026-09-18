@@ -364,7 +364,7 @@ static class Ui
         {
             Height = 40,
             BackColor = BannerBg,
-            Margin = new Padding(0, 0, 0, 12),
+            Margin = new Padding(0, 0, 0, 0),
             Padding = new Padding(10, 6, 12, 6),
         };
         RoundControl(bar, 10);
