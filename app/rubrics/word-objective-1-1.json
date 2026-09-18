@@ -1,0 +1,468 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-1-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.0.0",
+  "title": "Word Objective 1.1 — Navigate within documents",
+  "program": "word",
+  "objective": "1.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.bookmarks",
+    "word.internal_hyperlinks"
+  ],
+  "criteria": [
+    {
+      "id": "W11-S01",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 4,
+      "prompt": "Tìm từ to từ Navigation pane.",
+      "selector": {
+        "action": "find",
+        "query": "to",
+        "source": "navigation_pane"
+      },
+      "predicate": {
+        "type": "search_query",
+        "query": "to"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã tìm to từ Navigation pane.",
+        "fail": "Chưa dùng Navigation pane để tìm to.",
+        "unverified": "Chưa thu được bằng chứng Find trên Navigation pane. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được thao tác tìm kiếm."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở tab **Home**.",
+        "Nhóm **Editing**, bấm **Find** (hoặc Ctrl+F) để mở **Navigation** pane.",
+        "Gõ to vào ô **Search Document**."
+      ]
+    },
+    {
+      "id": "W11-S02",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 4,
+      "prompt": "Xem kết quả trên thẻ Results.",
+      "selector": {
+        "action": "results_tab"
+      },
+      "predicate": {
+        "type": "results_tab"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã mở thẻ Results có kết quả.",
+        "fail": "Chưa chuyển sang thẻ Results.",
+        "unverified": "Chưa thu được bằng chứng thẻ Results. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được thẻ Results."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Giữ **Navigation** pane đang mở.",
+        "Bấm thẻ **Results** dưới ô tìm kiếm.",
+        "Xem danh sách kết quả to trong tài liệu."
+      ]
+    },
+    {
+      "id": "W11-S03",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 4,
+      "prompt": "Đổi truy vấn sang toy và chuyển giữa các kết quả.",
+      "selector": {
+        "action": "find_navigate",
+        "query": "toy"
+      },
+      "predicate": {
+        "type": "search_navigate",
+        "query": "toy",
+        "min_hits": 2
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã tìm toy và chuyển giữa ít nhất hai kết quả.",
+        "fail": "Chưa đổi sang toy hoặc chưa chuyển kết quả bằng nút điều hướng.",
+        "unverified": "Chưa thu được bằng chứng điều hướng kết quả tìm kiếm. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được điều hướng kết quả."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Trong **Navigation** pane, xóa to và gõ toy.",
+        "Bấm **Next Search Result** để nhảy kết quả.",
+        "Chuyển ít nhất hai lần giữa các kết quả toy."
+      ]
+    },
+    {
+      "id": "W11-S04",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 4,
+      "prompt": "Tìm đúng từ Toymakers, phân biệt hoa/thường.",
+      "selector": {
+        "action": "find",
+        "query": "Toymakers",
+        "match_case": true,
+        "whole_word": true
+      },
+      "predicate": {
+        "type": "search_query",
+        "query": "Toymakers",
+        "match_case": true,
+        "whole_word": true
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã tìm đúng từ Toymakers.",
+        "fail": "Chưa tìm Toymakers với Match Case và Whole Word.",
+        "unverified": "Chưa thu được bằng chứng Find Match Case. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Find nâng cao."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Find** rồi bấm mũi tên **Find Options** / **Advanced Find**.",
+        "Gõ Toymakers. Bật **Match case** và **Find whole words only**.",
+        "Bấm **Find Next**."
+      ]
+    },
+    {
+      "id": "W11-S05",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 4,
+      "prompt": "Advanced Find Toy/toy, giới hạn Heading 2.",
+      "selector": {
+        "action": "advanced_find",
+        "query": "toy",
+        "style": "Heading 2"
+      },
+      "predicate": {
+        "type": "advanced_find",
+        "query": "toy",
+        "style": "Heading 2"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã dùng Advanced Find Toy trong Heading 2.",
+        "fail": "Chưa dùng Advanced Find với style Heading 2.",
+        "unverified": "Chưa thu được bằng chứng Advanced Find. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Advanced Find."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Advanced Find**.",
+        "Gõ toy. Trong **Format** / **Style** chọn **Heading 2**.",
+        "Bấm **Find Next** để tìm Toy/toy chỉ trong **Heading 2**."
+      ]
+    },
+    {
+      "id": "W11-B01",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Bookmark SalesManager phủ đúng Lola Jacobsen.",
+      "selector": {
+        "bookmark": "SalesManager"
+      },
+      "predicate": {
+        "type": "bookmark_range",
+        "name": "SalesManager",
+        "text": "Lola Jacobsen"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "SalesManager gắn đúng tên Lola Jacobsen.",
+        "fail": "Bookmark SalesManager phải phủ đúng chữ Lola Jacobsen.",
+        "unverified": "Chưa đọc được bookmark SalesManager.",
+        "error": "Không đọc được bookmark trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen đúng chữ Lola Jacobsen.",
+        "Tab **Insert**, nhóm **Links**, bấm **Bookmark**.",
+        "Đặt tên SalesManager rồi bấm **Add**."
+      ]
+    },
+    {
+      "id": "W11-B02",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Bookmark DesignManager phủ đúng Sarah Jones.",
+      "selector": {
+        "bookmark": "DesignManager"
+      },
+      "predicate": {
+        "type": "bookmark_range",
+        "name": "DesignManager",
+        "text": "Sarah Jones"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "DesignManager gắn đúng tên Sarah Jones.",
+        "fail": "Bookmark DesignManager phải phủ đúng chữ Sarah Jones trong phần Contact Us.",
+        "unverified": "Chưa đọc được bookmark DesignManager.",
+        "error": "Không đọc được bookmark trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Trong phần Contact Us, bôi đen đúng chữ Sarah Jones.",
+        "**Insert** > **Bookmark**.",
+        "Đặt tên DesignManager rồi bấm **Add**."
+      ]
+    },
+    {
+      "id": "W11-H01",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục New Electronic Favorites.",
+      "selector": {
+        "toc_label": "New Electronic Favorites"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "New Electronic Favorites",
+        "heading": "New Electronic Favorites"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading New Electronic Favorites.",
+        "fail": "New Electronic Favorites phải là liên kết nội bộ tới đúng heading, không phải website hay cùng một đích.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen dòng mục lục New Electronic Favorites.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading cùng tên rồi bấm **OK**."
+      ]
+    },
+    {
+      "id": "W11-H02",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục Why Buy Wingtip Toys?",
+      "selector": {
+        "toc_label": "Why Buy Wingtip Toys?"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "Why Buy Wingtip Toys?",
+        "heading": "Why Buy Wingtip Toys?"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading Why Buy Wingtip Toys?.",
+        "fail": "Why Buy Wingtip Toys? phải liên kết nội bộ tới đúng heading.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Why Buy Wingtip Toys? trong mục lục.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Why Buy Wingtip Toys? rồi **OK**."
+      ]
+    },
+    {
+      "id": "W11-H03",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục Recognition.",
+      "selector": {
+        "toc_label": "Recognition"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "Recognition",
+        "heading": "Recognition"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading Recognition.",
+        "fail": "Recognition phải liên kết nội bộ tới đúng heading.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Recognition trong mục lục.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Recognition rồi **OK**."
+      ]
+    },
+    {
+      "id": "W11-H04",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục Make It Your Own.",
+      "selector": {
+        "toc_label": "Make It Your Own"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "Make It Your Own",
+        "heading": "Make It Your Own"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading Make It Your Own.",
+        "fail": "Make It Your Own phải liên kết nội bộ tới đúng heading.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Make It Your Own trong mục lục.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Make It Your Own rồi **OK**."
+      ]
+    },
+    {
+      "id": "W11-H05",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục Hand-Carved Toys.",
+      "selector": {
+        "toc_label": "Hand-Carved Toys"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "Hand-Carved Toys",
+        "heading": "Hand-Carved Toys"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading Hand-Carved Toys.",
+        "fail": "Hand-Carved Toys phải liên kết nội bộ tới đúng heading.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Hand-Carved Toys trong mục lục.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Hand-Carved Toys rồi **OK**."
+      ]
+    },
+    {
+      "id": "W11-H06",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 7,
+      "prompt": "Liên kết mục lục Resources.",
+      "selector": {
+        "toc_label": "Resources"
+      },
+      "predicate": {
+        "type": "internal_hyperlink",
+        "text": "Resources",
+        "heading": "Resources"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Mục lục dẫn đúng heading Resources.",
+        "fail": "Resources phải liên kết nội bộ tới đúng heading.",
+        "unverified": "Chưa đọc được siêu liên kết mục lục.",
+        "error": "Không đọc được siêu liên kết trong tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen Resources trong mục lục.",
+        "**Insert** > **Link** > **Place in This Document**.",
+        "Chọn heading Resources rồi **OK**."
+      ]
+    },
+    {
+      "id": "W11-N01",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 6,
+      "prompt": "Từ đầu tài liệu, Go To Graphic đến đối tượng cuối.",
+      "selector": {
+        "action": "goto_graphic"
+      },
+      "predicate": {
+        "type": "goto_graphic"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã dùng Go To Graphic từ đầu tài liệu đến đối tượng cuối.",
+        "fail": "Chưa dùng Go To Graphic; cuộn hay bấm chuột không đủ.",
+        "unverified": "Chưa thu được bằng chứng Go To Graphic. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Go To Graphic."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đưa con trỏ về đầu tài liệu.",
+        "Ctrl+G (**Go To**), chọn **Graphic**.",
+        "Nhảy đến đối tượng **Graphic** cuối cùng."
+      ]
+    },
+    {
+      "id": "W11-N02",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 6,
+      "prompt": "Từ graphic cuối, Go To đầu trang 3.",
+      "selector": {
+        "action": "goto_page",
+        "page": 3
+      },
+      "predicate": {
+        "type": "goto_page",
+        "page": 3
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã dùng Go To Page tới đầu trang 3.",
+        "fail": "Chưa dùng Go To tới đầu trang 3.",
+        "unverified": "Chưa thu được bằng chứng Go To Page. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Go To Page."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Từ vị trí graphic cuối, Ctrl+G.",
+        "Chọn **Page**, gõ 3.",
+        "Bấm **Go To** để về đầu trang 3."
+      ]
+    },
+    {
+      "id": "W11-N03",
+      "objective": "1.1",
+      "kind": "action_sequence",
+      "weight": 6,
+      "prompt": "Từ đầu trang 3, Go To bookmark SalesManager.",
+      "selector": {
+        "action": "goto_bookmark",
+        "bookmark": "SalesManager"
+      },
+      "predicate": {
+        "type": "goto_bookmark",
+        "name": "SalesManager"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đã dùng Go To Bookmark SalesManager.",
+        "fail": "Chưa dùng Go To Bookmark; chỉ đứng sẵn tại bookmark thì chưa đủ.",
+        "unverified": "Chưa thu được bằng chứng Go To Bookmark. Không kết luận học sinh làm sai.",
+        "error": "Không ghi nhận được Go To Bookmark."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Từ đầu trang 3, Ctrl+G.",
+        "Chọn **Bookmark**.",
+        "Chọn SalesManager rồi **Go To**."
+      ]
+    }
+  ]
+}

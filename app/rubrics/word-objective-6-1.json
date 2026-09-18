@@ -1,0 +1,111 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-6-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 6.1 — Add and manage comments",
+  "program": "word",
+  "objective": "6.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.comments"
+  ],
+  "criteria": [
+    {
+      "id": "W61-D01",
+      "objective": "6.1",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Xóa comment I can provide a list.",
+      "predicate": {
+        "type": "comment_absent_text",
+        "text": "I can provide a list"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã xóa comment.",
+        "fail": "Vẫn còn I can provide a list.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Review** > **Show Comments**.",
+        "Bấm comment I can provide a list.",
+        "**Delete** trên nhóm **Comments**."
+      ]
+    },
+    {
+      "id": "W61-R01",
+      "objective": "6.1",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Trả lời comment: Please provide details.",
+      "predicate": {
+        "type": "comment_text",
+        "text": "Please provide details"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có reply.",
+        "fail": "Chưa thấy Please provide details.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm comment But slow.",
+        "Chọn **Reply**.",
+        "Gõ Please provide details."
+      ]
+    },
+    {
+      "id": "W61-A01",
+      "objective": "6.1",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Reply mang tên người dùng (Joan Lambert trên bài mẫu).",
+      "predicate": {
+        "type": "comment_author",
+        "author": "Joan Lambert"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Có comment Joan Lambert.",
+        "fail": "Chưa thấy tác giả Joan Lambert.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Tab **Review**, mở **Comments**.",
+        "Bấm **Reply** — Word gắn tên tài khoản Office.",
+        "Bài mẫu dùng **Joan Lambert**; máy học sinh dùng tên đăng nhập Word."
+      ]
+    },
+    {
+      "id": "W61-V01",
+      "objective": "6.1",
+      "kind": "artifact",
+      "weight": 35,
+      "prompt": "Resolve một comment (Jaime Odell).",
+      "predicate": {
+        "type": "comment_resolved",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã resolve.",
+        "fail": "Chưa resolve comment nào.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm comment They carry the new Ultra line (Jaime Odell).",
+        "Chọn **Resolve**.",
+        "Comment chuyển trạng thái resolved."
+      ]
+    }
+  ]
+}

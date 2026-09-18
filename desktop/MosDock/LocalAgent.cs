@@ -5,19 +5,21 @@ namespace MosDock;
 
 /// <summary>
 /// Agent local để trang MOS (Chrome hoặc WebView) gọi sau khi mở Word:
-/// POST http://127.0.0.1:17331/place?state=left|right|bottom|minimized
+/// POST http://127.0.0.1:17331/place?state=left|right|top|bottom|minimized
 /// </summary>
 sealed class LocalAgent : IDisposable
 {
     public const int Port = 17331;
     readonly HttpListener _http = new();
     readonly Action<string, string, bool, string?, bool> _onPlace;
+    readonly Action? _onDemo;
     readonly Control _ui;
 
-    public LocalAgent(Control ui, Action<string, string, bool, string?, bool> onPlace)
+    public LocalAgent(Control ui, Action<string, string, bool, string?, bool> onPlace, Action? onDemo = null)
     {
         _ui = ui;
         _onPlace = onPlace;
+        _onDemo = onDemo;
         _http.Prefixes.Add($"http://127.0.0.1:{Port}/");
         _http.Start();
         _ = Listen();
@@ -71,6 +73,13 @@ sealed class LocalAgent : IDisposable
                 return;
             }
 
+            if (path is "/demo" or "/demo-actions")
+            {
+                _ui.BeginInvoke(() => _onDemo?.Invoke());
+                await WriteJson(res, 200, """{"ok":true,"demo":true}""");
+                return;
+            }
+
             if (path is "/place" or "/open")
             {
                 var state = req.QueryString["state"] ?? "bottom";
@@ -107,7 +116,7 @@ sealed class LocalAgent : IDisposable
     static string Sanitize(string state)
     {
         state = (state ?? "bottom").ToLowerInvariant();
-        return state is "left" or "right" or "minimized" or "bottom" ? state : "bottom";
+        return state is "left" or "right" or "minimized" or "bottom" or "top" ? state : "bottom";
     }
 
     static void AllowCors(HttpListenerRequest req, HttpListenerResponse res)

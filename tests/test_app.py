@@ -6,6 +6,7 @@ def test_login_page():
     r = c.get("/dang-nhap")
     assert r.status_code == 200
     assert "Đăng nhập MOS-KulKul" in r.text
+    assert "Hệ thống luyện thi MOS" in r.text
     assert "program-menu" not in r.text
     assert "data-program" not in r.text
     assert "program-tile" not in r.text
@@ -13,6 +14,8 @@ def test_login_page():
     assert "login.js" not in r.text
     assert "/cai-dat" in r.text
     assert "đã cài trên máy" in r.text
+    assert "Tải MOS-KulKul" in r.text
+    assert "kulkul.png?v=" in r.text
 
 
 def test_api_login_and_programs():
@@ -45,13 +48,25 @@ def test_install_page_lists_windows_and_macos():
     assert r.status_code == 200
     assert "Windows" in r.text
     assert "macOS" in r.text
+    assert "Invoke-WebRequest" in r.text
+    assert "https://mos.gds.edu.vn/cai-dat/windows-full" in r.text
+    assert "Sao chép lệnh" in r.text
     assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
+    assert "/cai-dat/windows.zip" in r.text
+    assert "/cai-dat/windows-full" in r.text
+    assert "/cai-dat/windows-full.zip" in r.text
     assert "/cai-dat/macos" in r.text
     assert "MOS-KulKul-Setup-macOS.zip" in r.text
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
+    assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
+    assert "Demo tất cả bài tập" in r.text
+    assert "quét virus" in r.text.lower() or "SmartScreen" in r.text
+    assert "Giữ lại" in r.text
+    assert "Unblock-File" in r.text
+    assert "/cai-dat/checksums" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -62,6 +77,18 @@ def test_install_page_lists_windows_and_macos():
         assert missing.headers.get("content-disposition", "").lower().find("windows") >= 0 or "kulkul" in missing.headers.get("content-disposition", "").lower()
     else:
         assert missing.status_code == 404
+    zipped = c.get("/cai-dat/windows.zip")
+    if win_ready:
+        assert zipped.status_code == 200
+        assert zipped.content[:2] == b"PK"
+        assert "zip" in (zipped.headers.get("content-type") or "").lower()
+        assert "attachment" in (zipped.headers.get("content-disposition") or "").lower()
+    else:
+        assert zipped.status_code == 404
+    sums = c.get("/cai-dat/checksums")
+    assert sums.status_code == 200
+    assert sums.json()["ok"] is True
+    assert "files" in sums.json()
     missing_mac = c.get("/cai-dat/macos")
     mac_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -79,10 +106,131 @@ def test_install_page_lists_windows_and_macos():
     assert sh.status_code == 200
     assert "osacompile" in sh.text
     assert "MOS-KulKul.app" in sh.text
+    ps1 = c.get("/cai-dat/windows.ps1")
+    assert ps1.status_code == 200
+    assert "text/plain" in (ps1.headers.get("content-type") or "")
+    assert "mos.gds.edu.vn" in ps1.text
+    assert "Unblock-File" in ps1.text
+    assert "/cai-dat/windows-full" in ps1.text
+    assert "Start-Process" in ps1.text
     src = c.get("/cai-dat/macos-files/mosdock_mac.py")
     assert src.status_code == 200
     assert "17331" in src.text
     assert c.get("/cai-dat/macos-files/secret").status_code == 404
+    full = c.get("/cai-dat/windows-full")
+    full_ready = (INSTALLER_DIR / "MOS-KulKul-Setup-Windows-Full.exe").is_file()
+    if full_ready:
+        assert full.status_code == 200
+        assert "full" in (full.headers.get("content-disposition") or "").lower()
+    else:
+        assert full.status_code == 404
+
+
+def test_install_page_checksums_link_without_artifacts(monkeypatch):
+    import app.main as main
+
+    monkeypatch.setattr(main, "_installer_meta", lambda: [])
+    r = TestClient(app).get("/cai-dat")
+    assert r.status_code == 200
+    assert "/cai-dat/checksums" in r.text
+    assert "SHA-256" in r.text
+
+
+def test_wrap_installer_zip_includes_readme(tmp_path):
+    from app.main import sha256_path, wrap_installer_zip
+
+    exe = tmp_path / "MOS-KulKul-Setup-Windows.exe"
+    exe.write_bytes(b"MZ-fake-installer")
+    zipped = wrap_installer_zip(exe)
+    assert zipped.suffix == ".zip"
+    assert zipped.is_file()
+    import zipfile
+
+    with zipfile.ZipFile(zipped) as zf:
+        names = set(zf.namelist())
+        assert "MOS-KulKul-Setup-Windows.exe" in names
+        assert "HUONG-DAN-CAI.txt" in names
+        guide = zf.read("HUONG-DAN-CAI.txt").decode("utf-8")
+        assert "SmartScreen" in guide
+        assert "mos.gds.edu.vn" in guide
+        assert "cai-dat/windows-full" in guide
+    assert wrap_installer_zip(exe) == zipped
+    assert len(sha256_path(zipped)) == 64
+
+
+def test_windows_web_stub_iss_downloads_full_from_server():
+    from pathlib import Path
+
+    folder = Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows"
+    stub = (folder / "mosdock-web.iss").read_text(encoding="utf-8")
+    full = (folder / "mosdock.iss").read_text(encoding="utf-8")
+    assert "https://mos.gds.edu.vn/cai-dat/windows-full" in stub
+    assert "CreateAppDir=no" in stub
+    assert "Uninstallable=no" in stub
+    assert "CreateDownloadPage" in stub
+    assert "{#Dist}" not in stub
+    assert "OutputBaseFilename=MOS-KulKul-Setup-Windows-Full" in full
+    assert "{#Dist}\\*" in full
+
+
+def test_windows_sources_include_action_demo():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    program = (root / "Protocol.cs").read_text(encoding="utf-8")
+    demo = (root / "WordActionDemo.cs").read_text(encoding="utf-8")
+    form = (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "--demo-actions" in program
+    assert "--demo-all" in program
+    assert "Selection.Find" in demo
+    assert "WdGoToGraphic" in demo
+    assert "RunNavigate" in demo
+    assert "RunSaveShare" in demo
+    assert "RunInspect" in demo
+    assert "Demo tất cả bài tập" in form
+    assert "1.15.4" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "PinToWork" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "*_results.docx" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.1 / 1.3" not in demo
+
+
+def test_word_window_only_docks_current_exam():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    win = (root / "WordWindow.cs").read_text(encoding="utf-8")
+    com = (root / "WordCom.cs").read_text(encoding="utf-8")
+    probe = (root / "WordActionProbe.cs").read_text(encoding="utf-8")
+    assert "ResolveExamWindow" in win
+    assert "TitleMatchesExam" in win
+    assert "CancelPlace" in win
+    assert "SWP_NOZORDER" in win
+    assert "SW_SHOWNOACTIVATE" in win
+    assert "ForceBounds(hwnd, target)" in win
+    assert "bool activate" in com
+    assert "if (activate)" in com
+    assert "ActiveDocument.FullName" in probe
+    stem = "Word_6-2"
+    assert stem in "Word_6-2 - Saved"
+    assert stem not in "Word_1-1 - Word"
+
+
+def test_brand_icon_is_multi_size_ico():
+    from pathlib import Path
+    import struct
+
+    root = Path(__file__).resolve().parent.parent
+    ico = (root / "app" / "static" / "favicon.ico").read_bytes()
+    assert ico[:4] == b"\x00\x00\x01\x00"
+    count = struct.unpack_from("<H", ico, 4)[0]
+    assert count >= 6
+    png = root / "app" / "static" / "kulkul.png"
+    assert png.is_file() and png.stat().st_size > 1000
+    assert (root / "desktop" / "MosDock" / "Assets" / "kulkul.ico").stat().st_size == len(ico)
 
 
 def test_home_requires_login():
@@ -122,12 +270,26 @@ def test_layout_api_side_docks_leave_word_visible():
     assert right["word"]["x"] == 0
     assert right["word"]["w"] + right["dock"]["w"] == 1920
     mini = c.get("/api/layout", params={"state": "minimized", "w": 1920, "h": 1040}).json()
-    assert mini["dock"]["h"] == 96
-    assert mini["word"]["h"] == 1040 - 96
+    assert mini["dock"]["h"] == 68
+    assert mini["dock"]["w"] == 1920
+    assert mini["word"]["h"] == 972
     compact = c.get("/api/layout", params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1}).json()
     assert compact["compact"] is True
-    assert compact["dock"]["h"] == 96
-    assert compact["word"]["h"] == 1040 - 96
+    assert compact["dock"]["h"] == 68
+    assert compact["dock"]["w"] == 1920
+    assert compact["word"]["h"] == 972
+    assert compact["dock"]["y"] == compact["word"]["h"]
+    assert compact["fit"] == 1.0
+    help_box = compact["help"]
+    assert help_box["w"] == 1920
+    assert help_box["h"] == 162
+    assert help_box["h"] <= 1040 * 16 / 100
+    left_c = c.get("/api/layout", params={"state": "left", "w": 1920, "h": 1040, "compact": 1}).json()
+    assert left_c["dock"]["w"] == 72
+    assert left_c["dock"]["h"] == 1040
+    assert left_c["word"]["x"] == 72
+    assert left_c["help"]["h"] == 1040
+    assert left_c["help"]["w"] <= 1920 * 16 / 100
 
 
 def test_kulkul_home_after_login():

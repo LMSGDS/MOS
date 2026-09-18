@@ -1,0 +1,88 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-4-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 4.1 — Create and manage reference elements",
+  "program": "word",
+  "objective": "4.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.footnotes",
+    "word.citations"
+  ],
+  "criteria": [
+    {
+      "id": "W41-F01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Chèn ít nhất 3 footnotes.",
+      "predicate": {
+        "type": "footnote_min",
+        "min": 3
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có footnotes.",
+        "fail": "Chưa đủ 3 footnotes.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ sau từ cần chú thích (Jacob, Wilhelm, Hanau).",
+        "Tab **References**, nhóm **Footnotes**, bấm **Insert Footnote**.",
+        "Gõ nội dung chú thích rồi lặp đủ 3 chỗ."
+      ]
+    },
+    {
+      "id": "W41-C01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Chèn citation Brothers Grimm.",
+      "predicate": {
+        "type": "field_contains",
+        "text": "CITATION"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có citation.",
+        "fail": "Chưa thấy trường CITATION.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ cuối câu cần trích dẫn.",
+        "**References** > **Insert Citation** > **Add New Source**.",
+        "Điền nguồn rồi chèn citation."
+      ]
+    },
+    {
+      "id": "W41-C02",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Hiện citation (Brothers Grimm, 2019) trong đoạn văn.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Brothers Grimm, 2019"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã hiện citation.",
+        "fail": "Chưa thấy (Brothers Grimm, 2019).",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sau khi có Source, **Insert Citation** chọn nguồn Grimm.",
+        "Nếu thiếu năm, sửa **Edit Source**.",
+        "Cập nhật citation trong văn bản."
+      ]
+    }
+  ]
+}

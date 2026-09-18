@@ -16,6 +16,9 @@ if (-not (Test-Path $exeSrc)) {
 }
 
 New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Get-ChildItem -Path $PayloadDir -File | ForEach-Object {
+    Unblock-File -Path $_.FullName -ErrorAction SilentlyContinue
+}
 Get-ChildItem -Path $PayloadDir -File | Where-Object { $_.Name -ne "install.ps1" -and $_.Extension -ne ".pdb" } | ForEach-Object {
     Copy-Item -Force $_.FullName (Join-Path $dest $_.Name)
 }

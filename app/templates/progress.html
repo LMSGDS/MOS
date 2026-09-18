@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Tiến độ học tập{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Tiến độ và đánh giá của bạn</h1>
+  {% if user.role in ['admin', 'teacher', 'leadership'] %}
+  {% include "admin_nav.html" %}
+  {% endif %}
+  {% if not evaluation %}
+  <p class="lead">Chưa có dữ liệu bài làm.</p>
+  {% else %}
+  <p class="lead">{{ evaluation.summary }}</p>
+  <p><span class="badge badge-{{ evaluation.level }}">{{ evaluation.level_label }}</span></p>
+  <div class="program-grid" style="margin-top:12px">
+    <div class="program-tile"><span class="pname">Tiến độ<br><strong>{{ "%.0f"|format(evaluation.completion_pct or 0) }}%</strong></span></div>
+    <div class="program-tile"><span class="pname">Đã nộp<br><strong>{{ evaluation.exercises_completed }}/{{ evaluation.exercises_assigned }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ "%.0f"|format(evaluation.overall_score or 0) }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Tiến bộ<br><strong>{{ "%+.0f"|format(evaluation.avg_growth or 0) }}</strong></span></div>
+  </div>
+  <div class="bar big"><span style="width:{{ [evaluation.completion_pct or 0, 100]|min }}%"></span></div>
+
+  <h2 style="margin-top:28px;font-size:18px">Bài tập Word</h2>
+  <table class="grid">
+    <thead><tr><th>Bài</th><th>Trạng thái</th><th>Điểm</th><th>Tiến bộ</th></tr></thead>
+    <tbody>
+      {% for ex in exercises %}
+      <tr>
+        <td>{{ ex.title }}</td>
+        <td>{{ ex.status_label }}</td>
+        <td>{{ "%.0f"|format(ex.best_verified or 0) }}</td>
+        <td>{{ "%+.0f"|format(ex.growth or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px;font-size:18px">Cần ôn</h2>
+  <ul class="skill-list">
+    {% for s in evaluation.weak_skills %}
+    <li>{{ s.title }} — {{ s.label }}</li>
+    {% else %}
+    <li>Không có mục yếu được ghi nhận.</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p><a class="linkish" href="/">← Về trang chủ</a></p>
+</section>
+{% endblock %}

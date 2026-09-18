@@ -1,9 +1,11 @@
-"""Chấm bài MOS-KulKul từ tệp Office (Open XML), không dùng Office Online."""
+"""Chấm bài MOS-KulKul: rubric tiêu chí; không cho điểm kỹ năng chỉ vì đủ chữ."""
 from __future__ import annotations
 
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
+
+from app.grade import grade_path, load_rubric
 
 
 def _xml_text(xml_bytes: bytes) -> str:
@@ -37,8 +39,14 @@ def extract_text(path: Path) -> str:
     return "\n".join(chunks)
 
 
-def score_file(path: Path, rubric: dict | None = None) -> dict:
-    rubric = rubric or {}
+def score_file(path: Path | None, rubric: dict | None = None, evidence: list | None = None) -> dict:
+    rubric = load_rubric(rubric)
+    if rubric.get("criteria"):
+        return grade_path(path, rubric, evidence)
+
+    if path is None:
+        path = Path("")
+    path = Path(path)
     text = extract_text(path)
     checks = []
     points = 0
@@ -49,7 +57,7 @@ def score_file(path: Path, rubric: dict | None = None) -> dict:
         total += weight
         if ok:
             points += weight
-        checks.append({"ok": ok, "label": label, "weight": weight})
+        checks.append({"ok": ok, "label": label, "weight": weight, "status": "pass" if ok else "fail"})
 
     add(path.is_file() and path.stat().st_size > 64, "Nộp được tệp Office", 2)
     min_chars = int(rubric.get("min_chars") or 10)
@@ -61,7 +69,14 @@ def score_file(path: Path, rubric: dict | None = None) -> dict:
     score = round(100 * points / total, 1) if total else 0
     return {
         "score": min(max_score, score),
+        "verified": min(max_score, score),
+        "pending": 0,
         "max_score": max_score,
+        "complete": True,
+        "status": "final",
         "checks": checks,
+        "criteria": [],
         "chars": len(text),
+        "grader_version": "legacy-text",
+        "rubric_version": rubric.get("rubric_version") or "legacy",
     }

@@ -1,0 +1,181 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-3-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 3.2 — Modify tables",
+  "program": "word",
+  "objective": "3.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.tables"
+  ],
+  "criteria": [
+    {
+      "id": "W32-H01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Lặp hàng tiêu đề bảng trên mỗi trang (Repeat Header Rows).",
+      "predicate": {
+        "type": "table_repeat_header"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã bật Repeat Header Rows.",
+        "fail": "Chưa bật Repeat Header Rows.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen hàng tiêu đề.",
+        "Tab **Layout** (Table Tools), nhóm **Data**.",
+        "Bấm **Repeat Header Rows**."
+      ]
+    },
+    {
+      "id": "W32-M01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Gộp ô tiêu đề (Merge Cells) Customer / Appointment.",
+      "predicate": {
+        "type": "table_merged"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã gộp ô.",
+        "fail": "Chưa thấy ô gộp.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen các ô cần gộp trên hàng tiêu đề.",
+        "**Layout** > **Merge Cells**.",
+        "Gõ Customer và Appointment cho nhóm cột."
+      ]
+    },
+    {
+      "id": "W32-S01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Sắp xếp bảng theo LastName (Axen lên đầu).",
+      "predicate": {
+        "type": "table_data_starts",
+        "text": "Axen"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã sắp xếp (Axen).",
+        "fail": "Chưa thấy dữ liệu đã sort.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm trong bảng.",
+        "**Layout** > **Sort**.",
+        "Sort by **LastName**, Ascending, **OK**."
+      ]
+    },
+    {
+      "id": "W32-C01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Thêm cột Date.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Date"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có cột Date.",
+        "fail": "Chưa thấy cột Date.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm cột cuối.",
+        "**Layout** > **Insert Right**.",
+        "Đặt tiêu đề Date."
+      ]
+    },
+    {
+      "id": "W32-C02",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Thêm cột Time.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Time"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có cột Time.",
+        "fail": "Chưa thấy cột Time.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chèn thêm một cột.",
+        "Đặt tiêu đề **Time**.",
+        "Có thể gộp nhóm Appointment trên Date/Time."
+      ]
+    },
+    {
+      "id": "W32-D01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Xóa cột ID.",
+      "predicate": {
+        "type": "table_has_text",
+        "text": "Customer"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Cột ID / dòng thừa đã xử lý.",
+        "fail": "Vẫn còn dấu hiệu cột ID hoặc dòng chưa xóa.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm cột ID.",
+        "**Layout** > **Delete** > **Delete Columns**.",
+        "Không xóa nhầm LastName."
+      ]
+    },
+    {
+      "id": "W32-D02",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 10,
+      "prompt": "Xóa dòng Gratacos Solsona.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "Gratacos"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã xóa dòng.",
+        "fail": "Vẫn còn Gratacos Solsona.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm dòng Gratacos Solsona.",
+        "**Layout** > **Delete** > **Delete Rows**.",
+        "Kiểm tra lại bảng."
+      ]
+    }
+  ]
+}

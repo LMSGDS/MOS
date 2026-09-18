@@ -1,6 +1,7 @@
 """Client API v1 — desktop MOS-KulKul (JWT, store-and-forward)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 from datetime import datetime, timezone
@@ -11,13 +12,17 @@ from fastapi.responses import FileResponse
 
 from app.auth import authenticate
 from app.db import cursor
+from app.demo_all import results_file
+from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.programs import normalize
+from app.progress import record_attempt_event
 from app.scoring import score_file
 from app.security import bearer_user
 from app.tokens import issue
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "data" / "results"
+MAX_UPLOAD = 20 * 1024 * 1024
 router = APIRouter(prefix="/api/v1")
 
 
@@ -25,6 +30,327 @@ def _user_row(username: str) -> dict | None:
     with cursor() as cur:
         cur.execute("SELECT * FROM users WHERE username = %s", (username,))
         return cur.fetchone()
+
+
+def _as_dict(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    if not value:
+        return {}
+    return json.loads(value)
+
+
+def _staff(row: dict | None) -> bool:
+    return bool(row and row.get("role") in ("admin", "teacher", "leadership"))
+
+
+def _require_user(user: dict) -> dict:
+    row = _user_row(user["username"])
+    if not row:
+        raise HTTPException(status_code=401, detail="user")
+    return row
+
+
+def _load_attempt(attempt_id: str) -> dict | None:
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT a.*, p.rubric, p.skill_domain, p.filename, p.file_path, p.rubric_version AS project_rubric_version
+            FROM attempts a JOIN projects p ON p.id = a.project_id
+            WHERE a.id = %s
+            """,
+            (attempt_id,),
+        )
+        return cur.fetchone()
+
+
+def _assert_owner(attempt: dict | None, row_user: dict, *, write: bool = True) -> dict:
+    if not attempt:
+        raise HTTPException(status_code=404, detail="attempt")
+    owner = attempt["user_id"] == row_user["id"]
+    if owner:
+        return attempt
+    if write or not _staff(row_user):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return attempt
+
+
+def _locked_rubric(attempt: dict) -> dict:
+    version_id = attempt.get("project_version_id")
+    if version_id:
+        with cursor() as cur:
+            cur.execute("SELECT rubric FROM project_versions WHERE id = %s", (version_id,))
+            row = cur.fetchone()
+            if row:
+                return _as_dict(row["rubric"])
+    return _as_dict(attempt.get("rubric"))
+
+
+def _public_criteria(rubric: dict) -> list[dict]:
+    out = []
+    for item in rubric.get("criteria") or []:
+        out.append(
+            {
+                "id": item.get("id"),
+                "kind": item.get("kind"),
+                "weight": item.get("weight"),
+                "prompt": item.get("prompt") or "",
+                "help_steps": [str(s) for s in (item.get("help_steps") or []) if str(s).strip()],
+            }
+        )
+    return out
+
+
+def _grade_payload(scored: dict) -> dict:
+    return {
+        "score": scored.get("score"),
+        "verified": scored.get("verified", scored.get("score")),
+        "pending": scored.get("pending", 0),
+        "max_score": scored.get("max_score") or 100,
+        "complete": scored.get("complete"),
+        "status": scored.get("status"),
+        "checks": scored.get("checks") or [],
+        "criteria": scored.get("criteria") or [],
+        "grader_version": scored.get("grader_version"),
+        "rubric_version": scored.get("rubric_version"),
+        "error": scored.get("error"),
+    }
+
+
+_SKIP_ACTIONS = {"submit", "submit-offline", "open", "event", "checkpoint"}
+
+
+async def _read_upload(request: Request) -> tuple[bytes | None, str, list | None]:
+    ctype = (request.headers.get("content-type") or "").lower()
+    if "multipart/form-data" not in ctype:
+        return None, "", None
+    form = await request.form()
+    upload = form.get("file")
+    evidence = await _extract_evidence_from_form(form)
+    if upload is None or not hasattr(upload, "read"):
+        return None, "", evidence
+    filename = Path(getattr(upload, "filename", None) or "bai").name
+    if filename in ("", ".", "..") or "/" in filename or "\\" in filename:
+        filename = "bai.bin"
+    data = await upload.read()
+    if len(data) > MAX_UPLOAD:
+        raise HTTPException(status_code=413, detail="too_large")
+    return data, filename, evidence
+
+
+async def _extract_evidence_from_form(form) -> list | None:
+    for key in ("evidence", "evidence_file", "evidence.json"):
+        raw = form.get(key)
+        if raw is None:
+            continue
+        if hasattr(raw, "read"):
+            blob = await raw.read()
+            raw = blob.decode("utf-8", errors="replace") if isinstance(blob, (bytes, bytearray)) else str(blob)
+        events = _coerce_evidence(raw)
+        if events:
+            return events
+    return None
+
+
+def _telemetry_evidence(attempt_id: str) -> list[dict]:
+    with cursor() as cur:
+        cur.execute(
+            "SELECT skill, action, detail FROM telemetry WHERE attempt_id = %s ORDER BY id",
+            (attempt_id,),
+        )
+        rows = cur.fetchall()
+    packed = []
+    for row in rows:
+        action = str(row["action"] or "")
+        if action.casefold() in _SKIP_ACTIONS:
+            continue
+        packed.append({"skill": row.get("skill") or "", "action": action, "detail": row.get("detail") or {}})
+    return _coerce_evidence(packed)
+
+
+def _event_id(event: dict, index: int) -> str:
+    raw = str(event.get("id") or event.get("event_id") or "").strip()
+    if raw:
+        return raw
+    blob = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.sha256(f"{index}:{blob}".encode("utf-8")).hexdigest()[:24]
+
+
+def _ingest_evidence(attempt_id: str, events: list | None) -> int:
+    events = [e for e in (events or []) if isinstance(e, dict)]
+    if not events:
+        return 0
+    stored = 0
+    with cursor() as cur:
+        for index, event in enumerate(events):
+            action = str(event.get("action") or "event")
+            if action.casefold() in _SKIP_ACTIONS:
+                continue
+            detail = event.get("detail") if isinstance(event.get("detail"), dict) else {}
+            extra = {k: v for k, v in event.items() if k not in {"id", "event_id", "action", "skill", "detail"}}
+            merged = {**detail, **extra}
+            cur.execute(
+                """
+                INSERT INTO telemetry (attempt_id, skill, action, detail, event_id, sequence, document_id, source_version)
+                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s)
+                ON CONFLICT (attempt_id, event_id) WHERE event_id IS NOT NULL AND event_id <> '' DO NOTHING
+                """,
+                (
+                    attempt_id,
+                    str(event.get("skill") or ""),
+                    action,
+                    json.dumps(merged, ensure_ascii=False, default=str),
+                    _event_id(event, index),
+                    index,
+                    str(event.get("document_id") or "") or None,
+                    str(event.get("source_version") or "") or None,
+                ),
+            )
+            if cur.rowcount:
+                stored += 1
+    return stored
+
+
+def _save_evidence_file(attempt_id: str, events: list | None) -> str | None:
+    events = events or []
+    if not events:
+        return None
+    dest = RESULTS / attempt_id / "evidence.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps({"events": events}, ensure_ascii=False, default=str), encoding="utf-8")
+    return str(dest)
+
+
+def _store_attempt_check(
+    attempt_id: str,
+    payload: dict,
+    events: list | None,
+    *,
+    training: bool,
+    evidence_path: str | None,
+    persist_scores: bool | None = None,
+) -> None:
+    if persist_scores is None:
+        persist_scores = training
+    summary = {
+        "last_checkpoint_at": datetime.now(timezone.utc).isoformat(),
+        "evidence_count": len(events or []),
+        "evidence_path": evidence_path,
+        "grader_version": payload.get("grader_version"),
+    }
+    if training:
+        summary["last_check"] = payload
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE attempts SET
+              score = CASE WHEN %s THEN %s ELSE score END,
+              verified_score = CASE WHEN %s THEN %s ELSE verified_score END,
+              pending_score = CASE WHEN %s THEN %s ELSE pending_score END,
+              max_score = COALESCE(%s, max_score),
+              payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
+            WHERE id = %s AND (
+              status = 'running'
+              OR (status = 'submitted' AND COALESCE(pending_score, 0) > 0)
+            )
+            """,
+            (
+                persist_scores,
+                payload.get("score"),
+                persist_scores,
+                payload.get("verified"),
+                persist_scores,
+                payload.get("pending"),
+                payload.get("max_score") or 100,
+                json.dumps(summary, ensure_ascii=False),
+                attempt_id,
+            ),
+        )
+        cur.execute(
+            """
+            INSERT INTO telemetry (attempt_id, skill, action, detail)
+            VALUES (%s, '', 'checkpoint', %s::jsonb)
+            """,
+            (
+                attempt_id,
+                json.dumps(
+                    {
+                        "verified": payload.get("verified"),
+                        "pending": payload.get("pending"),
+                        "complete": payload.get("complete"),
+                        "evidence_count": len(events or []),
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+
+
+def _event_key(event: dict) -> tuple:
+    return (
+        str(event.get("action") or "").casefold(),
+        str(event.get("query") or "").casefold(),
+        str(event.get("name") or "").casefold(),
+        str(event.get("page") or ""),
+        str(event.get("style") or "").casefold(),
+    )
+
+
+def _combined_evidence(uploaded: list | None, attempt_id: str) -> list | None:
+    tel = _telemetry_evidence(attempt_id)
+    merged: list[dict] = []
+    seen: set[tuple] = set()
+    for event in (uploaded or []) + tel:
+        if not isinstance(event, dict):
+            continue
+        key = _event_key(event)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(event)
+    return merged or None
+
+
+def _save_bytes(dest: Path, data: bytes) -> Path:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return dest
+
+
+def _store_results(cur, submission_id: str, scored: dict) -> str:
+    run_id = secrets.token_hex(12)
+    cur.execute(
+        """
+        INSERT INTO grading_runs (id, submission_id, grader_version, rubric_version, status, finished_at)
+        VALUES (%s, %s, %s, %s, %s, now())
+        """,
+        (
+            run_id,
+            submission_id,
+            scored.get("grader_version") or GRADER_VERSION,
+            scored.get("rubric_version") or "",
+            scored.get("status") or "provisional",
+        ),
+    )
+    for item in scored.get("criteria") or []:
+        cur.execute(
+            """
+            INSERT INTO criterion_results (
+              grading_run_id, criterion_id, status, earned, possible, reason_code, evidence_refs, message
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+            """,
+            (
+                run_id,
+                item.get("criterion_id"),
+                item.get("status"),
+                item.get("earned") or 0,
+                item.get("possible") or 0,
+                item.get("reason_code"),
+                json.dumps(item.get("evidence_refs") or [], ensure_ascii=False),
+                item.get("message"),
+            ),
+        )
+    return run_id
 
 
 @router.post("/auth/login")
@@ -73,25 +399,85 @@ def v1_projects(request: Request, program: str | None = None):
     with cursor() as cur:
         if prog:
             cur.execute(
-                "SELECT id, title, program, skill_domain, filename, steps, time_limit_sec FROM projects WHERE program = %s ORDER BY title",
+                """
+                SELECT id, title, program, skill_domain, filename, steps, time_limit_sec, rubric_version
+                FROM projects WHERE program = %s ORDER BY title
+                """,
                 (prog,),
             )
         else:
             cur.execute(
-                "SELECT id, title, program, skill_domain, filename, steps, time_limit_sec FROM projects ORDER BY program, title"
+                """
+                SELECT id, title, program, skill_domain, filename, steps, time_limit_sec, rubric_version
+                FROM projects ORDER BY program, title
+                """
             )
         rows = cur.fetchall()
     return {"ok": True, "projects": rows}
 
 
-@router.get("/projects/{project_id}/file")
-def v1_project_file(request: Request, project_id: str):
-    bearer_user(request)
+def _project_row(project_id: str) -> dict | None:
     with cursor() as cur:
-        cur.execute("SELECT filename, file_path FROM projects WHERE id = %s", (project_id,))
-        row = cur.fetchone()
+        cur.execute("SELECT * FROM projects WHERE id = %s", (project_id,))
+        return cur.fetchone()
+
+
+@router.get("/projects/{project_id}/manifest")
+def v1_project_manifest(request: Request, project_id: str):
+    bearer_user(request)
+    row = _project_row(project_id)
     if not row:
         raise HTTPException(status_code=404, detail="project")
+    rubric = _as_dict(row.get("rubric"))
+    path = Path(row["file_path"])
+    digest = sha256_file(path) if path.is_file() else None
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, rubric_version, source_sha256, manifest
+            FROM project_versions
+            WHERE project_id = %s AND published = TRUE
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (project_id,),
+        )
+        version = cur.fetchone()
+    return {
+        "ok": True,
+        "project_id": project_id,
+        "title": row["title"],
+        "program": row["program"],
+        "filename": row["filename"],
+        "rubric_version": (version or {}).get("rubric_version") or row.get("rubric_version") or "legacy",
+        "project_version_id": (version or {}).get("id"),
+        "sha256": (version or {}).get("source_sha256") or digest,
+        "capabilities": rubric.get("capabilities") or [],
+        "criteria": _public_criteria(rubric),
+        "time_limit_sec": row.get("time_limit_sec") or 1800,
+    }
+
+
+@router.get("/projects/{project_id}/rubric")
+def v1_project_rubric(request: Request, project_id: str):
+    bearer_user(request)
+    row = _project_row(project_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="project")
+    return {"ok": True, "project_id": project_id, "rubric": _as_dict(row.get("rubric"))}
+
+
+@router.get("/projects/{project_id}/file")
+def v1_project_file(request: Request, project_id: str, kind: str = "starter"):
+    bearer_user(request)
+    row = _project_row(project_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="project")
+    if kind in ("results", "demo"):
+        demo = results_file(project_id)
+        if demo is None or not demo.is_file():
+            raise HTTPException(status_code=404, detail="results")
+        return FileResponse(demo, filename=demo.name)
     path = Path(row["file_path"])
     if not path.is_file():
         raise HTTPException(status_code=404, detail="file")
@@ -106,67 +492,155 @@ async def v1_start_attempt(request: Request):
     mode = str(body.get("mode") or "training")
     if mode not in ("training", "testing"):
         mode = "training"
-    row = _user_row(user["username"])
-    if not row:
-        raise HTTPException(status_code=401, detail="user")
+    row = _require_user(user)
     with cursor() as cur:
         cur.execute("SELECT id FROM projects WHERE id = %s", (project_id,))
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="project")
+        cur.execute(
+            """
+            SELECT id, rubric_version FROM project_versions
+            WHERE project_id = %s AND published = TRUE
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (project_id,),
+        )
+        version = cur.fetchone()
         cur.execute("SELECT class_id FROM enrollments WHERE user_id = %s LIMIT 1", (row["id"],))
         enr = cur.fetchone()
         attempt_id = secrets.token_hex(12)
+        class_id = enr["class_id"] if enr else None
         cur.execute(
             """
-            INSERT INTO attempts (id, user_id, project_id, class_id, mode, status)
-            VALUES (%s, %s, %s, %s, %s, 'running')
+            INSERT INTO attempts (id, user_id, project_id, class_id, mode, status, project_version_id)
+            VALUES (%s, %s, %s, %s, %s, 'running', %s)
             """,
-            (attempt_id, row["id"], project_id, enr["class_id"] if enr else None, mode),
+            (attempt_id, row["id"], project_id, class_id, mode, version["id"] if version else None),
         )
-    return {"ok": True, "attempt_id": attempt_id, "mode": mode}
+    record_attempt_event(
+        {"id": attempt_id, "user_id": row["id"], "project_id": project_id, "class_id": class_id, "status": "running"},
+        event="start",
+    )
+    return {
+        "ok": True,
+        "attempt_id": attempt_id,
+        "mode": mode,
+        "project_id": project_id,
+        "project_version_id": version["id"] if version else None,
+        "rubric_version": version["rubric_version"] if version else None,
+    }
 
 
 @router.post("/attempts/{attempt_id}/telemetry")
 async def v1_telemetry(request: Request, attempt_id: str):
-    bearer_user(request)
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
     body = await request.json()
     events = body.get("events") or []
     if not isinstance(events, list):
         raise HTTPException(status_code=400, detail="events")
+    accepted = 0
     with cursor() as cur:
-        cur.execute("SELECT id FROM attempts WHERE id = %s", (attempt_id,))
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="attempt")
         for ev in events:
             if not isinstance(ev, dict):
                 continue
+            event_id = str(ev.get("event_id") or "") or None
+            sequence = ev.get("sequence")
+            seq_val = int(sequence) if isinstance(sequence, int) or (isinstance(sequence, str) and str(sequence).isdigit()) else None
             cur.execute(
                 """
-                INSERT INTO telemetry (attempt_id, skill, action, detail)
-                VALUES (%s, %s, %s, %s::jsonb)
+                INSERT INTO telemetry (attempt_id, skill, action, detail, event_id, sequence, document_id, source_version)
+                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s)
+                ON CONFLICT (attempt_id, event_id) WHERE event_id IS NOT NULL AND event_id <> '' DO NOTHING
                 """,
                 (
                     attempt_id,
                     str(ev.get("skill") or ""),
                     str(ev.get("action") or "event"),
                     json.dumps(ev.get("detail") or {}, ensure_ascii=False),
+                    event_id,
+                    seq_val,
+                    str(ev.get("document_id") or "") or None,
+                    str(ev.get("source_version") or "") or None,
                 ),
             )
-    return {"ok": True, "accepted": len(events)}
+            if cur.rowcount:
+                accepted += 1
+    return {"ok": True, "accepted": accepted}
+
+
+@router.post("/attempts/{attempt_id}/evidence")
+async def v1_post_evidence(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
+    ctype = (request.headers.get("content-type") or "").lower()
+    events: list | None = None
+    if "multipart/form-data" in ctype:
+        form = await request.form()
+        events = await _extract_evidence_from_form(form)
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        events = _coerce_evidence(body)
+    stored = _ingest_evidence(attempt_id, events)
+    merged = _combined_evidence(events, attempt_id) or []
+    path = _save_evidence_file(attempt_id, merged)
+    scored = _regrade_with_evidence(attempt, merged)
+    training = attempt.get("mode") != "testing"
+    body = {
+        "ok": True,
+        "stored": stored,
+        "count": len(merged),
+        "evidence_path": path,
+        "events": merged,
+        "regraded": scored is not None,
+    }
+    if scored is not None and training:
+        body["score"] = scored
+    return body
+
+
+@router.get("/attempts/{attempt_id}/evidence")
+def v1_get_evidence(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=False)
+    events = _telemetry_evidence(attempt_id)
+    payload = _as_dict(attempt.get("payload"))
+    training = attempt.get("mode") != "testing"
+    staff = _staff(row_user)
+    last_check = payload.get("last_check") if training or staff else None
+    return {
+        "ok": True,
+        "attempt_id": attempt_id,
+        "count": len(events),
+        "events": events,
+        "evidence_count": payload.get("evidence_count") or len(events),
+        "last_checkpoint_at": payload.get("last_checkpoint_at"),
+        "score": last_check,
+        "verified_score": attempt.get("verified_score") if training or staff else None,
+        "pending_score": attempt.get("pending_score") if training or staff else None,
+    }
 
 
 @router.get("/attempts")
 def v1_attempts(request: Request):
     user = bearer_user(request)
-    row = _user_row(user["username"])
-    if not row:
-        raise HTTPException(status_code=401, detail="user")
+    row = _require_user(user)
     with cursor() as cur:
-        if row["role"] in ("admin", "teacher", "leadership"):
+        if _staff(row):
             cur.execute(
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title
+                       a.verified_score, a.pending_score,
+                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 ORDER BY a.started_at DESC
                 LIMIT 100
@@ -176,7 +650,8 @@ def v1_attempts(request: Request):
             cur.execute(
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title
+                       a.verified_score, a.pending_score,
+                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 WHERE a.user_id = %s
                 ORDER BY a.started_at DESC
@@ -188,50 +663,195 @@ def v1_attempts(request: Request):
     return {"ok": True, "attempts": rows}
 
 
-@router.post("/attempts/{attempt_id}/submit")
-async def v1_submit(request: Request, attempt_id: str):
-    user = bearer_user(request)
-    row_user = _user_row(user["username"])
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    saved = None
-    ctype = (request.headers.get("content-type") or "").lower()
-    if "multipart/form-data" in ctype:
-        form = await request.form()
-        upload = form.get("file")
-        if upload is not None and hasattr(upload, "read"):
-            filename = Path(getattr(upload, "filename", None) or "bai").name
-            dest = RESULTS / f"{attempt_id}-{filename}"
-            data = await upload.read()
-            dest.write_bytes(data)
-            saved = dest
+def _latest_artifact(attempt_id: str) -> Path | None:
+    folder = RESULTS / attempt_id
+    if not folder.is_dir():
+        return None
+    files = [
+        path
+        for path in folder.iterdir()
+        if path.is_file() and path.suffix.lower() in {".docx", ".docm", ".doc"}
+    ]
+    files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return files[0] if files else None
+
+
+def _score_saved(path: Path | None, attempt: dict, evidence: list | None = None) -> dict:
+    rubric = _locked_rubric(attempt)
+    return score_file(path, rubric, evidence)
+
+
+def _refresh_latest_submission(attempt_id: str, scored: dict, payload: dict) -> None:
     with cursor() as cur:
         cur.execute(
             """
-            SELECT a.*, p.rubric, p.skill_domain
-            FROM attempts a JOIN projects p ON p.id = a.project_id
-            WHERE a.id = %s
+            SELECT id FROM submissions
+            WHERE attempt_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
             """,
             (attempt_id,),
         )
-        attempt = cur.fetchone()
-        if not attempt:
-            raise HTTPException(status_code=404, detail="attempt")
-        if row_user and attempt["user_id"] != row_user["id"] and row_user["role"] not in ("admin", "teacher", "leadership"):
-            raise HTTPException(status_code=403, detail="forbidden")
-        rubric = attempt["rubric"] if isinstance(attempt["rubric"], dict) else json.loads(attempt["rubric"] or "{}")
-        scored = score_file(saved, rubric) if saved else {"score": 0, "max_score": 100, "checks": []}
-        started = attempt["started_at"]
-        now = datetime.now(timezone.utc)
-        duration = None
-        if started:
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=timezone.utc)
-            duration = int((now - started).total_seconds())
+        row = cur.fetchone()
+        if not row:
+            return
+        cur.execute(
+            """
+            UPDATE submissions SET
+              status = %s,
+              grader_version = %s,
+              score = %s,
+              verified_score = %s,
+              pending_score = %s,
+              max_score = %s,
+              payload = %s::jsonb
+            WHERE id = %s
+            """,
+            (
+                "graded" if payload.get("complete") else "provisional",
+                payload.get("grader_version"),
+                payload.get("score"),
+                payload.get("verified"),
+                payload.get("pending"),
+                payload.get("max_score") or 100,
+                json.dumps(payload, ensure_ascii=False),
+                row["id"],
+            ),
+        )
+        _store_results(cur, row["id"], scored)
+
+
+def _regrade_with_evidence(attempt: dict, events: list | None) -> dict | None:
+    path = _latest_artifact(str(attempt["id"]))
+    if path is None:
+        return None
+    scored = _score_saved(path, attempt, events)
+    payload = _grade_payload(scored)
+    training = attempt.get("mode") != "testing"
+    submitted = str(attempt.get("status") or "") == "submitted"
+    evidence_path = _save_evidence_file(str(attempt["id"]), events)
+    _store_attempt_check(
+        str(attempt["id"]),
+        payload,
+        events,
+        training=training,
+        evidence_path=evidence_path,
+        persist_scores=training or submitted,
+    )
+    if submitted:
+        _refresh_latest_submission(str(attempt["id"]), scored, payload)
+    record_attempt_event(
+        attempt,
+        event="evidence",
+        payload={**payload, "evidence_count": len(events or [])},
+    )
+    return payload
+
+
+@router.post("/attempts/{attempt_id}/checkpoints")
+async def v1_checkpoint(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
+    data, filename, evidence = await _read_upload(request)
+    if not data:
+        raise HTTPException(status_code=400, detail="file")
+    dest = RESULTS / attempt_id / f"checkpoint-{secrets.token_hex(6)}-{filename}"
+    saved = _save_bytes(dest, data)
+    _ingest_evidence(attempt_id, evidence)
+    events = _combined_evidence(evidence, attempt_id) or []
+    evidence_path = _save_evidence_file(attempt_id, events)
+    scored = _score_saved(saved, attempt, events)
+    payload = _grade_payload(scored)
+    training = attempt.get("mode") != "testing"
+    _store_attempt_check(attempt_id, payload, events, training=training, evidence_path=evidence_path)
+    record_attempt_event(attempt, event="checkpoint", payload={**payload, "evidence_count": len(events)})
+    if not training:
+        return {
+            "ok": True,
+            "checkpoint": True,
+            "mode": "testing",
+            "saved": True,
+            "evidence_stored": len(events),
+            "message": "Đã lưu checkpoint. Điểm và gợi ý ẩn trong chế độ thi.",
+        }
+    return {
+        "ok": True,
+        "checkpoint": True,
+        "mode": "training",
+        "score": payload,
+        "evidence_stored": len(events),
+        "evidence_path": evidence_path,
+    }
+
+
+async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key: str | None = None) -> dict:
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
+    if idempotency_key:
+        with cursor() as cur:
+            cur.execute(
+                "SELECT id, payload FROM submissions WHERE attempt_id = %s AND idempotency_key = %s",
+                (attempt_id, idempotency_key),
+            )
+            existing = cur.fetchone()
+        if existing:
+            stored = _as_dict(existing["payload"])
+            return {"ok": True, "submission_id": existing["id"], "score": stored, "replayed": True}
+    data, filename, evidence = await _read_upload(request)
+    saved = None
+    digest = None
+    submission_id = secrets.token_hex(12)
+    if data:
+        dest = RESULTS / attempt_id / f"{submission_id}-{filename}"
+        saved = _save_bytes(dest, data)
+        digest = sha256_file(saved)
+    _ingest_evidence(attempt_id, evidence)
+    events = _combined_evidence(evidence, attempt_id)
+    _save_evidence_file(attempt_id, events)
+    scored = _score_saved(saved, attempt, events)
+    payload = _grade_payload(scored)
+    started = attempt["started_at"]
+    now = datetime.now(timezone.utc)
+    duration = None
+    if started:
+        if started.tzinfo is None:
+            started = started.replace(tzinfo=timezone.utc)
+        duration = int((now - started).total_seconds())
+    with cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO submissions (
+              id, attempt_id, idempotency_key, status, artifact_sha256, snapshot_path,
+              grader_version, score, verified_score, pending_score, max_score, payload, sealed_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, now())
+            """,
+            (
+                submission_id,
+                attempt_id,
+                idempotency_key,
+                "graded" if payload.get("complete") else "provisional",
+                digest,
+                str(saved) if saved else None,
+                payload.get("grader_version"),
+                payload.get("score"),
+                payload.get("verified"),
+                payload.get("pending"),
+                payload.get("max_score") or 100,
+                json.dumps(payload, ensure_ascii=False),
+            ),
+        )
+        _store_results(cur, submission_id, scored)
         cur.execute(
             """
             UPDATE attempts SET
               status = 'submitted',
               score = %s,
+              verified_score = %s,
+              pending_score = %s,
               max_score = %s,
               submitted_at = now(),
               duration_sec = %s,
@@ -241,11 +861,13 @@ async def v1_submit(request: Request, attempt_id: str):
             WHERE id = %s
             """,
             (
-                scored["score"],
-                scored.get("max_score") or 100,
+                payload.get("score"),
+                payload.get("verified"),
+                payload.get("pending"),
+                payload.get("max_score") or 100,
                 duration,
                 str(saved) if saved else None,
-                json.dumps({"checks": scored.get("checks")}, ensure_ascii=False),
+                json.dumps(payload, ensure_ascii=False),
                 attempt_id,
             ),
         )
@@ -257,7 +879,45 @@ async def v1_submit(request: Request, attempt_id: str):
             (
                 attempt_id,
                 attempt.get("skill_domain") or "",
-                json.dumps({"score": scored["score"]}, ensure_ascii=False),
+                json.dumps({"score": payload.get("score"), "pending": payload.get("pending"), "submission_id": submission_id}, ensure_ascii=False),
             ),
         )
-    return {"ok": True, "score": scored, "duration_sec": duration}
+    record_attempt_event(
+        {**attempt, "status": "submitted"},
+        event="submit",
+        payload=payload,
+    )
+    return {"ok": True, "submission_id": submission_id, "score": payload, "duration_sec": duration}
+
+
+@router.post("/attempts/{attempt_id}/submit")
+async def v1_submit(request: Request, attempt_id: str):
+    key = request.headers.get("idempotency-key")
+    return await _submit_attempt(request, attempt_id, idempotency_key=key)
+
+
+@router.post("/attempts/{attempt_id}/submissions")
+async def v1_create_submission(request: Request, attempt_id: str):
+    key = request.headers.get("idempotency-key") or request.query_params.get("idempotency_key")
+    return await _submit_attempt(request, attempt_id, idempotency_key=key)
+
+
+@router.get("/submissions/{submission_id}")
+def v1_get_submission(request: Request, submission_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT s.*, a.user_id, a.mode, a.project_id
+            FROM submissions s JOIN attempts a ON a.id = s.attempt_id
+            WHERE s.id = %s
+            """,
+            (submission_id,),
+        )
+        row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="submission")
+    if row["user_id"] != row_user["id"] and not _staff(row_user):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return {"ok": True, "submission": row}

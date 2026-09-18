@@ -1,8 +1,10 @@
 """Cổng MOS — đăng nhập và mở Microsoft Word trên máy cá nhân."""
 from __future__ import annotations
 
+import hashlib
 import os
 import secrets
+import zipfile
 from pathlib import Path
 
 from contextlib import asynccontextmanager
@@ -16,7 +18,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.admin import router as admin_router
 from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
-from app.kulkul_layout import Rect, compute
+from app.hooks import router as hooks_router
+from app.kulkul_layout import Rect, compute, grow_for_help, measure
+from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,7 +41,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul6")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul9")
 SESSION_SECRET = _session_secret()
 
 @asynccontextmanager
@@ -55,6 +59,8 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(client_v1_router)
+app.include_router(progress_router)
+app.include_router(hooks_router)
 app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,
@@ -170,11 +176,24 @@ def api_layout(
     compact: bool = False,
 ):
     dock, word = compute(Rect(x, y, w, h), state, compact=compact)
+    nav = measure(Rect(x, y, w, h))
+    compact_on = compact or state == "minimized"
+    help_box = grow_for_help(dock, Rect(x, y, w, h), state) if compact_on else dock
     return {
         "state": state,
-        "compact": compact or state == "minimized",
+        "compact": compact_on,
+        "fit": nav.fit,
         "dock": {"x": dock.x, "y": dock.y, "w": dock.w, "h": dock.h},
         "word": {"x": word.x, "y": word.y, "w": word.w, "h": word.h},
+        "help": {"x": help_box.x, "y": help_box.y, "w": help_box.w, "h": help_box.h},
+        "nav": {
+            "cluster_w": nav.cluster_w,
+            "cluster_h": nav.cluster_h,
+            "help_w": nav.help_w,
+            "help_h": nav.help_h,
+            "icon": nav.icon,
+            "margin": nav.margin,
+        },
     }
 
 
@@ -232,10 +251,60 @@ def login(
 
 @app.get("/cai-dat", response_class=HTMLResponse)
 def install_page(request: Request):
-    return TEMPLATES.TemplateResponse(request, "install.html", _ctx(request))
+    return TEMPLATES.TemplateResponse(
+        request,
+        "install.html",
+        _ctx(request, {"installers": _installer_meta()}),
+    )
 
 
 INSTALLER_DIR = ROOT / "data" / "installers"
+_HASH_CACHE: dict[str, tuple[float, int, str]] = {}
+
+INSTALL_README = """MOS-KulKul — Trường GDS (mos.gds.edu.vn)
+
+Không tải .exe/.zip bằng Chrome/Edge: trình duyệt luôn quét virus vì bộ cài
+chưa mua chữ ký Authenticode (không phải mã độc).
+
+Cách nên dùng — đã mở PowerShell thì dán (không gói powershell -Command):
+  $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows-full' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
+
+Nếu đã giải nén file này:
+1. Chuột phải file .exe → Thuộc tính → bỏ chọn Chặn / Bỏ chặn → OK.
+   PowerShell: Unblock-File .\\MOS-KulKul-Setup-Windows.exe
+2. Nếu SmartScreen «Windows đã bảo vệ máy tính»: Thông tin thêm → Chạy anyway.
+3. Chrome «Tệp không phổ biến»: Giữ lại / Keep.
+
+Không tắt antivirus của nhà trường. Chỉ tải từ https://mos.gds.edu.vn/cai-dat
+"""
+
+
+def sha256_path(path: Path) -> str:
+    st = path.stat()
+    key = str(path.resolve())
+    hit = _HASH_CACHE.get(key)
+    if hit and hit[0] == st.st_mtime and hit[1] == st.st_size:
+        return hit[2]
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    hexed = digest.hexdigest()
+    _HASH_CACHE[key] = (st.st_mtime, st.st_size, hexed)
+    return hexed
+
+
+def wrap_installer_zip(source: Path, dest: Path | None = None) -> Path:
+    dest = dest or source.with_suffix(".zip")
+    if dest.is_file() and dest.stat().st_mtime >= source.stat().st_mtime and dest.stat().st_size > 22:
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".partial")
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(source, source.name)
+        zf.writestr("HUONG-DAN-CAI.txt", INSTALL_README)
+    tmp.replace(dest)
+    return dest
 
 
 def _installer_file(*names: str) -> Path | None:
@@ -246,7 +315,24 @@ def _installer_file(*names: str) -> Path | None:
     return None
 
 
-def _send_installer(*names: str, media: str | None = None):
+def _installer_meta() -> list[dict]:
+    names = (
+        "MOS-KulKul-Setup-Windows.zip",
+        "MOS-KulKul-Setup-Windows.exe",
+        "MOS-KulKul-Setup-Windows-Full.zip",
+        "MOS-KulKul-Setup-Windows-Full.exe",
+        "MOS-KulKul-Setup-macOS.zip",
+    )
+    rows = []
+    for name in names:
+        path = INSTALLER_DIR / name
+        if not path.is_file() or path.stat().st_size <= 0:
+            continue
+        rows.append({"name": name, "size": path.stat().st_size, "sha256": sha256_path(path)})
+    return rows
+
+
+def _send_installer(*names: str, media: str | None = None, as_zip: bool = False):
     path = _installer_file(*names)
     if path is None:
         listed = " / ".join(names)
@@ -254,22 +340,72 @@ def _send_installer(*names: str, media: str | None = None):
             f"Chưa có {listed} trên server. Copy artifact CI vào data/installers/.",
             status_code=404,
         )
+    if as_zip and path.suffix.lower() != ".zip":
+        path = wrap_installer_zip(path)
     chosen = media
     if path.suffix == ".zip":
         chosen = "application/zip"
     elif path.suffix == ".exe":
-        chosen = "application/vnd.microsoft.portable-executable"
+        chosen = "application/octet-stream"
     elif path.suffix == ".pkg":
         chosen = "application/octet-stream"
-    return FileResponse(path, media_type=chosen or "application/octet-stream", filename=path.name)
+    download_name = path.name
+    if path.suffix.lower() == ".exe":
+        download_name = path.stem + "-GDS.exe"
+    elif path.suffix.lower() == ".zip" and "Windows" in path.name:
+        download_name = path.stem + "-GDS.zip"
+    return FileResponse(
+        path,
+        media_type=chosen or "application/octet-stream",
+        filename=download_name,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "X-Download-Options": "noopen",
+            "Cache-Control": "private, max-age=120",
+        },
+    )
 
 
 @app.get("/cai-dat/windows")
 def install_windows():
+    """Bộ cài nhỏ (web stub). Khi chạy sẽ tải bản đầy đủ từ /cai-dat/windows-full."""
     return _send_installer(
         "MOS-KulKul-Setup-Windows.exe",
         "MOS-Dock-Setup-Windows.exe",
     )
+
+
+@app.get("/cai-dat/windows.zip")
+def install_windows_zip():
+    """Gói ZIP — trình duyệt không chặn .exe khi tải."""
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows.zip",
+        "MOS-KulKul-Setup-Windows.exe",
+        "MOS-Dock-Setup-Windows.exe",
+        as_zip=True,
+    )
+
+
+@app.get("/cai-dat/windows-full")
+def install_windows_full():
+    """Bản cài đầy đủ (~50MB) — stub và máy offline tải từ đây."""
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows-Full.exe",
+    )
+
+
+@app.get("/cai-dat/windows-full.zip")
+def install_windows_full_zip():
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows-Full.zip",
+        "MOS-KulKul-Setup-Windows-Full.exe",
+        as_zip=True,
+    )
+
+
+@app.get("/cai-dat/checksums")
+def install_checksums():
+    return JSONResponse({"ok": True, "files": _installer_meta()})
 
 
 @app.get("/cai-dat/macos")
@@ -294,6 +430,16 @@ def install_macos_pkg():
 def install_macos_sh():
     path = ROOT / "desktop" / "installer" / "macos" / "install.sh"
     return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/plain; charset=utf-8")
+
+
+@app.get("/cai-dat/windows.ps1")
+def install_windows_ps1():
+    path = ROOT / "desktop" / "installer" / "windows" / "bootstrap.ps1"
+    return PlainTextResponse(
+        path.read_text(encoding="utf-8"),
+        media_type="text/plain; charset=utf-8",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 _MACOS_FILES = {

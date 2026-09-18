@@ -1,0 +1,139 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-3-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 3.3 — Create and modify lists",
+  "program": "word",
+  "objective": "3.3",
+  "max_score": 100,
+  "capabilities": [
+    "word.lists"
+  ],
+  "criteria": [
+    {
+      "id": "W33-B01",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "A hero là mục danh sách (bullets).",
+      "predicate": {
+        "type": "list_format",
+        "text": "A hero",
+        "fmt": "bullet"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã là bullet.",
+        "fail": "A hero chưa thành danh sách.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen A hero, An ally, A teacher, An adversary.",
+        "**Home** > **Bullets**.",
+        "Chọn kiểu đạn tròn nếu cần."
+      ]
+    },
+    {
+      "id": "W33-B02",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 15,
+      "prompt": "Reluctant rebel là danh sách bullet.",
+      "predicate": {
+        "type": "list_format",
+        "text": "Reluctant rebel",
+        "fmt": "bullet"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã là bullet.",
+        "fail": "Reluctant rebel chưa thành danh sách.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen các dòng đặc điểm nhân vật.",
+        "**Home** > **Bullets**.",
+        "Có thể đổi **Define New Bullet**."
+      ]
+    },
+    {
+      "id": "W33-N01",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "The Journey dùng đánh số chữ hoa (A. B. C.).",
+      "predicate": {
+        "type": "list_format",
+        "text": "The Journey",
+        "fmt": "upperLetter"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã dùng upperLetter.",
+        "fail": "The Journey chưa đánh số A.B.C.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen The Journey / The Battle / The Twist / The Climax (nhóm 1).",
+        "**Home** > **Numbering**.",
+        "Chọn kiểu **A. B. C.**"
+      ]
+    },
+    {
+      "id": "W33-N02",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Có danh sách số dạng 1) 2) 3).",
+      "predicate": {
+        "type": "list_format",
+        "fmt": "decimal"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có numbering decimal.",
+        "fail": "Chưa thấy numbering decimal.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen nhóm The Journey thứ hai.",
+        "**Home** > **Numbering** > **Define New Number Format**.",
+        "Number style: 1, 2, 3... và format 1)."
+      ]
+    },
+    {
+      "id": "W33-R01",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Restart numbering / tách list (nhiều The Journey).",
+      "predicate": {
+        "type": "style_used",
+        "style": "ListParagraph",
+        "min": 20
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có nhiều ListParagraph.",
+        "fail": "Chưa tạo đủ các list.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm chuột phải số thứ tự.",
+        "Chọn **Restart at 1** khi bắt đầu list mới.",
+        "Dùng **Increase Indent** / **Decrease Indent** đổi cấp."
+      ]
+    }
+  ]
+}

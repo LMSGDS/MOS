@@ -19,12 +19,13 @@ static class Protocol
         }
     }
 
-    public static (string? State, string? App, bool Launch, string? File) Parse(string[] args)
+    public static (string? State, string? App, bool Launch, string? File, bool Demo) Parse(string[] args)
     {
         string? state = null;
         string? app = null;
         string? file = null;
         var launch = false;
+        var demo = false;
         string? pending = null;
         foreach (var arg in args)
         {
@@ -36,6 +37,14 @@ static class Protocol
             if (arg.Equals("--open", StringComparison.OrdinalIgnoreCase))
             {
                 launch = true;
+                continue;
+            }
+
+            if (arg.Equals("--demo-actions", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--demo-all", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--demo", StringComparison.OrdinalIgnoreCase))
+            {
+                demo = true;
                 continue;
             }
 
@@ -91,7 +100,7 @@ static class Protocol
             }
         }
 
-        return (state, app, launch, file);
+        return (state, app, launch, file, demo);
     }
 
     public static string? ParseState(string[] args) => Parse(args).State;

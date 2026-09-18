@@ -25,7 +25,7 @@ static class Portal
             UseCookies = true,
         };
         var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "MOS-KulKul/1.2");
+        http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "MOS-KulKul/1.4");
         return http;
     }
 
@@ -133,7 +133,10 @@ static class Portal
         return JsonDocument.Parse(text);
     }
 
-    public static async Task<JsonDocument> PostFileAsync(string path, string filePath)
+    public static async Task<JsonDocument> PostFileAsync(
+        string path,
+        string filePath,
+        IReadOnlyDictionary<string, string>? fields = null)
     {
         ApplyAuth();
         using var form = new MultipartFormDataContent();
@@ -141,6 +144,13 @@ static class Portal
         var file = new ByteArrayContent(bytes);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         form.Add(file, "file", Path.GetFileName(filePath));
+        if (fields is not null)
+        {
+            foreach (var kv in fields)
+            {
+                form.Add(new StringContent(kv.Value), kv.Key);
+            }
+        }
         using var resp = await Http.PostAsync(Origin + path, form);
         var text = await resp.Content.ReadAsStringAsync();
         if (!resp.IsSuccessStatusCode)

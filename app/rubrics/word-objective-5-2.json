@@ -1,0 +1,86 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-5-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 5.2 — Format illustrations and text boxes",
+  "program": "word",
+  "objective": "5.2",
+  "max_score": 100,
+  "capabilities": [
+    "word.picture_effects"
+  ],
+  "criteria": [
+    {
+      "id": "W52-A01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Áp Artistic Effect (Cutout) cho ảnh.",
+      "predicate": {
+        "type": "artistic_effect",
+        "name": "artisticCutout"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có Cutout.",
+        "fail": "Chưa thấy artistic Cutout.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bấm vào picture.",
+        "Tab **Picture Format** > **Artistic Effects**.",
+        "Chọn **Cutout**."
+      ]
+    },
+    {
+      "id": "W52-E01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Áp Picture Effect (Inner Shadow).",
+      "predicate": {
+        "type": "picture_effect",
+        "name": "innerShdw"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có inner shadow.",
+        "fail": "Chưa thấy picture effect.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn picture.",
+        "**Picture Format** > **Picture Effects**.",
+        "Chọn **Shadow** > Inner Shadow."
+      ]
+    },
+    {
+      "id": "W52-R01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Remove Background / ảnh HD (hdphoto).",
+      "predicate": {
+        "type": "hdphoto"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã xử lý nền ảnh.",
+        "fail": "Chưa thấy hdphoto / background removal.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn picture.",
+        "**Picture Format** > **Remove Background**.",
+        "Đánh dấu vùng giữ/xóa rồi **Keep Changes**."
+      ]
+    }
+  ]
+}

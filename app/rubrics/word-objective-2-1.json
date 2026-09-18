@@ -1,0 +1,88 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "word-objective-2-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.2.0",
+  "title": "Word Objective 2.1 — Insert text and paragraphs",
+  "program": "word",
+  "objective": "2.1",
+  "max_score": 100,
+  "capabilities": [
+    "word.symbols",
+    "word.find_replace"
+  ],
+  "criteria": [
+    {
+      "id": "W21-R01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Chèn ký hiệu ® sau Microsoft trong Microsoft Word 2019.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Microsoft®"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có ký hiệu ®.",
+        "fail": "Chưa thấy Microsoft® trong tài liệu.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi đen chỗ cần chèn sau chữ Microsoft.",
+        "Tab **Insert**, nhóm **Symbols**, bấm **Symbol**.",
+        "Chọn ® (**Registered**) rồi **Insert**."
+      ]
+    },
+    {
+      "id": "W21-S01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Thay (trademark) bằng ký hiệu ™.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "™"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã có ký hiệu ™.",
+        "fail": "Chưa thấy ký hiệu ™.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đặt con trỏ tại (trademark) hoặc bôi đen cụm này.",
+        "**Insert** > **Symbol**.",
+        "Chọn ™ (**Trademark**) hoặc bấm Alt+Ctrl+T."
+      ]
+    },
+    {
+      "id": "W21-S02",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Không còn chữ (trademark) thay cho ký hiệu.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "(trademark)"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đã bỏ hết (trademark).",
+        "fail": "Vẫn còn chữ (trademark).",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Dùng **Home** > **Replace** (Ctrl+H) nếu còn nhiều chỗ.",
+        "Find what: (trademark).",
+        "Replace with: ™ rồi **Replace All**."
+      ]
+    }
+  ]
+}

@@ -13,6 +13,7 @@ __pycache__/
 *.pyc
 data/session.secret
 data/mos.env
+data/git-sync.env
 data/results/
 data/installers/*.exe
 data/installers/*.pkg

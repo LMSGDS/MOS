@@ -4,9 +4,11 @@
 <section class="card login">
   <h1>Xin chào {{ user.name }}</h1>
   <p class="lead">Trên web không chọn Word / Excel / PowerPoint. Cài MOS-KulKul trên máy để mở Office, luyện tập và thi.</p>
-  <p><a class="linkish" href="/cai-dat">Cài MOS-KulKul — Windows Setup.exe và macOS .zip</a></p>
+  <p><a class="linkish" href="/cai-dat">Cài MOS-KulKul trên máy (Windows PowerShell / macOS)</a></p>
   {% if user.role in ['admin', 'teacher', 'leadership'] %}
   <p><a class="linkish" href="/quan-tri">Bảng điều khiển quản trị</a></p>
+  {% else %}
+  <p><a class="linkish" href="/tien-do">Tiến độ, tiến bộ và đánh giá bài tập</a></p>
   {% endif %}
   <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
 </section>

@@ -1,0 +1,822 @@
+namespace MosDock;
+
+/// <summary>
+/// Canvas LMS (Instructure) tokens: nav #394B58, primary #0374B5, page #F5F5F5, text #2D3B45.
+/// Layout uses Dock stacking and measured text — never overlapping Location for titles.
+/// </summary>
+static class Ui
+{
+    public static readonly Color Nav = Color.FromArgb(57, 75, 88);
+    public static readonly Color NavDark = Color.FromArgb(43, 57, 67);
+    public static readonly Color Primary = Color.FromArgb(3, 116, 181);
+    public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
+    public static readonly Color PageBg = Color.FromArgb(245, 245, 245);
+    public static readonly Color Card = Color.White;
+    public static readonly Color Text = Color.FromArgb(45, 59, 69);
+    public static readonly Color Muted = Color.FromArgb(107, 119, 128);
+    public static readonly Color Line = Color.FromArgb(199, 205, 209);
+    public static readonly Color Success = Color.FromArgb(3, 137, 61);
+    public static readonly Color Danger = Color.FromArgb(238, 6, 18);
+    public static readonly Color Word = Color.FromArgb(43, 87, 154);
+    public static readonly Color Excel = Color.FromArgb(33, 115, 70);
+    public static readonly Color Ppt = Color.FromArgb(183, 71, 42);
+    public static readonly Color Warning = Color.FromArgb(189, 107, 0);
+    public static readonly Color SignIn = Color.FromArgb(11, 37, 69);
+    public static readonly Color SignInHover = Color.FromArgb(8, 28, 54);
+    public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
+    public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
+    public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
+
+    public static Color Navy => Nav;
+    public static Color Blue => Primary;
+    public static Color Teal => Success;
+    public static Color Orange => Warning;
+
+    public static void ApplyWindowIcon(Form form)
+    {
+        try
+        {
+            var ico = Path.Combine(AppContext.BaseDirectory, "Assets", "kulkul.ico");
+            if (!File.Exists(ico))
+            {
+                ico = Path.Combine(AppContext.BaseDirectory, "kulkul.ico");
+            }
+
+            if (File.Exists(ico))
+            {
+                form.Icon = new Icon(ico);
+                return;
+            }
+
+            var exe = Application.ExecutablePath;
+            if (!string.IsNullOrWhiteSpace(exe) && File.Exists(exe))
+            {
+                form.Icon = Icon.ExtractAssociatedIcon(exe);
+            }
+        }
+        catch
+        {
+            // default WinForms icon
+        }
+    }
+
+    public static Image? BrandMark(int size = 72)
+    {
+        try
+        {
+            var png = Path.Combine(AppContext.BaseDirectory, "Assets", "kulkul.png");
+            if (!File.Exists(png))
+            {
+                png = Path.Combine(AppContext.BaseDirectory, "kulkul.png");
+            }
+
+            if (!File.Exists(png))
+            {
+                return PaintBrand(size);
+            }
+
+            using var src = Image.FromFile(png);
+            return new Bitmap(src, new Size(size, size));
+        }
+        catch
+        {
+            return PaintBrand(size);
+        }
+    }
+
+    public static Image PaintBrand(int size = 72)
+    {
+        size = Math.Max(24, size);
+        var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+        g.Clear(Color.Transparent);
+        var rect = new Rectangle(0, 0, size - 1, size - 1);
+        using (var bg = new SolidBrush(SignIn))
+        {
+            g.FillRounded(rect, size / 5, bg);
+        }
+
+        var cx = size * 0.50f;
+        var cy = size * 0.50f;
+        var len = size * 0.64f;
+        var thick = size * 0.30f;
+        DrawBlade(g, cx + size * 0.04f, cy - size * 0.06f, len, thick, -48f, Word);
+        DrawBlade(g, cx - size * 0.06f, cy + size * 0.10f, len * 0.78f, thick * 0.88f, 205f, Excel);
+        DrawBlade(g, cx + size * 0.08f, cy + size * 0.12f, len * 0.80f, thick * 0.88f, 22f, Ppt);
+        DrawSpark(g, cx, cy, size * 0.09f);
+        return bmp;
+    }
+
+    static void DrawBlade(Graphics g, float cx, float cy, float len, float thick, float angle, Color color)
+    {
+        var state = g.Save();
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform(angle);
+        using var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddEllipse(-len * 0.18f, -thick / 2f, len, thick);
+        using var fill = new SolidBrush(color);
+        g.FillPath(fill, path);
+        using var hi = new SolidBrush(Color.FromArgb(40, Color.White));
+        g.FillEllipse(hi, -len * 0.05f, -thick * 0.28f, len * 0.55f, thick * 0.42f);
+        g.Restore(state);
+    }
+
+    static void DrawSpark(Graphics g, float cx, float cy, float r)
+    {
+        using var fill = new SolidBrush(Color.White);
+        var pts = new PointF[8];
+        for (var i = 0; i < 8; i++)
+        {
+            var a = (float)(Math.PI / 2 + i * Math.PI / 4);
+            var rad = i % 2 == 0 ? r : r * 0.38f;
+            pts[i] = new PointF(cx + rad * (float)Math.Cos(a), cy - rad * (float)Math.Sin(a));
+        }
+
+        g.FillPolygon(fill, pts);
+    }
+
+    static void FillRounded(this Graphics g, Rectangle rect, int radius, Brush brush)
+    {
+        using var path = new System.Drawing.Drawing2D.GraphicsPath();
+        int d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        g.FillPath(brush, path);
+    }
+
+    public static Font TitleFont => new("Segoe UI", 22f, FontStyle.Bold);
+    public static Font HeadFont => new("Segoe UI", 13f, FontStyle.Bold);
+    public static Font BodyFont => new("Segoe UI", 10f);
+    public static Font SmallFont => new("Segoe UI", 9f);
+    public static Font NavFont => new("Segoe UI", 13f, FontStyle.Bold);
+    public static Font BtnFont => new("Segoe UI", 10f, FontStyle.Bold);
+
+    static readonly TextFormatFlags WrapFlags =
+        TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl;
+
+    public static int MeasureH(string text, Font font, int width)
+    {
+        width = Math.Max(24, width);
+        return TextRenderer.MeasureText(text ?? "", font, new Size(width, int.MaxValue), WrapFlags).Height;
+    }
+
+    public static int MeasureW(string text, Font font)
+    {
+        return TextRenderer.MeasureText(text ?? "", font, new Size(int.MaxValue, 0), TextFormatFlags.SingleLine).Width;
+    }
+
+    public static void BindWrap(Label label, int extra = 8, int maxHeight = 0)
+    {
+        void Fit(object? _, EventArgs e)
+        {
+            var parent = label.Parent;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var w = parent.ClientSize.Width - label.Margin.Horizontal - label.Padding.Horizontal;
+            if (w < 24)
+            {
+                return;
+            }
+
+            var h = MeasureH(label.Text, label.Font, w) + label.Padding.Vertical + extra;
+            if (maxHeight > 0)
+            {
+                h = Math.Min(h, maxHeight);
+            }
+            if (label.Height != h)
+            {
+                label.Height = h;
+            }
+        }
+
+        label.AutoSize = false;
+        label.UseMnemonic = false;
+        label.ParentChanged += (_, _) =>
+        {
+            if (label.Parent == null)
+            {
+                return;
+            }
+
+            label.Parent.Resize -= Fit;
+            label.Parent.Resize += Fit;
+            label.HandleCreated -= Fit;
+            label.HandleCreated += Fit;
+            Fit(null, EventArgs.Empty);
+        };
+        if (label.Parent != null)
+        {
+            label.Parent.Resize -= Fit;
+            label.Parent.Resize += Fit;
+            Fit(null, EventArgs.Empty);
+        }
+    }
+
+    public static Label Wrap(string text, Font font, Color color, int extra = 10)
+    {
+        var label = new Label
+        {
+            Text = text,
+            Font = font,
+            ForeColor = color,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+        };
+        BindWrap(label, extra);
+        return label;
+    }
+
+    public static Button PrimaryBtn(string text, int minWidth = 128)
+    {
+        var w = Math.Max(minWidth, MeasureW(text, BtnFont) + 36);
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = false,
+            Size = new Size(w, 38),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Primary,
+            ForeColor = Color.White,
+            Font = BtnFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = PrimaryDark;
+        return btn;
+    }
+
+    public static Button NavBtn(string text, int minWidth = 120)
+    {
+        var btn = PrimaryBtn(text, minWidth);
+        btn.BackColor = NavDark;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(33, 44, 52);
+        btn.Height = 36;
+        return btn;
+    }
+
+    public static Button SignInBtn(string text)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = false,
+            Height = 48,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = SignIn,
+            ForeColor = Color.White,
+            Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = SignInHover;
+        return btn;
+    }
+
+    public static void RoundControl(Control control, int radius)
+    {
+        void Apply(object? _, EventArgs e)
+        {
+            if (control.Width < 4 || control.Height < 4)
+            {
+                return;
+            }
+
+            using var path = RoundedRect(new Rectangle(0, 0, control.Width, control.Height), radius);
+            var next = new Region(path);
+            var prev = control.Region;
+            control.Region = next;
+            prev?.Dispose();
+        }
+
+        control.Resize += Apply;
+        Apply(null, EventArgs.Empty);
+    }
+
+    public static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        var d = Math.Max(2, radius * 2);
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+        path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+        path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+        path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    public static Button GhostBtn(string text, int minWidth = 120)
+    {
+        var w = Math.Max(minWidth, MeasureW(text, SmallFont) + 28);
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = false,
+            Size = new Size(w, 32),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.White,
+            ForeColor = Primary,
+            Font = SmallFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+        };
+        btn.FlatAppearance.BorderColor = Line;
+        return btn;
+    }
+
+    public static Panel StackPage(string title, string subtitle, Control body)
+    {
+        var page = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = PageBg,
+        };
+        body.Dock = DockStyle.Fill;
+        var lead = Wrap(subtitle, BodyFont, Muted, 16);
+        var head = Wrap(title, TitleFont, Text, 8);
+        page.Controls.Add(body);
+        page.Controls.Add(lead);
+        page.Controls.Add(head);
+        return page;
+    }
+
+    public static Panel Tile(string title, string lead, Color accent, Action onClick)
+    {
+        const int innerW = 244;
+        var titleH = MeasureH(title, HeadFont, innerW);
+        var leadH = MeasureH(lead, BodyFont, innerW);
+        var cardH = 8 + 16 + titleH + 8 + leadH + 18;
+
+        var shell = new Panel
+        {
+            Size = new Size(280, cardH),
+            BackColor = Line,
+            Padding = new Padding(1),
+            Margin = new Padding(0, 0, 16, 16),
+            Cursor = Cursors.Hand,
+        };
+        var card = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        var bar = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = accent, Cursor = Cursors.Hand };
+        var inner = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Card,
+            Padding = new Padding(18, 14, 18, 14),
+            Cursor = Cursors.Hand,
+        };
+        var h = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = titleH + 8,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        var p = new Label
+        {
+            Text = lead,
+            Font = BodyFont,
+            ForeColor = Muted,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = leadH + 4,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        inner.Controls.Add(p);
+        inner.Controls.Add(h);
+        card.Controls.Add(inner);
+        card.Controls.Add(bar);
+        shell.Controls.Add(card);
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, card, bar, inner, h, p })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+        }
+
+        shell.MouseEnter += (_, _) => card.BackColor = inner.BackColor = Color.FromArgb(250, 252, 253);
+        shell.MouseLeave += (_, _) => card.BackColor = inner.BackColor = Card;
+        return shell;
+    }
+
+    public static Panel ListCard(string title, string detail, Control? action = null)
+    {
+        var card = new Panel
+        {
+            Width = 720,
+            Height = 88,
+            BackColor = Line,
+            Padding = new Padding(1),
+            Margin = new Padding(0, 0, 0, 10),
+            Tag = "card",
+        };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 12) };
+        if (action is not null)
+        {
+            var side = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = Math.Max(136, action.Width + 8),
+                BackColor = Card,
+                Padding = new Padding(8, 0, 0, 0),
+            };
+            action.Location = new Point(8, 4);
+            side.Controls.Add(action);
+            inner.Controls.Add(side);
+        }
+
+        var copy = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var d = new Label
+        {
+            Text = detail,
+            Font = SmallFont,
+            ForeColor = Muted,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+        };
+        var t = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+        };
+        BindWrap(d, 4);
+        BindWrap(t, 6);
+        copy.Controls.Add(d);
+        copy.Controls.Add(t);
+        inner.Controls.Add(copy);
+        card.Controls.Add(inner);
+
+        void Fit(object? _, EventArgs e)
+        {
+            var actionW = action is null ? 0 : Math.Max(136, action.Width + 24);
+            var tw = Math.Max(160, card.ClientSize.Width - 36 - actionW);
+            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 36;
+            var ah = action is null ? 0 : action.Height + 28;
+            var next = Math.Max(72, Math.Max(th, ah));
+            if (card.Height != next)
+            {
+                card.Height = next;
+            }
+        }
+
+        card.Resize += Fit;
+        Fit(null, EventArgs.Empty);
+        return card;
+    }
+
+    public static void FitCards(FlowLayoutPanel list)
+    {
+        var w = Math.Max(360, list.ClientSize.Width - 28);
+        foreach (Control child in list.Controls)
+        {
+            if (Equals(child.Tag, "card"))
+            {
+                child.Width = w;
+            }
+        }
+    }
+
+    public static string AppName(string id) => id switch
+    {
+        "excel" => "Microsoft Excel",
+        "powerpoint" => "Microsoft PowerPoint",
+        _ => "Microsoft Word",
+    };
+
+    public static Color AppColor(string id) => id switch
+    {
+        "excel" => Excel,
+        "powerpoint" => Ppt,
+        _ => Word,
+    };
+
+    public static string ModeLabel(string mode) =>
+        mode == "testing" ? "Thi" : "Luyện tập";
+
+    public static Button DockSquare(NavIcon icon, string tip, Color fill)
+    {
+        var btn = new Button
+        {
+            Size = new Size(40, 40),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = fill,
+            ForeColor = Color.White,
+            Margin = new Padding(3, 3, 3, 3),
+            Tag = icon,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            Text = "",
+            AccessibleName = tip,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(fill);
+        btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(fill);
+        DockTips.SetToolTip(btn, tip);
+        btn.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var kind = btn.Tag is NavIcon n ? n : icon;
+            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White);
+        };
+        RoundControl(btn, 6);
+        return btn;
+    }
+
+    static ToolTip? _dockTips;
+    static readonly Font TipFont = new("Segoe UI", 9f, FontStyle.Bold);
+    static readonly Font AaaBig = new("Segoe UI", 13f, FontStyle.Bold);
+    static readonly Font AaaMid = new("Segoe UI", 10f, FontStyle.Bold);
+    static readonly Font AaaSm = new("Segoe UI", 8f, FontStyle.Bold);
+
+    public static ToolTip DockTips => _dockTips ??= CreateDarkTip();
+
+    public static ToolTip CreateDarkTip()
+    {
+        var tip = new ToolTip
+        {
+            ShowAlways = true,
+            OwnerDraw = true,
+            UseAnimation = false,
+            UseFading = false,
+            InitialDelay = 120,
+            AutoPopDelay = 5000,
+            ReshowDelay = 80,
+            BackColor = Color.FromArgb(20, 20, 20),
+            ForeColor = Color.White,
+        };
+        tip.Popup += (_, e) =>
+        {
+            e.ToolTipSize = new Size(Math.Max(88, e.ToolTipSize.Width + 28), Math.Max(32, e.ToolTipSize.Height + 8));
+        };
+        tip.Draw += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = new Rectangle(0, 0, e.Bounds.Width - 1, e.Bounds.Height - 1);
+            using var path = RoundedRect(box, 8);
+            using var bg = new SolidBrush(Color.FromArgb(20, 20, 20));
+            e.Graphics.FillPath(bg, path);
+            TextRenderer.DrawText(
+                e.Graphics,
+                e.ToolTipText,
+                TipFont,
+                box,
+                Color.White,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+        };
+        return tip;
+    }
+
+    public static Button AaaButton()
+    {
+        var btn = new Button
+        {
+            Size = new Size(54, 36),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = DockBlue,
+            ForeColor = Color.White,
+            Text = "",
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            AccessibleName = "Cỡ chữ hướng dẫn",
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 99, 177);
+        DockTips.SetToolTip(btn, "Cỡ chữ hướng dẫn");
+        btn.Paint += (_, e) => PaintAaa(e.Graphics, btn.ClientRectangle);
+        RoundControl(btn, 6);
+        return btn;
+    }
+
+    public static void PaintAaa(Graphics g, Rectangle r)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        using var brush = new SolidBrush(Color.White);
+        g.DrawString("A", AaaBig, brush, r.X + 3, r.Y + 3);
+        g.DrawString("A", AaaMid, brush, r.X + 20, r.Y + 10);
+        g.DrawString("A", AaaSm, brush, r.X + 33, r.Y + 16);
+    }
+
+    public static string StripMarks(string? text) =>
+        (text ?? "").Replace("**", "", StringComparison.Ordinal);
+
+    public static string HelpStepsRtf(IReadOnlyList<string> steps, float bodyPt)
+    {
+        var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
+        var sb = new System.Text.StringBuilder();
+        sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}");
+        sb.Append(@"\pard\qc\cf0\f0\fs").Append(fs).Append(' ');
+        for (var i = 0; i < steps.Count; i++)
+        {
+            sb.Append(i + 1).Append(". ");
+            AppendMarkedRtf(sb, steps[i] ?? "");
+            sb.Append(@"\par ");
+        }
+
+        sb.Append('}');
+        return sb.ToString();
+    }
+
+    static void AppendMarkedRtf(System.Text.StringBuilder sb, string text)
+    {
+        var parts = text.Split("**");
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i % 2 == 1)
+            {
+                sb.Append(@"\b ");
+            }
+
+            foreach (var ch in parts[i])
+            {
+                if (ch is '\\' or '{' or '}')
+                {
+                    sb.Append('\\').Append(ch);
+                }
+                else if (ch > 127)
+                {
+                    sb.Append(@"\u").Append((int)ch).Append('?');
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
+            }
+
+            if (i % 2 == 1)
+            {
+                sb.Append(@"\b0 ");
+            }
+        }
+    }
+
+    public static FlowLayoutPanel DockChip()
+    {
+        var chip = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            BackColor = Color.White,
+            Padding = new Padding(4, 4, 4, 4),
+            Margin = new Padding(0, 0, 0, 2),
+        };
+        RoundControl(chip, 10);
+        return chip;
+    }
+
+    public static Button IconBtn(NavIcon icon, string tip)
+    {
+        var btn = DockSquare(icon, tip, DockBlue);
+        btn.Size = new Size(36, 32);
+        return btn;
+    }
+
+    public static void SetIconActive(Button btn, bool on)
+    {
+        btn.BackColor = on ? Primary : NavDark;
+        btn.Invalidate();
+    }
+
+    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color)
+    {
+        using var pen = new Pen(color, 1.6f);
+        using var brush = new SolidBrush(color);
+        var cx = r.X + r.Width / 2;
+        var cy = r.Y + r.Height / 2;
+        var frame = new Rectangle(cx - 10, cy - 8, 20, 16);
+        switch (icon)
+        {
+            case NavIcon.Home:
+                g.FillPolygon(brush, new[] { new Point(cx, cy - 8), new Point(cx - 8, cy + 1), new Point(cx + 8, cy + 1) });
+                g.FillRectangle(brush, cx - 5, cy, 10, 8);
+                break;
+            case NavIcon.Dock:
+                g.DrawRectangle(pen, new Rectangle(cx - 9, cy - 8, 12, 10));
+                g.FillRectangle(brush, new Rectangle(cx - 3, cy - 4, 12, 10));
+                g.FillPolygon(brush, new[] { new Point(cx + 10, cy + 8), new Point(cx + 14, cy + 4), new Point(cx + 6, cy + 4) });
+                break;
+            case NavIcon.Left:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Y + 1, 7, frame.Height - 1));
+                break;
+            case NavIcon.Right:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.Right - 8, frame.Y + 1, 7, frame.Height - 1));
+                break;
+            case NavIcon.Top:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Y + 1, frame.Width - 1, 5));
+                break;
+            case NavIcon.Bottom:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Bottom - 6, frame.Width - 1, 5));
+                break;
+            case NavIcon.Save:
+                g.FillRectangle(brush, new Rectangle(cx - 8, cy - 8, 16, 16));
+                using (var hole = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                {
+                    g.FillRectangle(hole, new Rectangle(cx - 4, cy - 6, 8, 5));
+                    g.FillRectangle(hole, new Rectangle(cx - 5, cy + 2, 10, 5));
+                }
+                break;
+            case NavIcon.Tasks:
+                g.DrawRectangle(pen, new Rectangle(cx - 8, cy - 8, 16, 16));
+                g.DrawLine(pen, cx - 5, cy - 3, cx + 5, cy - 3);
+                g.DrawLine(pen, cx - 5, cy + 1, cx + 5, cy + 1);
+                g.DrawLine(pen, cx - 5, cy + 5, cx + 5, cy + 5);
+                break;
+            case NavIcon.Refresh:
+                g.DrawArc(pen, cx - 7, cy - 7, 14, 14, 40, 260);
+                g.FillPolygon(brush, new[] { new Point(cx + 6, cy - 8), new Point(cx + 11, cy - 2), new Point(cx + 2, cy - 2) });
+                break;
+            case NavIcon.Pin:
+                g.FillEllipse(brush, cx - 3, cy - 8, 6, 6);
+                g.FillRectangle(brush, cx - 2, cy - 3, 4, 8);
+                g.DrawLine(pen, cx, cy + 5, cx, cy + 9);
+                break;
+            case NavIcon.Menu:
+                g.DrawLine(pen, cx - 8, cy - 5, cx + 8, cy - 5);
+                g.DrawLine(pen, cx - 8, cy, cx + 8, cy);
+                g.DrawLine(pen, cx - 8, cy + 5, cx + 8, cy + 5);
+                break;
+            case NavIcon.Hint:
+                g.FillEllipse(brush, cx - 6, cy - 8, 12, 12);
+                g.FillRectangle(brush, cx - 3, cy + 3, 6, 3);
+                g.DrawLine(pen, cx - 3, cy + 8, cx + 3, cy + 8);
+                break;
+            case NavIcon.Share:
+                g.DrawLines(pen, new[] { new Point(cx - 6, cy + 4), new Point(cx + 2, cy - 4), new Point(cx + 2, cy + 1) });
+                g.DrawLine(pen, cx + 2, cy - 4, cx + 8, cy - 4);
+                break;
+            case NavIcon.Back:
+                g.DrawLines(pen, new[] { new Point(cx + 4, cy - 7), new Point(cx - 6, cy), new Point(cx + 4, cy + 7) });
+                break;
+            case NavIcon.Next:
+                g.DrawLines(pen, new[] { new Point(cx - 4, cy - 7), new Point(cx + 6, cy), new Point(cx - 4, cy + 7) });
+                break;
+            case NavIcon.Expand:
+                g.DrawRectangle(pen, frame);
+                g.DrawLine(pen, frame.X + 4, cy, frame.Right - 4, cy);
+                g.DrawLine(pen, cx, frame.Y + 3, cx, frame.Bottom - 3);
+                break;
+            case NavIcon.Collapse:
+                g.DrawRectangle(pen, frame);
+                g.FillRectangle(brush, new Rectangle(frame.X + 1, frame.Bottom - 6, frame.Width - 1, 5));
+                break;
+            case NavIcon.Check:
+                g.DrawLines(pen, new[] { new Point(cx - 6, cy), new Point(cx - 1, cy + 5), new Point(cx + 7, cy - 6) });
+                break;
+            case NavIcon.Submit:
+                g.DrawLine(pen, cx, cy + 6, cx, cy - 6);
+                g.DrawLines(pen, new[] { new Point(cx - 5, cy - 1), new Point(cx, cy - 6), new Point(cx + 5, cy - 1) });
+                g.DrawLine(pen, cx - 7, cy + 7, cx + 7, cy + 7);
+                break;
+        }
+    }
+}
+
+enum NavIcon
+{
+    Home,
+    Dock,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    Save,
+    Tasks,
+    Refresh,
+    Pin,
+    Menu,
+    Hint,
+    Share,
+    Back,
+    Next,
+    Expand,
+    Collapse,
+    Check,
+    Submit,
+}

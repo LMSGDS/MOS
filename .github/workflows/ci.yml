@@ -49,7 +49,15 @@ jobs:
           test -f desktop/MosDockMac/mosdock_mac.py
           test -f desktop/installer/windows/mosdock.iss
           test -f desktop/installer/windows/install.ps1
+          test -f desktop/installer/windows/bootstrap.ps1
           test -f desktop/installer/macos/build-pkg.sh
           test -f app/schema.sql
-          test -f deploy/docker-compose.yml
+          test -f scripts/git-sync.sh
+          test -f deploy/mos-git-sync.timer
           test -f desktop/MosDock/ExamHub.cs
+          test -f desktop/MosDock/WordGrade.cs
+          test -f app/grade.py
+          test -f app/rubrics/word-objective-1-1.json
+          test -f data/projects/word-objective-1-1/Word_1-1.docx
+          test -f tests/fixtures/word-objective-1-1/Word_1-1.docx
+          test -f tests/fixtures/word-objective-1-1/Word_1-1_results.docx

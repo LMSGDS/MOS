@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Đánh giá {{ evaluation.name if evaluation else 'học sinh' }}{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
+  {% if not evaluation %}
+  <h1>Không tìm thấy học sinh</h1>
+  {% else %}
+  <h1>{{ evaluation.name }} <span class="hint" style="display:inline">{{ evaluation.student_code or evaluation.username }} · {{ evaluation.class_name or "Chưa xếp lớp" }}</span></h1>
+  <p class="lead">{{ evaluation.summary }}</p>
+  <p><span class="badge badge-{{ evaluation.level }}">{{ evaluation.level_label }}</span></p>
+  <div class="program-grid" style="margin-top:12px">
+    <div class="program-tile"><span class="pname">Tiến độ<br><strong>{{ "%.0f"|format(evaluation.completion_pct or 0) }}%</strong></span></div>
+    <div class="program-tile"><span class="pname">Đã nộp<br><strong>{{ evaluation.exercises_completed }}/{{ evaluation.exercises_assigned }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Hoàn thành 100<br><strong>{{ evaluation.exercises_mastered }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ "%.0f"|format(evaluation.overall_score or 0) }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Tiến bộ TB<br><strong>{{ "%+.0f"|format(evaluation.avg_growth or 0) }}</strong></span></div>
+  </div>
+
+  <h2 style="margin-top:28px;font-size:18px">Tiến độ từng bài tập</h2>
+  <table class="grid">
+    <thead><tr><th>Bài</th><th>Trạng thái</th><th>Điểm tốt nhất</th><th>Lần gần nhất</th><th>Tiến bộ</th><th>Kỹ năng</th><th>Lượt</th></tr></thead>
+    <tbody>
+      {% for ex in exercises %}
+      <tr>
+        <td>{{ ex.title }}</td>
+        <td>{{ ex.status_label }}</td>
+        <td>{{ "%.0f"|format(ex.best_verified or 0) }}</td>
+        <td>{{ "%.0f"|format(ex.last_verified or 0) }}{% if ex.last_pending %} · pending {{ "%.0f"|format(ex.last_pending) }}{% endif %}</td>
+        <td>{{ "%+.0f"|format(ex.growth or 0) }}</td>
+        <td>{{ ex.criteria_passed or 0 }}/{{ ex.criteria_total or 0 }}</td>
+        <td>{{ ex.attempt_count or 0 }} làm · {{ ex.checkpoint_count or 0 }} checkpoint</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Chưa giao bài.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px;font-size:18px">Kỹ năng chưa đạt / đã đạt</h2>
+  <div class="eval-split">
+    <div>
+      <h3>Cần cải thiện</h3>
+      <ul class="skill-list">
+        {% for s in evaluation.weak_skills %}
+        <li>{{ s.title }} — {{ s.label }} ({{ s.status }})</li>
+        {% else %}
+        <li>Không có mục yếu.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h3>Đã đạt</h3>
+      <ul class="skill-list">
+        {% for s in evaluation.strong_skills %}
+        <li>{{ s.title }} — {{ s.label }}</li>
+        {% else %}
+        <li>Chưa có mục đạt.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <h2 style="margin-top:28px;font-size:18px">Tiến trình thao tác</h2>
+  <table class="grid">
+    <thead><tr><th>Thời điểm</th><th>Bài</th><th>Sự kiện</th><th>Điểm</th><th>Kỹ năng</th></tr></thead>
+    <tbody>
+      {% for t in timeline %}
+      <tr>
+        <td>{{ t.created_at }}</td>
+        <td>{{ t.title }}</td>
+        <td>{{ t.event }}</td>
+        <td>{{ t.verified if t.verified is not none else "—" }}</td>
+        <td>{{ t.criteria_passed or 0 }}/{{ t.criteria_total or 0 }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Chưa có tiến trình.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

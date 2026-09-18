@@ -29,6 +29,8 @@
       <form method="post" action="/dang-xuat"><button type="submit">Đăng xuất</button></form>
       {% if user and user.role in ['admin', 'teacher', 'leadership'] %}
       <a class="linkish" href="/quan-tri" style="color:#fff">Quản trị</a>
+      {% elif user %}
+      <a class="linkish" href="/tien-do" style="color:#fff">Tiến độ</a>
       {% endif %}
     </div>
     <iframe title="Mini-browser MOS" src="/khung/office?chuong-trinh={{ program.id }}"></iframe>

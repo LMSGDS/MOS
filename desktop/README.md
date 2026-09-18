@@ -1,6 +1,6 @@
 # MOS-KulKul (Windows + macOS)
 
-Đăng nhập (JWT) trên **Windows trước**: cửa sổ đề bình thường (danh sách MOS, Luyện tập/Thi), rồi mới dock TopMost khi mở Word/Excel/PowerPoint trên máy. Không WebView2, không Office Online. macOS để sau.
+Đăng nhập trên **Windows** và web `/dang-nhap`: form kiểu GMetrix SMS. Khi mở Office: cụm icon dock 2 hàng. **Luyện tập** mở khung Hướng dẫn trên dock (đề bài, bước đánh số in đậm, nút AAA đổi cỡ chữ, bóng đèn Hiện/Ẩn hướng dẫn); **Thi** ẩn hướng dẫn. Word Objective 1 (1.1–1.4) có đề + chấm Open XML. Thanh dock: vị trí, lưu/thoát, danh sách nhiệm vụ, kiểm tra, ghim, menu, bỏ qua, trước/sau. Không WebView2, không Office Online.
 
 ## Bộ cài tự động
 
@@ -8,11 +8,16 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 
 | Nền tảng | File |
 | --- | --- |
-| Windows | `MOS-KulKul-Setup-Windows.exe` — app PC native (không WebView2) |
+| Windows | `MOS-KulKul-Setup-Windows.exe` — bộ cài nhỏ (lấy liên kết, khi Cài sẽ tải bản đầy đủ từ máy chủ) |
+| Windows (offline) | `MOS-KulKul-Setup-Windows-Full.exe` — bản đầy đủ ~50MB |
 | macOS | `MOS-KulKul-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS-KulKul.command` → Mở |
 | macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple |
 
-Copy vào `data/installers/` trên server rồi tải tại `/cai-dat`.
+Copy vào `data/installers/` trên server. Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
+
+```powershell
+$ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows-full' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
+```
 
 ### Windows
 

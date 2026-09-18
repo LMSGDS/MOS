@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Bài tập MOS-KulKul{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Cơ sở dữ liệu bài tập</h1>
+  <p class="lead">20 đề Word Objective 1–6 được giao cho lớp, theo dõi số học sinh đã làm và điểm trung bình.</p>
+  {% include "admin_nav.html" %}
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Mã</th><th>Bài tập</th><th>Chương trình</th><th>Lớp đã giao</th>
+        <th>HS đã làm</th><th>HS hoàn thành</th><th>Điểm TB</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ex in exercises %}
+      <tr>
+        <td>{{ ex.id }}</td>
+        <td>{{ ex.title }}</td>
+        <td>{{ ex.program }} {{ ex.objective }}</td>
+        <td>{{ ex.class_count }}</td>
+        <td>{{ ex.students_started }}</td>
+        <td>{{ ex.students_done }}</td>
+        <td>{{ "%.1f"|format(ex.avg_best or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7">Chưa có bài tập.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
