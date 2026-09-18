@@ -28,16 +28,29 @@ jobs:
           Copy-Item desktop/installer/windows/install.ps1 dist-win/
           if (-not (Test-Path dist-win\MOS-KulKul.exe)) { throw "MOS-KulKul.exe missing after publish" }
           Get-ChildItem dist-win | Format-Table Name, Length
-      - name: Compile Inno Setup installer
+      - name: Compile full Inno Setup installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
         with:
           path: desktop/installer/windows/mosdock.iss
           options: /DDist="${{ github.workspace }}\dist-win"
+      - name: Compile small web stub installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        with:
+          path: desktop/installer/windows/mosdock-web.iss
+      - name: Check stub is small and full payload exists
+        shell: pwsh
+        run: |
+          $stub = Get-Item dist-installer\MOS-KulKul-Setup-Windows.exe
+          $full = Get-Item dist-installer\MOS-KulKul-Setup-Windows-Full.exe
+          Write-Host "stub=$($stub.Length) full=$($full.Length)"
+          if ($stub.Length -gt 8MB) { throw "Web stub too large: $($stub.Length)" }
+          if ($full.Length -lt 20MB) { throw "Full installer too small: $($full.Length)" }
       - uses: actions/upload-artifact@v4
         with:
           name: MOS-KulKul-Setup-Windows
           path: |
             dist-installer/MOS-KulKul-Setup-Windows.exe
+            dist-installer/MOS-KulKul-Setup-Windows-Full.exe
             dist-win/MOS-KulKul.exe
             dist-win/install.ps1
 

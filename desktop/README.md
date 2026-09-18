@@ -8,7 +8,8 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 
 | Nền tảng | File |
 | --- | --- |
-| Windows | `MOS-KulKul-Setup-Windows.exe` — app PC native (không WebView2) |
+| Windows | `MOS-KulKul-Setup-Windows.exe` — bộ cài nhỏ (lấy liên kết, khi Cài sẽ tải bản đầy đủ từ máy chủ) |
+| Windows (offline) | `MOS-KulKul-Setup-Windows-Full.exe` — bản đầy đủ ~50MB |
 | macOS | `MOS-KulKul-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS-KulKul.command` → Mở |
 | macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple |
 

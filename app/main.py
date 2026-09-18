@@ -266,9 +266,18 @@ def _send_installer(*names: str, media: str | None = None):
 
 @app.get("/cai-dat/windows")
 def install_windows():
+    """Bộ cài nhỏ (web stub). Khi chạy sẽ tải bản đầy đủ từ /cai-dat/windows-full."""
     return _send_installer(
         "MOS-KulKul-Setup-Windows.exe",
         "MOS-Dock-Setup-Windows.exe",
+    )
+
+
+@app.get("/cai-dat/windows-full")
+def install_windows_full():
+    """Bản cài đầy đủ (~50MB) — stub và máy offline tải từ đây."""
+    return _send_installer(
+        "MOS-KulKul-Setup-Windows-Full.exe",
     )
 
 

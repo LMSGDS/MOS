@@ -50,10 +50,12 @@ def test_install_page_lists_windows_and_macos():
     assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
+    assert "/cai-dat/windows-full" in r.text
     assert "/cai-dat/macos" in r.text
     assert "MOS-KulKul-Setup-macOS.zip" in r.text
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
+    assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()
@@ -85,6 +87,28 @@ def test_install_page_lists_windows_and_macos():
     assert src.status_code == 200
     assert "17331" in src.text
     assert c.get("/cai-dat/macos-files/secret").status_code == 404
+    full = c.get("/cai-dat/windows-full")
+    full_ready = (INSTALLER_DIR / "MOS-KulKul-Setup-Windows-Full.exe").is_file()
+    if full_ready:
+        assert full.status_code == 200
+        assert "full" in (full.headers.get("content-disposition") or "").lower()
+    else:
+        assert full.status_code == 404
+
+
+def test_windows_web_stub_iss_downloads_full_from_server():
+    from pathlib import Path
+
+    folder = Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows"
+    stub = (folder / "mosdock-web.iss").read_text(encoding="utf-8")
+    full = (folder / "mosdock.iss").read_text(encoding="utf-8")
+    assert "https://mos.gds.edu.vn/cai-dat/windows-full" in stub
+    assert "CreateAppDir=no" in stub
+    assert "Uninstallable=no" in stub
+    assert "CreateDownloadPage" in stub
+    assert "{#Dist}" not in stub
+    assert "OutputBaseFilename=MOS-KulKul-Setup-Windows-Full" in full
+    assert "{#Dist}\\*" in full
 
 
 def test_home_requires_login():
