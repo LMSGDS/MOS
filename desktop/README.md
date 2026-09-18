@@ -13,7 +13,11 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 | macOS | `MOS-KulKul-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS-KulKul.command` → Mở |
 | macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple |
 
-Copy vào `data/installers/` trên server rồi tải tại `/cai-dat`.
+Copy vào `data/installers/` trên server. Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"
+```
 
 ### Windows
 

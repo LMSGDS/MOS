@@ -48,6 +48,10 @@ def test_install_page_lists_windows_and_macos():
     assert r.status_code == 200
     assert "Windows" in r.text
     assert "macOS" in r.text
+    assert "windows.ps1" in r.text
+    assert "irm https://mos.gds.edu.vn/cai-dat/windows.ps1" in r.text
+    assert "ExecutionPolicy Bypass" in r.text
+    assert "Sao chép lệnh" in r.text
     assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
     assert "/cai-dat/windows" in r.text
@@ -103,6 +107,13 @@ def test_install_page_lists_windows_and_macos():
     assert sh.status_code == 200
     assert "osacompile" in sh.text
     assert "MOS-KulKul.app" in sh.text
+    ps1 = c.get("/cai-dat/windows.ps1")
+    assert ps1.status_code == 200
+    assert "text/plain" in (ps1.headers.get("content-type") or "")
+    assert "mos.gds.edu.vn" in ps1.text
+    assert "Unblock-File" in ps1.text
+    assert "/cai-dat/windows.zip" in ps1.text
+    assert "Start-Process" in ps1.text
     src = c.get("/cai-dat/macos-files/mosdock_mac.py")
     assert src.status_code == 200
     assert "17331" in src.text
@@ -143,6 +154,8 @@ def test_wrap_installer_zip_includes_readme(tmp_path):
         guide = zf.read("HUONG-DAN-CAI.txt").decode("utf-8")
         assert "SmartScreen" in guide
         assert "mos.gds.edu.vn" in guide
+        assert "windows.ps1" in guide
+        assert "irm" in guide
     assert wrap_installer_zip(exe) == zipped
     assert len(sha256_path(zipped)) == 64
 

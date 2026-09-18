@@ -263,10 +263,13 @@ _HASH_CACHE: dict[str, tuple[float, int, str]] = {}
 
 INSTALL_README = """MOS-KulKul — Trường GDS (mos.gds.edu.vn)
 
-File .exe nhà trường tự phát hành, chưa mua chữ ký Authenticode.
-Chrome/Edge sẽ quét virus — đây là bước bình thường, không phải phần mềm độc hại.
+Không tải .exe/.zip bằng Chrome/Edge: trình duyệt luôn quét virus vì bộ cài
+chưa mua chữ ký Authenticode (không phải mã độc).
 
-Sau khi giải nén:
+Cách nên dùng — PowerShell (không đi qua thanh tải trình duyệt):
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://mos.gds.edu.vn/cai-dat/windows.ps1 | iex"
+
+Nếu đã giải nén file này:
 1. Chuột phải file .exe → Thuộc tính → bỏ chọn Chặn / Bỏ chặn → OK.
    PowerShell: Unblock-File .\\MOS-KulKul-Setup-Windows.exe
 2. Nếu SmartScreen «Windows đã bảo vệ máy tính»: Thông tin thêm → Chạy anyway.
@@ -427,6 +430,16 @@ def install_macos_pkg():
 def install_macos_sh():
     path = ROOT / "desktop" / "installer" / "macos" / "install.sh"
     return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/plain; charset=utf-8")
+
+
+@app.get("/cai-dat/windows.ps1")
+def install_windows_ps1():
+    path = ROOT / "desktop" / "installer" / "windows" / "bootstrap.ps1"
+    return PlainTextResponse(
+        path.read_text(encoding="utf-8"),
+        media_type="text/plain; charset=utf-8",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 _MACOS_FILES = {
