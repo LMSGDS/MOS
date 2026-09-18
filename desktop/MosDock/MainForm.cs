@@ -36,7 +36,6 @@ sealed class MainForm : Form
     readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.DockBlue);
     readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước, không chấm", Ui.DockBlue);
     readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Sang nhiệm vụ sau", Ui.DockGreen);
-    readonly Button _dockShot = Ui.DockSquare(NavIcon.Camera, "Chụp vùng layout đang chiếm màn hình", Ui.DockTeal);
     readonly ContextMenuStrip _dockMenuStrip = new();
     readonly ContextMenuStrip _extraMenu = new();
     readonly Panel _helpPane = new();
@@ -214,7 +213,7 @@ sealed class MainForm : Form
     Button[] DockButtons() =>
     [
         _dockPos, _dockSave, _dockTasks, _dockCheck, _dockPin,
-        _dockMenu, _dockHint, _dockShot, _dockShare, _dockBack, _dockNext,
+        _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
     ];
 
     void ApplyNavChrome(NavMetrics nav)
@@ -428,7 +427,6 @@ sealed class MainForm : Form
             _extraMenu.Show(_dockMenu, new Point(0, -4), ToolStripDropDownDirection.AboveRight);
         };
         _dockHint.Click += (_, _) => ToggleHelp();
-        _dockShot.Click += (_, _) => CaptureLayoutShot();
         _dockShare.Click += (_, _) => StepTask(1);
         _dockBack.Click += (_, _) => StepTask(-1);
         _dockNext.Click += (_, _) => StepTask(1);
@@ -457,11 +455,8 @@ sealed class MainForm : Form
         extraCheck.Click += async (_, _) => await CheckTasks();
         var extraDemo = new ToolStripMenuItem("Demo tất cả bài tập");
         extraDemo.Click += async (_, _) => await RunActionDemo();
-        var extraShot = new ToolStripMenuItem("Chụp vùng layout");
-        extraShot.Click += (_, _) => CaptureLayoutShot();
         _extraMenu.Items.Add(extraCheck);
         _extraMenu.Items.Add(extraDemo);
-        _extraMenu.Items.Add(extraShot);
         _extraMenu.Items.Add(extraSubmit);
         _extraMenu.Items.Add(new ToolStripSeparator());
         _extraMenu.Items.Add(extraUndock);
@@ -1108,7 +1103,6 @@ sealed class MainForm : Form
         Ui.SetIconActive(_dockPin, _pinned);
         _dockPin.BackColor = _pinned ? Ui.DockBlue : Color.FromArgb(148, 163, 184);
         Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn" : "Hiện hướng dẫn");
-        Ui.DockTips.SetToolTip(_dockShot, "Chụp vùng layout đang chiếm màn hình");
         Ui.DockTips.SetToolTip(_dockTasks, "Hiện danh sách nhiệm vụ");
         Ui.DockTips.SetToolTip(_dockSave, "Lưu và thoát bài");
         Ui.DockTips.SetToolTip(_dockShare, "Bỏ qua chấm, sang nhiệm vụ sau");
@@ -1761,36 +1755,6 @@ sealed class MainForm : Form
         }
 
         return (dock, word);
-    }
-
-    void CaptureLayoutShot()
-    {
-        try
-        {
-            var work = CurrentWork();
-            var (dock, word) = _docking
-                ? DockAndWord(work)
-                : LayoutMath.Compute(work, _state, compact: true);
-            var region = LayoutMath.Occupied(dock, word);
-            var path = LayoutShot.Grab(region);
-            ActionEvidence.Add(
-                "screenshot",
-                source: "layout_shot",
-                ok: true,
-                detail: $"{region.W}x{region.H} {path}",
-                hits: 1);
-            _examStatus.Text = $"Đã chụp {region.W}×{region.H} (clipboard + {path})";
-            Ui.DockTips.SetToolTip(_dockShot, _examStatus.Text);
-        }
-        catch (Exception ex)
-        {
-            ActionEvidence.Add("screenshot", source: "layout_shot", ok: false, detail: ex.Message);
-            MessageBox.Show(
-                "Không chụp được vùng layout.\n\n" + ex.Message,
-                "MOS-KulKul",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
-        }
     }
 
     const uint SwpNoactivate = 0x0010;

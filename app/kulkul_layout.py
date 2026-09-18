@@ -169,15 +169,6 @@ def cluster(work: Rect, state: str, scale: float = 1.0) -> Rect:
     return place(work, state, nav.cluster_w, nav.cluster_h, nav.margin)
 
 
-def occupied(a: Rect, b: Rect) -> Rect:
-    """Vùng layout đang chiếm màn hình: dock ∪ Word."""
-    x = min(a.x, b.x)
-    y = min(a.y, b.y)
-    right = max(a.right, b.right)
-    bottom = max(a.bottom, b.bottom)
-    return Rect(x, y, max(1, right - x), max(1, bottom - y))
-
-
 def word_beside(work: Rect, dock: Rect, state: str | None) -> Rect:
     """Word occupies leftover working area so Navigation never covers the document."""
     state = (state or "bottom").lower()

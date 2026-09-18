@@ -212,24 +212,6 @@ def test_word_window_only_docks_current_exam():
     assert "bool activate" in com
     assert "if (activate)" in com
     assert "ActiveDocument.FullName" in probe
-
-
-def test_layout_shot_captures_occupied_region():
-    from pathlib import Path
-
-    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
-    shot = (root / "LayoutShot.cs").read_text(encoding="utf-8")
-    math = (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    form = (root / "MainForm.cs").read_text(encoding="utf-8")
-    ui = (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "CopyFromScreen" in shot
-    assert "Screenshots" in shot
-    assert "Occupied" in math
-    assert "CaptureLayoutShot" in form
-    assert "Chụp vùng layout" in form
-    assert "LayoutShot.Grab" in form
-    assert "NavIcon.Camera" in form
-    assert "NavIcon.Camera" in ui
     stem = "Word_6-2"
     assert stem in "Word_6-2 - Saved"
     assert stem not in "Word_1-1 - Word"
