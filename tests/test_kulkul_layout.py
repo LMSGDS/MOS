@@ -294,3 +294,27 @@ def test_pin_expands_screenshot_centered_cluster():
     assert laptop_pin.w == LAPTOP.w
     assert laptop_pin.x == LAPTOP.x
     assert laptop_pin.bottom == LAPTOP.bottom
+
+
+def test_user_can_resize_navigation_thickness():
+    from app.kulkul_layout import clamp_thickness, with_thickness
+
+    dock, word = compute(WORK, "bottom", compact=True, thickness=120)
+    assert dock.w == WORK.w
+    assert dock.h == 120
+    assert word.h == WORK.h - 120
+    assert not overlap(dock, word)
+
+    left, word_l = compute(WORK, "left", compact=True, thickness=140)
+    assert left.h == WORK.h
+    assert left.w == 140
+    assert word_l.x == left.right
+    assert not overlap(left, word_l)
+
+    too_big = clamp_thickness(WORK, "bottom", 9000)
+    assert too_big == WORK.h * DOCK_MAX_PCT // 100
+    too_small = clamp_thickness(WORK, "bottom", 1)
+    assert too_small == 52
+    grown = with_thickness(dock, WORK, "bottom", 120)
+    assert grown.h == 120
+    assert grown.w == WORK.w
