@@ -27,8 +27,9 @@ sealed class HomeDash : Panel
     readonly RadarView _radar = new();
     readonly Label _resumeTitle = new();
     readonly Label _resumeLead = new();
-    readonly ProgressBar _resumeBar = new();
+    readonly Ui.PercentTrack _resumeBar = new();
     readonly Button _resumeGo;
+    readonly Panel _recentHost = new();
     readonly FlowLayoutPanel _recent = new();
     MosAttempt? _resume;
 
@@ -260,9 +261,7 @@ sealed class HomeDash : Panel
         actions.Controls.Add(_resumeGo);
 
         _resumeBar.Dock = DockStyle.Bottom;
-        _resumeBar.Height = 8;
-        _resumeBar.Style = ProgressBarStyle.Continuous;
-        _resumeBar.Maximum = 100;
+        _resumeBar.Height = 22;
 
         _resumeTitle.Font = Ui.HeadFont;
         _resumeTitle.ForeColor = Ui.Text;
@@ -290,14 +289,16 @@ sealed class HomeDash : Panel
         shell.Dock = DockStyle.Fill;
         shell.Margin = new Padding(4, 0, 0, 0);
         inner.Padding = new Padding(14, 12, 14, 12);
-        inner.Controls.Add(_recent);
+        _recentHost.Dock = DockStyle.Fill;
+        _recentHost.BackColor = Ui.Card;
+        _recentHost.Padding = new Padding(0, 8, 0, 0);
+        inner.Controls.Add(_recentHost);
         inner.Controls.Add(CardHead("Bài đã nộp", () => OpenDoneList?.Invoke()));
 
         _recent.Dock = DockStyle.Fill;
         _recent.FlowDirection = FlowDirection.TopDown;
         _recent.WrapContents = false;
         _recent.BackColor = Ui.Card;
-        _recent.Padding = new Padding(0, 8, 0, 0);
         _recent.Resize += (_, _) => FitRecent();
         return shell;
     }
@@ -345,9 +346,10 @@ sealed class HomeDash : Panel
         _resume = null;
         _resumeTitle.Text = "Đang tải…";
         _resumeLead.Text = "";
-        _resumeBar.Value = 0;
+        _resumeBar.Set(null, "—");
         _resumeGo.Text = "Tiếp tục";
         _recent.Controls.Clear();
+        _recentHost.Controls.Clear();
     }
 
     public void ShowError(string message)
@@ -364,8 +366,9 @@ sealed class HomeDash : Panel
         string displayName)
     {
         var name = string.IsNullOrWhiteSpace(displayName) ? "bạn" : displayName.Trim();
-        var open = attempts.Where(a => a.IsOpen).ToList();
-        var done = attempts.Where(a => !a.IsOpen).ToList();
+        var sets = ExamHub.GroupAttempts(attempts);
+        var open = sets.Open.ToList();
+        var done = sets.Submitted.ToList();
         var levelKey = progress.Values
             .Select(p => p.Level)
             .FirstOrDefault(l => !string.IsNullOrWhiteSpace(l) && l != "chua_bat_dau")
@@ -401,7 +404,7 @@ sealed class HomeDash : Panel
         _doneHint.Text = completed + "/" + Math.Max(assigned, 0) + " module";
 
         _openValue.Text = open.Count.ToString();
-        _openHint.Text = open.Count == 0 ? "Không có bài dở" : open.Count + " bài đang mở";
+        _openHint.Text = OpenHint(open.Count, sets.ArchivedOpen);
 
         _radar.SetValues(
             AxisValue(progress, attempts, "word"),
@@ -413,6 +416,21 @@ sealed class HomeDash : Panel
         FitRecent();
     }
 
+    static string OpenHint(int open, int archived)
+    {
+        if (open == 0)
+        {
+            return archived > 0 ? archived + " lần mở cũ đã gom" : "Không có bài dở";
+        }
+
+        if (archived > 0)
+        {
+            return open + " đề · " + archived + " lần cũ đã gom";
+        }
+
+        return open == 1 ? "1 bài đang mở" : open + " bài đang mở";
+    }
+
     void BindResume(List<MosAttempt> open)
     {
         _resume = open.Count > 0 ? open[0] : null;
@@ -420,23 +438,22 @@ sealed class HomeDash : Panel
         {
             _resumeTitle.Text = "Chưa có bài đang làm dở";
             _resumeLead.Text = "Bắt đầu Word, Excel hoặc PowerPoint ở trên — quay lại đây để mở tiếp, không tạo lần làm mới.";
-            _resumeBar.Value = 0;
+            _resumeBar.Set(null, "—");
             _resumeGo.Text = "Bài mới";
             return;
         }
 
-        var pct = attempt.ProgressPct;
-        if (pct is { } n)
+        _resumeTitle.Text = attempt.DisplayTitle;
+        var appMode = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode);
+        if (attempt.ProgressPct is { } n)
         {
-            _resumeTitle.Text = attempt.DisplayTitle + " – Đã hoàn thành " + n + "%";
-            _resumeLead.Text = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode);
-            _resumeBar.Value = n;
+            _resumeLead.Text = appMode + " — Đã hoàn thành " + n + "%";
+            _resumeBar.Set(n, n + "%");
         }
         else
         {
-            _resumeTitle.Text = attempt.DisplayTitle;
-            _resumeLead.Text = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode) + " — Đang làm dở";
-            _resumeBar.Value = 0;
+            _resumeLead.Text = appMode + " — Đang làm dở";
+            _resumeBar.Set(12, "Chưa chấm");
         }
 
         _resumeGo.Text = "Tiếp tục";
@@ -445,19 +462,13 @@ sealed class HomeDash : Panel
     void BindRecent(List<MosAttempt> done)
     {
         _recent.Controls.Clear();
+        _recentHost.Controls.Clear();
         var rows = done.Take(3).ToList();
         if (rows.Count == 0)
         {
-            _recent.Controls.Add(new Label
-            {
-                Text = "Chưa nộp bài nào. Điểm 3 bài gần nhất sẽ hiện tại đây.",
-                Font = Ui.BodyFont,
-                ForeColor = Ui.Muted,
-                AutoSize = false,
-                Width = Math.Max(160, _recent.ClientSize.Width),
-                Height = 64,
-                UseMnemonic = false,
-            });
+            _recentHost.Controls.Add(Ui.EmptyHint(
+                "Bạn chưa hoàn thành bài thi nào",
+                "Các bài thi đã nộp sẽ hiển thị ở đây."));
             return;
         }
 
@@ -472,6 +483,8 @@ sealed class HomeDash : Panel
             line.Width = Math.Max(160, _recent.ClientSize.Width);
             _recent.Controls.Add(line);
         }
+
+        _recentHost.Controls.Add(_recent);
     }
 
     static float AxisValue(
@@ -487,7 +500,7 @@ sealed class HomeDash : Panel
 
         var fromAttempts = attempts
             .Where(a => string.Equals(a.Program, program, StringComparison.OrdinalIgnoreCase) && a.Score is not null)
-            .Select(a => a.Score!.Value / Math.Max(1, a.MaxScore))
+            .Select(a => a.Score!.Value / Math.Max(1, a.DisplayMax))
             .DefaultIfEmpty(0)
             .Max();
         return (float)Math.Clamp(Math.Max(fromProgress, fromAttempts), 0, 1);

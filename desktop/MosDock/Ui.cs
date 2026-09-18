@@ -1041,6 +1041,100 @@ static class Ui
         g.DrawLine(pen, cx + 3, cy + 3, cx + 8, cy + 8);
     }
 
+    public static Panel EmptyHint(string title, string lead)
+    {
+        var box = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var icon = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Card };
+        icon.Paint += (_, e) => PaintEmptyDoc(e.Graphics, icon.ClientRectangle);
+        var head = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            Dock = DockStyle.Top,
+            Height = 24,
+            TextAlign = ContentAlignment.TopCenter,
+            UseMnemonic = false,
+        };
+        var body = new Label
+        {
+            Text = lead,
+            Font = SmallFont,
+            ForeColor = Muted,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.TopCenter,
+            UseMnemonic = false,
+        };
+        box.Controls.Add(body);
+        box.Controls.Add(head);
+        box.Controls.Add(icon);
+        return box;
+    }
+
+    public static void PaintEmptyDoc(Graphics g, Rectangle r)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var w = 28;
+        var h = 34;
+        var x = r.X + (r.Width - w) / 2;
+        var y = r.Y + Math.Max(4, (r.Height - h) / 2);
+        using var fill = new SolidBrush(Color.FromArgb(36, Text));
+        using var pen = new Pen(Color.FromArgb(70, Text), 1.4f);
+        g.FillRectangle(fill, x, y, w, h);
+        g.DrawRectangle(pen, x, y, w, h);
+        g.DrawLine(pen, x + 6, y + 10, x + w - 6, y + 10);
+        g.DrawLine(pen, x + 6, y + 16, x + w - 6, y + 16);
+        g.DrawLine(pen, x + 6, y + 22, x + w - 10, y + 22);
+    }
+
+    public sealed class PercentTrack : Panel
+    {
+        int? _pct;
+        string _caption = "—";
+
+        public PercentTrack()
+        {
+            Height = 22;
+            DoubleBuffered = true;
+            BackColor = Card;
+        }
+
+        public void Set(int? pct, string caption)
+        {
+            _pct = pct is { } n ? Math.Clamp(n, 0, 100) : null;
+            _caption = caption;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var labelW = 72;
+            var track = new Rectangle(0, Height / 2 - 5, Math.Max(20, Width - labelW - 4), 10);
+            using (var bg = new SolidBrush(Color.FromArgb(232, 226, 218)))
+            {
+                g.FillRectangle(bg, track);
+            }
+
+            if (_pct is { } n && n > 0)
+            {
+                var fillW = Math.Max(4, track.Width * n / 100);
+                using var fill = new SolidBrush(Success);
+                g.FillRectangle(fill, track.X, track.Y, fillW, track.Height);
+            }
+
+            TextRenderer.DrawText(
+                g,
+                _caption,
+                SmallFont,
+                new Rectangle(track.Right + 4, 0, labelW, Height),
+                Muted,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+        }
+    }
+
     public static Color ReviewFill(string tone) => tone switch
     {
         "correct" => ReviewCorrect,

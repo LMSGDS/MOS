@@ -1560,18 +1560,33 @@ sealed class MainForm : Form
             return;
         }
 
-        var filtered = rows.Where(a => running ? a.IsOpen : !a.IsOpen).ToList();
+        var sets = ExamHub.GroupAttempts(rows);
+        var filtered = running ? sets.Open.ToList() : sets.Submitted.ToList();
         list.Controls.Clear();
         if (filtered.Count == 0)
         {
             list.Controls.Add(new Label
             {
-                Text = running ? "Không có bài đang làm dở." : "Chưa nộp bài nào.",
+                Text = running
+                    ? "Không có bài đang làm dở."
+                    : "Bạn chưa hoàn thành bài thi nào. Các bài thi đã nộp sẽ hiển thị ở đây.",
                 AutoSize = true,
                 ForeColor = Ui.Muted,
+                MaximumSize = new Size(420, 0),
                 Margin = new Padding(12),
             });
             return;
+        }
+
+        if (running && sets.ArchivedOpen > 0)
+        {
+            list.Controls.Add(new Label
+            {
+                Text = "Đã gom " + sets.ArchivedOpen + " lần mở cũ của cùng đề / quá 21 ngày.",
+                AutoSize = true,
+                ForeColor = Ui.Muted,
+                Margin = new Padding(12, 8, 12, 8),
+            });
         }
 
         foreach (var row in filtered)
@@ -1586,7 +1601,7 @@ sealed class MainForm : Form
     {
         var detail = resume
             ? $"{Ui.AppName(attempt.Program)} · {Ui.ModeLabel(attempt.Mode)} · {attempt.StartedAt}"
-            : $"{Ui.ModeLabel(attempt.Mode)} · {attempt.StartedAt} · {(attempt.Score is { } s ? $"{s}/{attempt.MaxScore} đã xác minh" : "chưa có điểm")}";
+            : $"{Ui.ModeLabel(attempt.Mode)} · {attempt.StartedAt} · {attempt.ScoreLabel} đã xác minh";
         Button? go = null;
         if (resume)
         {

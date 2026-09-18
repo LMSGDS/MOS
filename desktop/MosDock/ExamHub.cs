@@ -24,32 +24,68 @@ readonly record struct MosAttempt(
     double? Pending,
     double MaxScore,
     string StartedAt,
-    string? SubmittedAt)
+    string? SubmittedAt,
+    DateTimeOffset? Started = null)
 {
     public bool IsOpen => Status is "running" or "in_progress";
+
+    public bool IsRecent(int days = 21) =>
+        Started is null || Started.Value >= DateTimeOffset.Now.AddDays(-days);
+
+    /// <summary>
+    /// Điểm MOS là thang 100. Nếu máy chủ trả điểm 100 nhưng max_score = 10 thì hiện 100/100.
+    /// </summary>
+    public double DisplayMax
+    {
+        get
+        {
+            var max = MaxScore <= 0 ? 100 : MaxScore;
+            if (Score is { } s && s > max && s <= 100.05)
+            {
+                return 100;
+            }
+
+            return max;
+        }
+    }
 
     public int? ProgressPct
     {
         get
         {
-            if (MaxScore <= 0 || Score is null)
+            var raw = Score ?? Pending;
+            if (raw is null)
             {
                 return null;
             }
 
-            return (int)Math.Clamp(Math.Round(Score.Value / MaxScore * 100), 0, 100);
+            var max = DisplayMax;
+            if (max <= 0)
+            {
+                return null;
+            }
+
+            var pct = raw.Value <= 100 && Math.Abs(max - 100) < 0.05
+                ? raw.Value
+                : raw.Value / max * 100;
+            return (int)Math.Clamp(Math.Round(pct), 0, 100);
         }
     }
 
     public string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? Ui.AppName(Program) : Title;
 
     public string ScoreLabel => Score is { } s
-        ? $"{FormatScore(s)}/{FormatScore(MaxScore)}"
+        ? $"{FormatScore(Math.Min(s, DisplayMax))}/{FormatScore(DisplayMax)}"
         : "chưa có điểm";
 
     static string FormatScore(double n) =>
         Math.Abs(n - Math.Round(n)) < 0.05 ? ((int)Math.Round(n)).ToString() : n.ToString("0.#");
 }
+
+readonly record struct AttemptSets(
+    IReadOnlyList<MosAttempt> Open,
+    int ArchivedOpen,
+    IReadOnlyList<MosAttempt> Submitted);
 
 readonly record struct MosProgress(
     string Program,
@@ -134,10 +170,33 @@ static class ExamHub
                 FormatTime(a, "started_at"),
                 a.TryGetProperty("submitted_at", out var sub) && sub.ValueKind is JsonValueKind.String
                     ? sub.GetString()
-                    : null));
+                    : null,
+                ReadTime(a, "started_at")));
         }
 
         return items;
+    }
+
+    public static AttemptSets GroupAttempts(IReadOnlyList<MosAttempt> rows)
+    {
+        static DateTimeOffset When(MosAttempt a) => a.Started ?? DateTimeOffset.MinValue;
+
+        var openAll = rows.Where(a => a.IsOpen).ToList();
+        var latest = openAll
+            .GroupBy(a => string.IsNullOrWhiteSpace(a.ProjectId) ? a.Id : a.ProjectId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(When).First())
+            .OrderByDescending(When)
+            .ToList();
+        var recent = latest.Where(a => a.IsRecent(21)).ToList();
+        if (recent.Count == 0 && latest.Count > 0)
+        {
+            recent = [latest[0]];
+        }
+
+        return new AttemptSets(
+            recent,
+            Math.Max(0, openAll.Count - recent.Count),
+            rows.Where(a => !a.IsOpen).OrderByDescending(When).ToList());
     }
 
     public static async Task<MosProgress?> GetProgressAsync(string program)
@@ -693,6 +752,16 @@ static class ExamHub
 
         var raw = p.GetString() ?? "";
         return DateTimeOffset.TryParse(raw, out var dt) ? dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : raw;
+    }
+
+    static DateTimeOffset? ReadTime(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p) || p.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(p.GetString(), out var dt) ? dt : null;
     }
 
     static string SnapshotWork(string path)
