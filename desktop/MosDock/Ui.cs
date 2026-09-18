@@ -12,6 +12,7 @@ static class Ui
     public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
     public static readonly Color PageBg = Color.FromArgb(247, 243, 238);
     public static readonly Color WarmShadow = Color.FromArgb(226, 214, 200);
+    public static readonly Color BannerBg = Color.FromArgb(227, 240, 248);
     public static readonly Color ReviewResult = Color.FromArgb(232, 242, 250);
     public static readonly Color ReviewYours = Color.FromArgb(255, 246, 230);
     public static readonly Color ReviewCorrect = Color.FromArgb(230, 245, 233);
