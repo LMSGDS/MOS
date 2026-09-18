@@ -332,6 +332,17 @@ static class ExamHub
             using var posted = await Portal.PostJsonAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/telemetry",
                 payload);
+            try
+            {
+                using var stored = await Portal.PostJsonAsync(
+                    $"/api/v1/attempts/{ExamSession.AttemptId}/evidence",
+                    payload);
+            }
+            catch
+            {
+                // telemetry already saved if this older server lacks /evidence
+            }
+
             await OfflineQueue.FlushAsync();
         }
         catch

@@ -1,6 +1,7 @@
 """Client API v1 — desktop MOS-KulKul (JWT, store-and-forward)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 from datetime import datetime, timezone
@@ -114,31 +115,39 @@ def _grade_payload(scored: dict) -> dict:
     }
 
 
+_SKIP_ACTIONS = {"submit", "submit-offline", "open", "event", "checkpoint"}
+
+
 async def _read_upload(request: Request) -> tuple[bytes | None, str, list | None]:
     ctype = (request.headers.get("content-type") or "").lower()
     if "multipart/form-data" not in ctype:
         return None, "", None
     form = await request.form()
     upload = form.get("file")
+    evidence = await _extract_evidence_from_form(form)
     if upload is None or not hasattr(upload, "read"):
-        return None, "", _form_evidence(form)
+        return None, "", evidence
     filename = Path(getattr(upload, "filename", None) or "bai").name
     if filename in ("", ".", "..") or "/" in filename or "\\" in filename:
         filename = "bai.bin"
     data = await upload.read()
     if len(data) > MAX_UPLOAD:
         raise HTTPException(status_code=413, detail="too_large")
-    return data, filename, _form_evidence(form)
+    return data, filename, evidence
 
 
-def _form_evidence(form) -> list | None:
-    raw = form.get("evidence")
-    if raw is None:
-        return None
-    if hasattr(raw, "read"):
-        return None
-    events = _coerce_evidence(raw)
-    return events or None
+async def _extract_evidence_from_form(form) -> list | None:
+    for key in ("evidence", "evidence_file", "evidence.json"):
+        raw = form.get(key)
+        if raw is None:
+            continue
+        if hasattr(raw, "read"):
+            blob = await raw.read()
+            raw = blob.decode("utf-8", errors="replace") if isinstance(blob, (bytes, bytearray)) else str(blob)
+        events = _coerce_evidence(raw)
+        if events:
+            return events
+    return None
 
 
 def _telemetry_evidence(attempt_id: str) -> list[dict]:
@@ -148,14 +157,118 @@ def _telemetry_evidence(attempt_id: str) -> list[dict]:
             (attempt_id,),
         )
         rows = cur.fetchall()
-    skip = {"submit", "submit-offline", "open", "event"}
     packed = []
     for row in rows:
         action = str(row["action"] or "")
-        if action.casefold() in skip:
+        if action.casefold() in _SKIP_ACTIONS:
             continue
         packed.append({"skill": row.get("skill") or "", "action": action, "detail": row.get("detail") or {}})
     return _coerce_evidence(packed)
+
+
+def _event_id(event: dict, index: int) -> str:
+    raw = str(event.get("id") or event.get("event_id") or "").strip()
+    if raw:
+        return raw
+    blob = json.dumps(event, ensure_ascii=False, sort_keys=True, default=str)
+    return hashlib.sha256(f"{index}:{blob}".encode("utf-8")).hexdigest()[:24]
+
+
+def _ingest_evidence(attempt_id: str, events: list | None) -> int:
+    events = [e for e in (events or []) if isinstance(e, dict)]
+    if not events:
+        return 0
+    stored = 0
+    with cursor() as cur:
+        for index, event in enumerate(events):
+            action = str(event.get("action") or "event")
+            if action.casefold() in _SKIP_ACTIONS:
+                continue
+            detail = event.get("detail") if isinstance(event.get("detail"), dict) else {}
+            extra = {k: v for k, v in event.items() if k not in {"id", "event_id", "action", "skill", "detail"}}
+            merged = {**detail, **extra}
+            cur.execute(
+                """
+                INSERT INTO telemetry (attempt_id, skill, action, detail, event_id, sequence, document_id, source_version)
+                VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s)
+                ON CONFLICT (attempt_id, event_id) WHERE event_id IS NOT NULL AND event_id <> '' DO NOTHING
+                """,
+                (
+                    attempt_id,
+                    str(event.get("skill") or ""),
+                    action,
+                    json.dumps(merged, ensure_ascii=False, default=str),
+                    _event_id(event, index),
+                    index,
+                    str(event.get("document_id") or "") or None,
+                    str(event.get("source_version") or "") or None,
+                ),
+            )
+            if cur.rowcount:
+                stored += 1
+    return stored
+
+
+def _save_evidence_file(attempt_id: str, events: list | None) -> str | None:
+    events = events or []
+    if not events:
+        return None
+    dest = RESULTS / attempt_id / "evidence.json"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps({"events": events}, ensure_ascii=False, default=str), encoding="utf-8")
+    return str(dest)
+
+
+def _store_attempt_check(attempt_id: str, payload: dict, events: list | None, *, training: bool, evidence_path: str | None) -> None:
+    summary = {
+        "last_checkpoint_at": datetime.now(timezone.utc).isoformat(),
+        "evidence_count": len(events or []),
+        "evidence_path": evidence_path,
+        "grader_version": payload.get("grader_version"),
+    }
+    if training:
+        summary["last_check"] = payload
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE attempts SET
+              score = CASE WHEN %s THEN %s ELSE score END,
+              verified_score = CASE WHEN %s THEN %s ELSE verified_score END,
+              pending_score = CASE WHEN %s THEN %s ELSE pending_score END,
+              max_score = COALESCE(%s, max_score),
+              payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
+            WHERE id = %s AND status = 'running'
+            """,
+            (
+                training,
+                payload.get("score"),
+                training,
+                payload.get("verified"),
+                training,
+                payload.get("pending"),
+                payload.get("max_score") or 100,
+                json.dumps(summary, ensure_ascii=False),
+                attempt_id,
+            ),
+        )
+        cur.execute(
+            """
+            INSERT INTO telemetry (attempt_id, skill, action, detail)
+            VALUES (%s, '', 'checkpoint', %s::jsonb)
+            """,
+            (
+                attempt_id,
+                json.dumps(
+                    {
+                        "verified": payload.get("verified"),
+                        "pending": payload.get("pending"),
+                        "complete": payload.get("complete"),
+                        "evidence_count": len(events or []),
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
 
 
 def _combined_evidence(uploaded: list | None, attempt_id: str) -> list | None:
@@ -415,6 +528,59 @@ async def v1_telemetry(request: Request, attempt_id: str):
     return {"ok": True, "accepted": accepted}
 
 
+@router.post("/attempts/{attempt_id}/evidence")
+async def v1_post_evidence(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
+    ctype = (request.headers.get("content-type") or "").lower()
+    events: list | None = None
+    if "multipart/form-data" in ctype:
+        form = await request.form()
+        events = await _extract_evidence_from_form(form)
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        events = _coerce_evidence(body)
+    stored = _ingest_evidence(attempt_id, events)
+    merged = _combined_evidence(events, attempt_id) or []
+    path = _save_evidence_file(attempt_id, merged)
+    return {
+        "ok": True,
+        "stored": stored,
+        "count": len(merged),
+        "evidence_path": path,
+        "events": merged,
+    }
+
+
+@router.get("/attempts/{attempt_id}/evidence")
+def v1_get_evidence(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=False)
+    events = _telemetry_evidence(attempt_id)
+    payload = _as_dict(attempt.get("payload"))
+    training = attempt.get("mode") != "testing"
+    staff = _staff(row_user)
+    last_check = payload.get("last_check") if training or staff else None
+    return {
+        "ok": True,
+        "attempt_id": attempt_id,
+        "count": len(events),
+        "events": events,
+        "evidence_count": payload.get("evidence_count") or len(events),
+        "last_checkpoint_at": payload.get("last_checkpoint_at"),
+        "score": last_check,
+        "verified_score": attempt.get("verified_score") if training or staff else None,
+        "pending_score": attempt.get("pending_score") if training or staff else None,
+    }
+
+
 @router.get("/attempts")
 def v1_attempts(request: Request):
     user = bearer_user(request)
@@ -464,18 +630,30 @@ async def v1_checkpoint(request: Request, attempt_id: str):
         raise HTTPException(status_code=400, detail="file")
     dest = RESULTS / attempt_id / f"checkpoint-{secrets.token_hex(6)}-{filename}"
     saved = _save_bytes(dest, data)
-    scored = _score_saved(saved, attempt, _combined_evidence(evidence, attempt_id))
+    _ingest_evidence(attempt_id, evidence)
+    events = _combined_evidence(evidence, attempt_id) or []
+    evidence_path = _save_evidence_file(attempt_id, events)
+    scored = _score_saved(saved, attempt, events)
     payload = _grade_payload(scored)
     training = attempt.get("mode") != "testing"
+    _store_attempt_check(attempt_id, payload, events, training=training, evidence_path=evidence_path)
     if not training:
         return {
             "ok": True,
             "checkpoint": True,
             "mode": "testing",
             "saved": True,
+            "evidence_stored": len(events),
             "message": "Đã lưu checkpoint. Điểm và gợi ý ẩn trong chế độ thi.",
         }
-    return {"ok": True, "checkpoint": True, "mode": "training", "score": payload}
+    return {
+        "ok": True,
+        "checkpoint": True,
+        "mode": "training",
+        "score": payload,
+        "evidence_stored": len(events),
+        "evidence_path": evidence_path,
+    }
 
 
 async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key: str | None = None) -> dict:
@@ -501,7 +679,10 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         dest = RESULTS / attempt_id / f"{submission_id}-{filename}"
         saved = _save_bytes(dest, data)
         digest = sha256_file(saved)
-    scored = _score_saved(saved, attempt, _combined_evidence(evidence, attempt_id))
+    _ingest_evidence(attempt_id, evidence)
+    events = _combined_evidence(evidence, attempt_id)
+    _save_evidence_file(attempt_id, events)
+    scored = _score_saved(saved, attempt, events)
     payload = _grade_payload(scored)
     started = attempt["started_at"]
     now = datetime.now(timezone.utc)

@@ -43,18 +43,36 @@
 
   <h2 style="margin-top:28px;font-size:18px">Lịch sử bài làm</h2>
   <table class="grid">
-    <thead><tr><th>Học sinh</th><th>Bài</th><th>Chế độ</th><th>Điểm</th><th>Thời gian (s)</th></tr></thead>
+    <thead><tr><th>Học sinh</th><th>Bài</th><th>Chế độ</th><th>Đã XN</th><th>Chưa XN</th><th>Bằng chứng</th></tr></thead>
     <tbody>
       {% for h in history %}
       <tr>
         <td>{{ h.student }}</td>
         <td>{{ h.title }}</td>
-        <td>{{ h.mode }}</td>
-        <td>{{ h.score }}</td>
-        <td>{{ h.duration_sec }}</td>
+        <td>{{ h.mode }}{% if h.status and h.status != 'submitted' %} · {{ h.status }}{% endif %}</td>
+        <td>{{ h.verified_score if h.verified_score is not none else h.score }}</td>
+        <td>{{ h.pending_score if h.pending_score is not none else "—" }}</td>
+        <td>{{ h.evidence_count }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="5">Chưa có dữ liệu telemetry.</td></tr>
+      <tr><td colspan="6">Chưa có bài làm.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:28px;font-size:18px">Bằng chứng thao tác (Find / Go To / Inspect)</h2>
+  <table class="grid">
+    <thead><tr><th>Học sinh</th><th>Bài</th><th>Thao tác</th><th>Chi tiết</th></tr></thead>
+    <tbody>
+      {% for e in evidence_rows %}
+      <tr>
+        <td>{{ e.student }}</td>
+        <td>{{ e.title }}</td>
+        <td>{{ e.action }}</td>
+        <td class="hint">{% if e.detail is mapping %}{% if e.detail.query %}{{ e.detail.query }} {% endif %}{% if e.detail.name %}{{ e.detail.name }} {% endif %}{% if e.detail.page %}trang {{ e.detail.page }} {% endif %}{% if e.detail.style %}{{ e.detail.style }}{% endif %}{% else %}{{ e.detail }}{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Chưa có bằng chứng thao tác gửi về server.</td></tr>
       {% endfor %}
     </tbody>
   </table>

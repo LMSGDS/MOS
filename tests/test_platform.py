@@ -124,6 +124,7 @@ def test_admin_dashboard_staff_only(client):
     assert "Bảng điều khiển MOS-KulKul" in page.text
     assert "10A1" in page.text
     assert "Học sinh" in page.text
+    assert "Bằng chứng thao tác" in page.text
 
 
 def test_openxml_scoring_reads_sample_docx(pg):
@@ -293,3 +294,52 @@ def test_word_11_checkpoint_with_demo_evidence(client):
     statuses = {c["criterion_id"]: c["status"] for c in score["criteria"]}
     assert statuses["W11-S01"] == "pass"
     assert statuses["W11-N03"] == "pass"
+    assert check.json()["evidence_stored"] >= 8
+
+    stored = client.get(f"/api/v1/attempts/{attempt_id}/evidence", headers=headers)
+    assert stored.status_code == 200
+    body = stored.json()
+    assert body["count"] >= 8
+    actions = {e["action"] for e in body["events"]}
+    assert "find" in actions
+    assert "goto_bookmark" in actions
+    assert body["verified_score"] == 100
+    assert body["pending_score"] == 0
+    listed = client.get("/api/v1/attempts", headers=headers).json()
+    hit = next(a for a in listed["attempts"] if a["id"] == attempt_id)
+    assert hit["verified_score"] == 100
+    assert hit["pending_score"] == 0
+
+    teacher = _token(client, "giaovien")
+    admin = client.get(
+        f"/api/v1/attempts/{attempt_id}/evidence",
+        headers={"Authorization": f"Bearer {teacher}"},
+    )
+    assert admin.status_code == 200
+    assert admin.json()["count"] >= 8
+
+
+def test_post_evidence_json_is_stored(client):
+    token = _token(client, "hocsinh")
+    headers = {"Authorization": f"Bearer {token}"}
+    started = client.post(
+        "/api/v1/attempts",
+        headers=headers,
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    attempt_id = started.json()["attempt_id"]
+    posted = client.post(
+        f"/api/v1/attempts/{attempt_id}/evidence",
+        headers=headers,
+        json={"events": [{"action": "find", "query": "to", "source": "navigation_pane", "event_id": "ev-to-1"}]},
+    )
+    assert posted.status_code == 200
+    assert posted.json()["count"] >= 1
+    again = client.post(
+        f"/api/v1/attempts/{attempt_id}/evidence",
+        headers=headers,
+        json={"events": [{"action": "find", "query": "to", "source": "navigation_pane", "event_id": "ev-to-1"}]},
+    )
+    assert again.json()["stored"] == 0
+    got = client.get(f"/api/v1/attempts/{attempt_id}/evidence", headers=headers).json()
+    assert any(e.get("query") == "to" for e in got["events"])

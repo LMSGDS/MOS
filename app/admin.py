@@ -78,16 +78,32 @@ def _dashboard(request: Request, user: dict):
         classes_rows = cur.fetchall()
         cur.execute(
             """
-            SELECT u.name AS student, p.title, a.mode, a.score, a.duration_sec, a.submitted_at
+            SELECT u.name AS student, p.title, a.mode, a.status, a.score, a.verified_score, a.pending_score,
+                   a.duration_sec, a.submitted_at, a.id AS attempt_id,
+                   COALESCE((a.payload->>'evidence_count')::int, 0) AS evidence_count
             FROM attempts a
             JOIN users u ON u.id = a.user_id
             JOIN projects p ON p.id = a.project_id
-            WHERE a.status = 'submitted'
-            ORDER BY a.submitted_at DESC NULLS LAST
-            LIMIT 30
+            WHERE a.status = 'submitted' OR COALESCE((a.payload->>'evidence_count')::int, 0) > 0
+               OR a.verified_score IS NOT NULL
+            ORDER BY COALESCE(a.submitted_at, a.started_at) DESC
+            LIMIT 40
             """
         )
         history = cur.fetchall()
+        cur.execute(
+            """
+            SELECT u.name AS student, p.title, t.action, t.detail, t.ts, a.id AS attempt_id
+            FROM telemetry t
+            JOIN attempts a ON a.id = t.attempt_id
+            JOIN users u ON u.id = a.user_id
+            JOIN projects p ON p.id = a.project_id
+            WHERE t.action NOT IN ('submit', 'submit-offline', 'open', 'event', 'checkpoint')
+            ORDER BY t.ts DESC
+            LIMIT 40
+            """
+        )
+        evidence_rows = cur.fetchall()
     return TEMPLATES.TemplateResponse(
         request,
         "admin.html",
@@ -99,6 +115,7 @@ def _dashboard(request: Request, user: dict):
             "skills": skills,
             "classes_rows": classes_rows,
             "history": history,
+            "evidence_rows": evidence_rows,
             "program": {"id": "word", "short": "Word"},
             "programs": [],
         },
