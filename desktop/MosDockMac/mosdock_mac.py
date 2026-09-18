@@ -36,9 +36,10 @@ def compute(x: int, y: int, w: int, h: int, state: str, compact: bool):
         dw = CONTROLS_W if compact else max(280, int(w * SIDE_RATIO))
         dock = (x + w - dw, y, dw, h)
         office = (x, y, w - dw, h)
-    elif state == "minimized":
-        dock = (x, y + h - CONTROLS_H, w, CONTROLS_H)
-        office = (x, y, w, h - CONTROLS_H)
+    elif state == "top":
+        dh = CONTROLS_H if compact else max(180, int(h * BOTTOM_RATIO))
+        dock = (x, y, w, dh)
+        office = (x, y + dh, w, h - dh)
     else:
         dh = CONTROLS_H if compact else max(180, int(h * BOTTOM_RATIO))
         dock = (x, y + h - dh, w, dh)

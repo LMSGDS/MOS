@@ -2,7 +2,11 @@
 
 Đo working area thật của máy, nhân tỉ lệ chuẩn (tham chiếu 1920×1040) để ra
 kích thước thanh Navigation ở left / right / top / bottom.
-Compact = cụm icon GMetrix đè TopMost, Office giữ full màn hình.
+
+Nguyên tắc cạnh:
+- top / bottom: bung hết chiều ngang màn hình, dày ClusterH (compact) hoặc ExpandedEdgeH.
+- left / right: bung hết chiều dọc màn hình, rộng ClusterW (compact) hoặc ExpandedSideW.
+Word luôn chiếm phần working area còn lại — thanh Navigation không đè lên tài liệu.
 """
 from __future__ import annotations
 
@@ -119,14 +123,17 @@ def measure(work: Rect) -> NavMetrics:
     )
 
 
+def horizontal(state: str | None) -> bool:
+    return (state or "bottom").lower() not in ("left", "right")
+
+
 def size_for(work: Rect, state: str, compact: bool = True) -> tuple[int, int]:
     nav = measure(work)
     state = (state or "bottom").lower()
-    if compact or state == "minimized":
-        return nav.cluster_w, nav.cluster_h
+    compact = compact or state == "minimized"
     if state in ("left", "right"):
-        return nav.expanded_side_w, work.h
-    return work.w, nav.expanded_edge_h
+        return (nav.cluster_w if compact else nav.expanded_side_w), work.h
+    return work.w, (nav.cluster_h if compact else nav.expanded_edge_h)
 
 
 def _clamp_word(word: Rect, work: Rect) -> Rect:
@@ -167,45 +174,48 @@ def cluster(work: Rect, state: str, scale: float = 1.0) -> Rect:
     return place(work, state, nav.cluster_w, nav.cluster_h, nav.margin)
 
 
+def word_beside(work: Rect, dock: Rect, state: str | None) -> Rect:
+    """Word occupies leftover working area so Navigation never covers the document."""
+    state = (state or "bottom").lower()
+    if state == "left":
+        word = Rect(dock.right, work.y, work.right - dock.right, work.h)
+    elif state == "right":
+        word = Rect(work.x, work.y, dock.x - work.x, work.h)
+    elif state == "top":
+        word = Rect(work.x, dock.bottom, work.w, work.bottom - dock.bottom)
+    else:
+        word = Rect(work.x, work.y, work.w, dock.y - work.y)
+    return _clamp_word(word, work)
+
+
 def compute(work: Rect, state: str, compact: bool = False, scale: float = 1.0) -> tuple[Rect, Rect]:
     state = (state or "bottom").lower()
     compact = compact or state == "minimized"
     nav = measure(_scale_work(work, scale))
-    if compact:
-        return place(work, state, nav.cluster_w, nav.cluster_h, nav.margin), work
+    side = nav.cluster_w if compact else nav.expanded_side_w
+    edge = nav.cluster_h if compact else nav.expanded_edge_h
     if state == "left":
-        dock = Rect(work.x, work.y, nav.expanded_side_w, work.h)
-        word = Rect(dock.right, work.y, work.w - nav.expanded_side_w, work.h)
+        dock = Rect(work.x, work.y, side, work.h)
     elif state == "right":
-        dock = Rect(work.right - nav.expanded_side_w, work.y, nav.expanded_side_w, work.h)
-        word = Rect(work.x, work.y, work.w - nav.expanded_side_w, work.h)
+        dock = Rect(work.right - side, work.y, side, work.h)
     elif state == "top":
-        dock = Rect(work.x, work.y, work.w, nav.expanded_edge_h)
-        word = Rect(work.x, dock.bottom, work.w, work.h - nav.expanded_edge_h)
+        dock = Rect(work.x, work.y, work.w, edge)
     else:
-        dock = Rect(work.x, work.bottom - nav.expanded_edge_h, work.w, nav.expanded_edge_h)
-        word = Rect(work.x, work.y, work.w, work.h - nav.expanded_edge_h)
-    return dock, _clamp_word(word, work)
+        dock = Rect(work.x, work.bottom - edge, work.w, edge)
+    return dock, word_beside(work, dock, state)
 
 
 def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rect:
-    """Gắn thẻ Hướng dẫn vào cụm dock, tỉ lệ theo màn hình, không vượt 22% cạnh."""
+    """Giữ cạnh dài đầy màn hình; dày thêm ô Hướng dẫn, không vượt 22% cạnh ngắn."""
     nav = measure(_scale_work(work, scale))
-    w = max(dock.w, nav.help_w)
-    h = dock.h + nav.help_h
-    w = min(w, _cap(work.w, w, nav.cluster_w))
-    h = min(h, _cap(work.h, h, dock.h + max(72, nav.help_h // 2)))
-    x = dock.x - (w - dock.w) // 2
-    y = dock.y if (state or "").lower() == "top" else dock.y - (h - dock.h)
-    if x < work.x:
-        x = work.x + nav.margin
-    if x + w > work.right:
-        x = work.right - w - nav.margin
-    if y < work.y:
-        y = work.y + nav.margin
-    if y + h > work.bottom:
-        y = work.bottom - h - nav.margin
-    return Rect(x, y, w, h)
+    state = (state or "bottom").lower()
+    if state in ("left", "right"):
+        w = min(_cap(work.w, dock.w + nav.help_w, dock.w), max(dock.w, work.w - MIN_WORD))
+        x = work.x if state == "left" else work.right - w
+        return Rect(x, work.y, w, work.h)
+    h = min(_cap(work.h, dock.h + nav.help_h, dock.h), max(dock.h, work.h - MIN_WORD))
+    y = work.y if state == "top" else work.bottom - h
+    return Rect(work.x, y, work.w, h)
 
 
 def overlap(a: Rect, b: Rect) -> bool:

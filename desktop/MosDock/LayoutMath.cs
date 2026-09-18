@@ -88,21 +88,23 @@ public static class LayoutMath
             fit);
     }
 
+    public static bool Horizontal(string state)
+    {
+        state = (state ?? "bottom").ToLowerInvariant();
+        return state is not "left" and not "right";
+    }
+
     public static (int W, int H) SizeFor(Rect work, string state, bool compact = true)
     {
         var nav = Measure(work);
         state = (state ?? "bottom").ToLowerInvariant();
-        if (compact || state == "minimized")
-        {
-            return (nav.ClusterW, nav.ClusterH);
-        }
-
+        compact = compact || state == "minimized";
         if (state is "left" or "right")
         {
-            return (nav.ExpandedSideW, work.H);
+            return (compact ? nav.ClusterW : nav.ExpandedSideW, work.H);
         }
 
-        return (work.W, nav.ExpandedEdgeH);
+        return (work.W, compact ? nav.ClusterH : nav.ExpandedEdgeH);
     }
 
     public static (Rect Dock, Rect Word) Compute(Rect work, string state, bool compact = false, float scale = 1f)
@@ -110,35 +112,41 @@ public static class LayoutMath
         state = (state ?? "bottom").ToLowerInvariant();
         compact = compact || state == "minimized";
         var nav = Measure(ScaleWork(work, scale));
-        if (compact)
-        {
-            return (Place(work, state, nav.ClusterW, nav.ClusterH, nav.Margin), work);
-        }
-
+        var side = compact ? nav.ClusterW : nav.ExpandedSideW;
+        var edge = compact ? nav.ClusterH : nav.ExpandedEdgeH;
         Rect dock;
-        Rect word;
         if (state == "left")
         {
-            dock = new Rect(work.X, work.Y, nav.ExpandedSideW, work.H);
-            word = new Rect(dock.Right, work.Y, work.W - nav.ExpandedSideW, work.H);
+            dock = new Rect(work.X, work.Y, side, work.H);
         }
         else if (state == "right")
         {
-            dock = new Rect(work.Right - nav.ExpandedSideW, work.Y, nav.ExpandedSideW, work.H);
-            word = new Rect(work.X, work.Y, work.W - nav.ExpandedSideW, work.H);
+            dock = new Rect(work.Right - side, work.Y, side, work.H);
         }
         else if (state == "top")
         {
-            dock = new Rect(work.X, work.Y, work.W, nav.ExpandedEdgeH);
-            word = new Rect(work.X, dock.Bottom, work.W, work.H - nav.ExpandedEdgeH);
+            dock = new Rect(work.X, work.Y, work.W, edge);
         }
         else
         {
-            dock = new Rect(work.X, work.Bottom - nav.ExpandedEdgeH, work.W, nav.ExpandedEdgeH);
-            word = new Rect(work.X, work.Y, work.W, work.H - nav.ExpandedEdgeH);
+            dock = new Rect(work.X, work.Bottom - edge, work.W, edge);
         }
 
-        return (dock, ClampWord(word, work));
+        return (dock, WordBeside(work, dock, state));
+    }
+
+    /// <summary>Word occupies the leftover working area; Navigation never covers the document.</summary>
+    public static Rect WordBeside(Rect work, Rect dock, string state)
+    {
+        state = (state ?? "bottom").ToLowerInvariant();
+        Rect word = state switch
+        {
+            "left" => new Rect(dock.Right, work.Y, work.Right - dock.Right, work.H),
+            "right" => new Rect(work.X, work.Y, dock.X - work.X, work.H),
+            "top" => new Rect(work.X, dock.Bottom, work.W, work.Bottom - dock.Bottom),
+            _ => new Rect(work.X, work.Y, work.W, dock.Y - work.Y),
+        };
+        return ClampWord(word, work);
     }
 
     public static Rect Cluster(Rect work, string state, float scale = 1f)
@@ -165,33 +173,17 @@ public static class LayoutMath
     public static Rect GrowForHelp(Rect dock, Rect work, string state, float scale = 1f)
     {
         var nav = Measure(ScaleWork(work, scale));
-        var w = Math.Max(dock.W, nav.HelpW);
-        var h = dock.H + nav.HelpH;
-        w = Math.Min(w, Cap(work.W, w, nav.ClusterW));
-        h = Math.Min(h, Cap(work.H, h, dock.H + Math.Max(72, nav.HelpH / 2)));
-        var x = dock.X - (w - dock.W) / 2;
-        var y = state is "top" ? dock.Y : dock.Y - (h - dock.H);
-        if (x < work.X)
+        state = (state ?? "bottom").ToLowerInvariant();
+        if (state is "left" or "right")
         {
-            x = work.X + nav.Margin;
+            var w = Math.Min(Cap(work.W, dock.W + nav.HelpW, dock.W), Math.Max(dock.W, work.W - MinWord));
+            var x = state == "left" ? work.X : work.Right - w;
+            return new Rect(x, work.Y, w, work.H);
         }
 
-        if (x + w > work.Right)
-        {
-            x = work.Right - w - nav.Margin;
-        }
-
-        if (y < work.Y)
-        {
-            y = work.Y + nav.Margin;
-        }
-
-        if (y + h > work.Bottom)
-        {
-            y = work.Bottom - h - nav.Margin;
-        }
-
-        return new Rect(x, y, w, h);
+        var h = Math.Min(Cap(work.H, dock.H + nav.HelpH, dock.H), Math.Max(dock.H, work.H - MinWord));
+        var y = state == "top" ? work.Y : work.Bottom - h;
+        return new Rect(work.X, y, work.W, h);
     }
 
     static Rect ScaleWork(Rect work, float scale)

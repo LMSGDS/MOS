@@ -167,7 +167,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.1" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
@@ -248,18 +248,24 @@ def test_layout_api_side_docks_leave_word_visible():
     assert right["word"]["w"] + right["dock"]["w"] == 1920
     mini = c.get("/api/layout", params={"state": "minimized", "w": 1920, "h": 1040}).json()
     assert mini["dock"]["h"] == 80
-    assert mini["dock"]["w"] == 200
-    assert mini["word"]["h"] == 1040
+    assert mini["dock"]["w"] == 1920
+    assert mini["word"]["h"] == 960
     compact = c.get("/api/layout", params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1}).json()
     assert compact["compact"] is True
     assert compact["dock"]["h"] == 80
-    assert compact["dock"]["w"] == 200
-    assert compact["word"]["h"] == 1040
+    assert compact["dock"]["w"] == 1920
+    assert compact["word"]["h"] == 960
+    assert compact["dock"]["y"] == compact["word"]["h"]
     assert compact["fit"] == 1.0
     help_box = compact["help"]
-    assert help_box["h"] <= 212
+    assert help_box["w"] == 1920
+    assert help_box["h"] == 212
     assert help_box["h"] < 1040 * 22 / 100
-    assert help_box["w"] <= 240
+    left_c = c.get("/api/layout", params={"state": "left", "w": 1920, "h": 1040, "compact": 1}).json()
+    assert left_c["dock"]["w"] == 200
+    assert left_c["dock"]["h"] == 1040
+    assert left_c["word"]["x"] == 200
+    assert left_c["help"]["h"] == 1040
 
 
 def test_kulkul_home_after_login():

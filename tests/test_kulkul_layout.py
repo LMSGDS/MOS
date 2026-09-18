@@ -1,6 +1,5 @@
 from app.kulkul_layout import (
     CLUSTER_H,
-    CLUSTER_MARGIN,
     CLUSTER_W,
     EXPANDED_SIDE_W,
     HELP_H,
@@ -53,24 +52,39 @@ def test_top_word_is_below():
     assert not overlap(dock, word)
 
 
-def test_compact_is_small_gmetrix_cluster():
+def test_compact_spans_full_screen_edge():
+    """Top/bottom bung hết ngang; left/right bung hết dọc; Word lấy phần còn lại."""
     dock, word = compute(WORK, "bottom", compact=True)
-    assert dock.w == CLUSTER_W
+    assert dock.w == WORK.w
     assert dock.h == CLUSTER_H
-    assert word == WORK
-    assert dock.y == WORK.bottom - CLUSTER_H - CLUSTER_MARGIN
+    assert dock.x == WORK.x
+    assert dock.y == WORK.bottom - CLUSTER_H
+    assert word.h == WORK.h - CLUSTER_H
+    assert word.w == WORK.w
+    assert not overlap(dock, word)
 
     left, word_l = compute(WORK, "left", compact=True)
     assert left.w == CLUSTER_W
-    assert left.h == CLUSTER_H
-    assert left.x == WORK.x + CLUSTER_MARGIN
-    assert word_l == WORK
+    assert left.h == WORK.h
+    assert left.x == WORK.x
+    assert left.y == WORK.y
+    assert word_l.x == left.right
+    assert word_l.w == WORK.w - CLUSTER_W
+    assert not overlap(left, word_l)
 
-    right, _ = compute(WORK, "right", compact=True)
-    assert right.x == WORK.right - CLUSTER_W - CLUSTER_MARGIN
+    right, word_r = compute(WORK, "right", compact=True)
+    assert right.w == CLUSTER_W
+    assert right.h == WORK.h
+    assert right.right == WORK.right
+    assert word_r.right == right.x
+    assert not overlap(right, word_r)
 
-    top, _ = compute(WORK, "top", compact=True)
-    assert top.y == WORK.y + CLUSTER_MARGIN
+    top, word_t = compute(WORK, "top", compact=True)
+    assert top.w == WORK.w
+    assert top.h == CLUSTER_H
+    assert top.y == WORK.y
+    assert word_t.y == top.bottom
+    assert not overlap(top, word_t)
 
 
 def test_minimized_matches_compact_bottom():
@@ -80,34 +94,39 @@ def test_minimized_matches_compact_bottom():
     assert word == word2
 
 
-def test_grow_for_help_sits_above_bottom_cluster():
-    dock, _ = compute(WORK, "bottom", compact=True)
+def test_grow_for_help_keeps_full_bottom_span():
+    dock, word = compute(WORK, "bottom", compact=True)
     grown = grow_for_help(dock, WORK, "bottom")
-    assert grown.w == HELP_W
+    assert grown.w == WORK.w
     assert grown.h == CLUSTER_H + HELP_H
+    assert grown.x == WORK.x
     assert grown.bottom == dock.bottom
     assert grown.y == dock.y - HELP_H
+    leftover = Rect(WORK.x, WORK.y, WORK.w, grown.y - WORK.y)
+    assert not overlap(grown, leftover)
+    assert leftover.h == word.h - HELP_H
 
 
-def test_grow_for_help_keeps_top_cluster_at_top():
+def test_grow_for_help_keeps_top_bar_at_top():
     dock, _ = compute(WORK, "top", compact=True)
     grown = grow_for_help(dock, WORK, "top")
     assert grown.y == dock.y
+    assert grown.w == WORK.w
     assert grown.h == CLUSTER_H + HELP_H
 
 
-def test_help_overlay_is_small_gmetrix_card():
-    """Thanh Navigation + Help không được chiếm nửa màn hình như panel 960×600."""
+def test_help_overlay_stays_on_full_vertical_edge():
     dock, word = compute(WORK, "left", compact=True)
     grown = grow_for_help(dock, WORK, "left")
-    assert word == WORK
-    assert grown.w <= HELP_W
-    assert grown.h == CLUSTER_H + HELP_H
-    assert grown.w < WORK.w / 5
-    assert grown.h < WORK.h * OVERLAY_CAP_PCT / 100 + 1
-    assert grown.w <= 260
-    assert grown.h <= 220
-    assert grown.x == WORK.x + CLUSTER_MARGIN
+    cap = WORK.w * OVERLAY_CAP_PCT // 100
+    assert word.x == dock.right
+    assert not overlap(dock, word)
+    assert grown.h == WORK.h
+    assert grown.x == WORK.x
+    assert grown.y == WORK.y
+    assert CLUSTER_W < grown.w <= cap
+    assert grown.w <= CLUSTER_W + HELP_W
+    assert grown.w < WORK.w / 4
 
 
 def test_reference_desktop_fit_is_one():
@@ -119,57 +138,75 @@ def test_reference_desktop_fit_is_one():
     assert nav.help_h == HELP_H
 
 
-def test_each_position_uses_measured_cluster_size():
+def test_each_position_uses_measured_full_edge():
     nav = measure(WORK)
-    for state in ("left", "right", "top", "bottom"):
+    for state in ("left", "right"):
         w, h = size_for(WORK, state, compact=True)
-        assert (w, h) == (nav.cluster_w, nav.cluster_h)
+        assert (w, h) == (nav.cluster_w, WORK.h)
         dock, word = compute(WORK, state, compact=True)
         assert dock.w == w
         assert dock.h == h
-        assert word == WORK
+        assert not overlap(dock, word)
+    for state in ("top", "bottom"):
+        w, h = size_for(WORK, state, compact=True)
+        assert (w, h) == (WORK.w, nav.cluster_h)
+        dock, word = compute(WORK, state, compact=True)
+        assert dock.w == w
+        assert dock.h == h
+        assert not overlap(dock, word)
 
 
-def test_laptop_desktop_shrinks_navigation():
+def test_laptop_desktop_shrinks_navigation_thickness():
     nav = measure(LAPTOP)
     assert nav.fit < 1
     assert nav.cluster_w < CLUSTER_W
     assert nav.cluster_h < CLUSTER_H
+    bottom, word_b = compute(LAPTOP, "bottom", compact=True)
+    assert bottom.w == LAPTOP.w
+    assert bottom.h == nav.cluster_h
+    assert word_b.h == LAPTOP.h - nav.cluster_h
+    assert not overlap(bottom, word_b)
+    left, word_l = compute(LAPTOP, "left", compact=True)
+    assert left.h == LAPTOP.h
+    assert left.w == nav.cluster_w
+    assert not overlap(left, word_l)
     for state in ("left", "right", "top", "bottom"):
         dock, word = compute(LAPTOP, state, compact=True)
-        assert dock.w == nav.cluster_w
-        assert dock.h == nav.cluster_h
-        assert dock.w < LAPTOP.w / 5
-        assert dock.h < LAPTOP.h / 6
-        assert word == LAPTOP
         grown = grow_for_help(dock, LAPTOP, state)
-        assert grown.w < LAPTOP.w / 4
-        assert grown.h <= LAPTOP.h * OVERLAY_CAP_PCT // 100
-        assert grown.h < 220
+        assert not overlap(dock, word)
+        if state in ("left", "right"):
+            assert grown.h == LAPTOP.h
+            assert grown.w <= LAPTOP.w * OVERLAY_CAP_PCT // 100
+        else:
+            assert grown.w == LAPTOP.w
+            assert grown.h <= LAPTOP.h * OVERLAY_CAP_PCT // 100
 
 
-def test_large_desktop_keeps_navigation_compact():
+def test_large_desktop_keeps_navigation_thin():
     nav_qhd = measure(QHD)
     nav_uhd = measure(UHD)
     assert nav_qhd.fit > 1
     assert nav_uhd.fit >= nav_qhd.fit
-    qhd, _ = compute(QHD, "bottom", compact=True)
-    uhd, _ = compute(UHD, "left", compact=True)
-    assert CLUSTER_W <= qhd.w <= 240
+    qhd, word_q = compute(QHD, "bottom", compact=True)
+    uhd, word_u = compute(UHD, "left", compact=True)
+    assert qhd.w == QHD.w
     assert CLUSTER_H <= qhd.h <= 100
+    assert word_q.h == QHD.h - qhd.h
+    assert uhd.h == UHD.h
     assert uhd.w <= 240
-    assert uhd.h <= 100
-    assert uhd.w < UHD.w / 8
-    assert uhd.h < UHD.h / 8
+    assert word_u.w == UHD.w - uhd.w
+    assert not overlap(qhd, word_q)
+    assert not overlap(uhd, word_u)
 
 
 def test_compact_scales_with_desktop_size():
     big = Rect(0, 0, 2880, 1560)
-    dock, _ = compute(big, "bottom", compact=True)
-    assert CLUSTER_W <= dock.w <= 240
+    dock, word = compute(big, "bottom", compact=True)
+    assert dock.w == big.w
     assert CLUSTER_H <= dock.h <= 100
+    assert word.h == big.h - dock.h
     grown = grow_for_help(dock, big, "bottom")
-    assert grown.w <= 260
+    assert grown.w == big.w
     assert grown.h <= big.h * OVERLAY_CAP_PCT // 100
     assert grown.h >= dock.h
     assert grown.h < big.h / 4
@@ -184,11 +221,11 @@ def test_unknown_state_defaults_to_bottom():
     assert not overlap(dock, word)
 
 
-def test_laptop_help_card_stays_on_screen_edge():
+def test_laptop_help_bar_stays_on_screen_edge():
     dock, word = compute(LAPTOP, "bottom", compact=True)
     grown = grow_for_help(dock, LAPTOP, "bottom")
-    assert word == LAPTOP
+    assert not overlap(dock, word)
     assert grown.bottom == dock.bottom
-    assert grown.h <= 160
-    assert grown.w <= 240
+    assert grown.w == LAPTOP.w
+    assert grown.h <= LAPTOP.h * OVERLAY_CAP_PCT // 100
     assert grown.y > LAPTOP.y + LAPTOP.h // 2

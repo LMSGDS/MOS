@@ -25,6 +25,7 @@ sealed class MainForm : Form
     readonly ListView _tasks = new();
     readonly Label _examStatus = new();
     readonly Panel _dockChrome = new();
+    readonly FlowLayoutPanel _dockFlow = new();
     readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang vị trí khác", Ui.DockBlue);
     readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.DockBlue);
     readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Hiện danh sách nhiệm vụ", Ui.DockBlue);
@@ -218,13 +219,31 @@ sealed class MainForm : Form
     void ApplyNavChrome(NavMetrics nav)
     {
         _nav = nav;
-        _dockChrome.Height = nav.ClusterH;
         _dockChrome.Padding = new Padding(nav.ChromePad);
         foreach (var btn in DockButtons())
         {
             btn.Size = new Size(nav.Icon, nav.Icon);
             btn.Margin = new Padding(nav.IconGap);
         }
+
+        OrientNav();
+    }
+
+    void OrientNav()
+    {
+        if (_docking && _compact && _state is "left" or "right")
+        {
+            _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
+            _dockChrome.Width = _nav.ClusterW;
+            _dockFlow.FlowDirection = FlowDirection.TopDown;
+            _dockFlow.WrapContents = true;
+            return;
+        }
+
+        _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
+        _dockChrome.Height = _nav.ClusterH;
+        _dockFlow.FlowDirection = FlowDirection.LeftToRight;
+        _dockFlow.WrapContents = true;
     }
 
     void BuildHeader()
@@ -383,14 +402,12 @@ sealed class MainForm : Form
         _dockChrome.BackColor = Color.FromArgb(236, 239, 241);
         _dockChrome.Padding = new Padding(6, 4, 6, 4);
 
-        var row1 = Ui.DockChip();
-        var row2 = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            WrapContents = false,
-            BackColor = Color.Transparent,
-            Margin = new Padding(0),
-        };
+        _dockFlow.Dock = DockStyle.Fill;
+        _dockFlow.FlowDirection = FlowDirection.LeftToRight;
+        _dockFlow.WrapContents = true;
+        _dockFlow.BackColor = Color.Transparent;
+        _dockFlow.Padding = Padding.Empty;
+        _dockFlow.Margin = Padding.Empty;
 
         _dockPos.Click += (_, _) =>
         {
@@ -414,27 +431,12 @@ sealed class MainForm : Form
         _dockBack.Click += (_, _) => StepTask(-1);
         _dockNext.Click += (_, _) => StepTask(1);
 
-        row1.Controls.Add(_dockPos);
-        row1.Controls.Add(_dockSave);
-        row1.Controls.Add(_dockTasks);
-        row1.Controls.Add(_dockCheck);
-        row1.Controls.Add(_dockPin);
-        row2.Controls.Add(_dockMenu);
-        row2.Controls.Add(_dockHint);
-        row2.Controls.Add(_dockShare);
-        row2.Controls.Add(_dockBack);
-        row2.Controls.Add(_dockNext);
-
-        var stack = new FlowLayoutPanel
+        foreach (var btn in DockButtons())
         {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            BackColor = Color.Transparent,
-        };
-        stack.Controls.Add(row1);
-        stack.Controls.Add(row2);
-        _dockChrome.Controls.Add(stack);
+            _dockFlow.Controls.Add(btn);
+        }
+
+        _dockChrome.Controls.Add(_dockFlow);
 
         _dockMenuStrip.Font = new Font("Segoe UI", 10f);
         _dockMenuStrip.Items.Add(DockMenuItem("←  left", "left"));
@@ -498,8 +500,8 @@ sealed class MainForm : Form
 
         _exam.Controls.Add(_summary);
         _exam.Controls.Add(_tasks);
-        _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_helpPane);
+        _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_examStatus);
         _exam.Controls.Add(_examMeta);
         _exam.Controls.Add(_examTitle);
@@ -1120,7 +1122,7 @@ sealed class MainForm : Form
         _dockChrome.Visible = !showSummary;
         if (_docking && _compact && !showSummary)
         {
-            _dockChrome.Height = _nav.ClusterH;
+            OrientNav();
             _dockChrome.Padding = new Padding(_nav.ChromePad);
         }
         _helpPane.Visible = showHelp;
@@ -1697,12 +1699,7 @@ sealed class MainForm : Form
         var work = CurrentWork();
         var nav = LayoutMath.Measure(work);
         ApplyNavChrome(nav);
-        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
-        if (_compact && HelpOpen)
-        {
-            dock = LayoutMath.GrowForHelp(dock, work, _state);
-        }
-
+        var (dock, word) = DockAndWord(work);
         FitOverlay(dock.X, dock.Y, dock.W, dock.H);
         TopMost = _pinned;
         ApplyExamChrome();
@@ -1729,11 +1726,23 @@ sealed class MainForm : Form
         }
 
         var work = CurrentWork();
-        var (_, word) = LayoutMath.Compute(work, _state, _compact);
+        var (_, word) = DockAndWord(work);
         WordWindow.Apply(word, _app);
         if (_pinned && !TopMost)
         {
             TopMost = true;
         }
+    }
+
+    (Rect Dock, Rect Word) DockAndWord(Rect work)
+    {
+        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
+        if (_compact && HelpOpen)
+        {
+            dock = LayoutMath.GrowForHelp(dock, work, _state);
+            word = LayoutMath.WordBeside(work, dock, _state);
+        }
+
+        return (dock, word);
     }
 }
