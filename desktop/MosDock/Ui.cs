@@ -469,7 +469,7 @@ static class Ui
             _icon.Paint += (_, e) => PaintInfoMark(e.Graphics, _icon.ClientRectangle, AccentOf(_tone));
             _msg.Dock = DockStyle.Fill;
             _msg.Font = SmallFont;
-            _msg.ForeColor = Text;
+            _msg.ForeColor = Ui.Text;
             _msg.UseMnemonic = false;
             Controls.Add(_msg);
             Controls.Add(_icon);
