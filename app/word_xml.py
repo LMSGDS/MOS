@@ -209,6 +209,8 @@ def extract_word_facts(path: Path) -> dict:
         external = (rel.get("mode") == "External") or bool(target and not anchor)
         if field_raw and ("http://" in field_raw.lower() or "https://" in field_raw.lower() or "mailto:" in field_raw.lower()):
             external = True
+        if not text and not anchor and not external:
+            return
         hyperlinks.append(
             {
                 "text": text,
@@ -221,8 +223,21 @@ def extract_word_facts(path: Path) -> dict:
     body = root.find(f"{W}body")
     if body is None:
         body = root
+    field_on = False
+    field_instr: list[str] = []
+    field_text: list[str] = []
+
+    def flush_field() -> None:
+        nonlocal field_on, field_instr, field_text
+        raw = "".join(field_instr)
+        if "HYPERLINK" in raw.upper():
+            add_hyperlink(norm("".join(field_text)), "", "", raw.strip())
+        field_on = False
+        field_instr = []
+        field_text = []
 
     def walk(el: ET.Element, para: ET.Element | None, style: str) -> None:
+        nonlocal field_on, field_instr, field_text
         tag = _local(el.tag)
         current_para = para
         current_style = style
@@ -236,17 +251,34 @@ def extract_word_facts(path: Path) -> dict:
             start_bookmark(el, current_para, current_style)
         elif tag == "bookmarkEnd":
             end_bookmark(el)
+        elif tag == "fldChar":
+            kind = (el.attrib.get(f"{W}fldCharType") or "").lower()
+            if kind == "begin":
+                field_on = True
+                field_instr = []
+                field_text = []
+            elif kind == "separate":
+                field_text = []
+            elif kind == "end" and field_on:
+                flush_field()
+        elif tag == "instrText" and el.text:
+            if field_on:
+                field_instr.append(el.text)
+            elif "HYPERLINK" in el.text.upper():
+                add_hyperlink("", "", "", el.text.strip())
         elif tag == "t":
             collect_text(el)
+            if field_on and el.text:
+                field_text.append(el.text)
         elif tag == "hyperlink":
             texts = norm("".join((t.text or "") for t in el.iter(f"{W}t")))
             add_hyperlink(texts, el.attrib.get(f"{W}anchor") or "", el.attrib.get(f"{R}id") or "")
-        elif tag == "instrText" and el.text and "HYPERLINK" in el.text.upper():
-            add_hyperlink("", "", "", el.text.strip())
         for child in list(el):
             walk(child, current_para, current_style)
 
     walk(body, None, "")
+    if field_on:
+        flush_field()
 
     for bid, name in open_ids.items():
         if name in bookmarks and not bookmarks[name]["text"]:
@@ -257,6 +289,20 @@ def extract_word_facts(path: Path) -> dict:
         bm = bookmarks.get(anchor) or {}
         link["target_heading"] = bm.get("heading") or ""
         link["target_text"] = bm.get("text") or ""
+
+    unique: list[dict] = []
+    seen_links: set[tuple] = set()
+    for link in hyperlinks:
+        key = (
+            norm(link.get("text")).casefold(),
+            (link.get("anchor") or "").casefold(),
+            bool(link.get("external")),
+        )
+        if key in seen_links:
+            continue
+        seen_links.add(key)
+        unique.append(link)
+    hyperlinks = unique
 
     extra = _manage_document_facts(root, extra_parts)
     skills = _skill_facts(root, extra_parts, names)

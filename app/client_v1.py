@@ -219,7 +219,17 @@ def _save_evidence_file(attempt_id: str, events: list | None) -> str | None:
     return str(dest)
 
 
-def _store_attempt_check(attempt_id: str, payload: dict, events: list | None, *, training: bool, evidence_path: str | None) -> None:
+def _store_attempt_check(
+    attempt_id: str,
+    payload: dict,
+    events: list | None,
+    *,
+    training: bool,
+    evidence_path: str | None,
+    persist_scores: bool | None = None,
+) -> None:
+    if persist_scores is None:
+        persist_scores = training
     summary = {
         "last_checkpoint_at": datetime.now(timezone.utc).isoformat(),
         "evidence_count": len(events or []),
@@ -237,14 +247,17 @@ def _store_attempt_check(attempt_id: str, payload: dict, events: list | None, *,
               pending_score = CASE WHEN %s THEN %s ELSE pending_score END,
               max_score = COALESCE(%s, max_score),
               payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
-            WHERE id = %s AND status = 'running'
+            WHERE id = %s AND (
+              status = 'running'
+              OR (status = 'submitted' AND COALESCE(pending_score, 0) > 0)
+            )
             """,
             (
-                training,
+                persist_scores,
                 payload.get("score"),
-                training,
+                persist_scores,
                 payload.get("verified"),
-                training,
+                persist_scores,
                 payload.get("pending"),
                 payload.get("max_score") or 100,
                 json.dumps(summary, ensure_ascii=False),
@@ -566,13 +579,19 @@ async def v1_post_evidence(request: Request, attempt_id: str):
     stored = _ingest_evidence(attempt_id, events)
     merged = _combined_evidence(events, attempt_id) or []
     path = _save_evidence_file(attempt_id, merged)
-    return {
+    scored = _regrade_with_evidence(attempt, merged)
+    training = attempt.get("mode") != "testing"
+    body = {
         "ok": True,
         "stored": stored,
         "count": len(merged),
         "evidence_path": path,
         "events": merged,
+        "regraded": scored is not None,
     }
+    if scored is not None and training:
+        body["score"] = scored
+    return body
 
 
 @router.get("/attempts/{attempt_id}/evidence")
@@ -632,9 +651,84 @@ def v1_attempts(request: Request):
     return {"ok": True, "attempts": rows}
 
 
+def _latest_artifact(attempt_id: str) -> Path | None:
+    folder = RESULTS / attempt_id
+    if not folder.is_dir():
+        return None
+    files = [
+        path
+        for path in folder.iterdir()
+        if path.is_file() and path.suffix.lower() in {".docx", ".docm", ".doc"}
+    ]
+    files.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return files[0] if files else None
+
+
 def _score_saved(path: Path | None, attempt: dict, evidence: list | None = None) -> dict:
     rubric = _locked_rubric(attempt)
     return score_file(path, rubric, evidence)
+
+
+def _refresh_latest_submission(attempt_id: str, scored: dict, payload: dict) -> None:
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT id FROM submissions
+            WHERE attempt_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (attempt_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return
+        cur.execute(
+            """
+            UPDATE submissions SET
+              status = %s,
+              grader_version = %s,
+              score = %s,
+              verified_score = %s,
+              pending_score = %s,
+              max_score = %s,
+              payload = %s::jsonb
+            WHERE id = %s
+            """,
+            (
+                "graded" if payload.get("complete") else "provisional",
+                payload.get("grader_version"),
+                payload.get("score"),
+                payload.get("verified"),
+                payload.get("pending"),
+                payload.get("max_score") or 100,
+                json.dumps(payload, ensure_ascii=False),
+                row["id"],
+            ),
+        )
+        _store_results(cur, row["id"], scored)
+
+
+def _regrade_with_evidence(attempt: dict, events: list | None) -> dict | None:
+    path = _latest_artifact(str(attempt["id"]))
+    if path is None:
+        return None
+    scored = _score_saved(path, attempt, events)
+    payload = _grade_payload(scored)
+    training = attempt.get("mode") != "testing"
+    submitted = str(attempt.get("status") or "") == "submitted"
+    evidence_path = _save_evidence_file(str(attempt["id"]), events)
+    _store_attempt_check(
+        str(attempt["id"]),
+        payload,
+        events,
+        training=training,
+        evidence_path=evidence_path,
+        persist_scores=training or submitted,
+    )
+    if submitted:
+        _refresh_latest_submission(str(attempt["id"]), scored, payload)
+    return payload
 
 
 @router.post("/attempts/{attempt_id}/checkpoints")

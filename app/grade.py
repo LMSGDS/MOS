@@ -8,7 +8,7 @@ from pathlib import Path
 
 from app.word_xml import extract_word_facts, norm, same
 
-GRADER_VERSION = "1.3.0"
+GRADER_VERSION = "1.3.1"
 RUBRIC_DIR = Path(__file__).resolve().parent / "rubrics"
 
 
@@ -73,6 +73,13 @@ def _bookmark_range(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "bookmark_range_mismatch", refs)
 
 
+def _link_hits_heading(link: dict, heading: str) -> bool:
+    if same(link.get("target_heading"), heading) or same(link.get("target_text"), heading):
+        return True
+    slug = (link.get("anchor") or "").replace("_", " ").strip(" _")
+    return bool(slug) and same(slug, heading)
+
+
 def _internal_hyperlink(facts: dict, criterion: dict) -> dict:
     pred = criterion.get("predicate") or {}
     label = pred.get("text") or (criterion.get("selector") or {}).get("toc_label") or ""
@@ -84,7 +91,7 @@ def _internal_hyperlink(facts: dict, criterion: dict) -> dict:
         if any(same(h.get("text"), label) for h in externals):
             return _result(criterion, "fail", "hyperlink_external_only")
         return _result(criterion, "fail", "hyperlink_missing")
-    good = [h for h in matches if same(h.get("target_heading"), heading)]
+    good = [h for h in matches if _link_hits_heading(h, heading)]
     if not good:
         refs = [f"word/document.xml:{m.get('anchor')}" for m in matches]
         return _result(criterion, "fail", "hyperlink_wrong_target", refs)
@@ -504,6 +511,17 @@ def _key(value: str | None) -> str:
     return re.sub(r"[\s_\-]+", "", (value or "")).casefold()
 
 
+def _page_same(got, expected) -> bool:
+    if expected is None or expected == "":
+        return True
+    if got is None or got == "":
+        return False
+    try:
+        return int(float(got)) == int(float(expected))
+    except (TypeError, ValueError):
+        return str(got).strip() == str(expected).strip()
+
+
 def _query_same(got, expected, match_case: bool) -> bool:
     got = str(got or "").strip()
     expected = str(expected or "").strip()
@@ -618,7 +636,7 @@ def _grade_action(criterion: dict, events: list[dict]) -> dict:
         if kind == "goto_page":
             if action not in {"goto_page", "goto"}:
                 continue
-            if page is None or str(ev_page) == str(page) or ev_page == page:
+            if page is None or _page_same(ev_page, page):
                 return _result(criterion, "pass", "action_observed", ["action:goto_page"])
         if kind == "goto_bookmark":
             if action not in {"goto_bookmark", "goto"}:

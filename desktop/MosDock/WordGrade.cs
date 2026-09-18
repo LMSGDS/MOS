@@ -90,6 +90,7 @@ sealed class HyperlinkFact
     public string Anchor { get; init; } = "";
     public bool External { get; init; }
     public string TargetHeading { get; set; } = "";
+    public string TargetText { get; set; } = "";
 }
 
 static class WordXml
@@ -156,6 +157,9 @@ static class WordXml
             var openIds = new Dictionary<string, string>(StringComparer.Ordinal);
             var buffers = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             var hyperlinks = new List<HyperlinkFact>();
+            var fieldOn = false;
+            var fieldInstr = new List<string>();
+            var fieldText = new List<string>();
 
             string ParaStyle(XElement p)
             {
@@ -165,6 +169,73 @@ static class WordXml
 
             string ParaText(XElement? p) =>
                 p is null ? "" : Norm(string.Concat(p.Descendants(W + "t").Select(t => t.Value)));
+
+            static (string Anchor, bool External) FieldAnchor(string raw)
+            {
+                var parts = raw.Replace("\"", " ").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                var anchor = "";
+                for (var i = 0; i < parts.Length - 1; i++)
+                {
+                    if (string.Equals(parts[i], "\\l", StringComparison.OrdinalIgnoreCase))
+                    {
+                        anchor = parts[i + 1];
+                        break;
+                    }
+                }
+
+                var lower = raw.ToLowerInvariant();
+                var external = lower.Contains("http://") || lower.Contains("https://") || lower.Contains("mailto:");
+                return (anchor, external);
+            }
+
+            void AddHyperlink(string text, string anchor, string rid, string fieldRaw = "")
+            {
+                rels.TryGetValue(rid, out var rel);
+                if (anchor.Length == 0 && rel.Target.StartsWith("#", StringComparison.Ordinal))
+                {
+                    anchor = rel.Target[1..];
+                }
+
+                if (anchor.Length == 0 && fieldRaw.Length > 0)
+                {
+                    (anchor, _) = FieldAnchor(fieldRaw);
+                }
+
+                var external = rel.Mode == "External" || (rel.Target.Length > 0 && anchor.Length == 0);
+                if (fieldRaw.Length > 0)
+                {
+                    var lower = fieldRaw.ToLowerInvariant();
+                    if (lower.Contains("http://") || lower.Contains("https://") || lower.Contains("mailto:"))
+                    {
+                        external = true;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(text) && string.IsNullOrEmpty(anchor) && !external)
+                {
+                    return;
+                }
+
+                hyperlinks.Add(new HyperlinkFact { Text = text, Anchor = anchor, External = external });
+            }
+
+            void FlushField()
+            {
+                if (!fieldOn)
+                {
+                    return;
+                }
+
+                var raw = string.Concat(fieldInstr);
+                if (raw.IndexOf("HYPERLINK", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    AddHyperlink(Norm(string.Concat(fieldText)), "", "", raw.Trim());
+                }
+
+                fieldOn = false;
+                fieldInstr.Clear();
+                fieldText.Clear();
+            }
 
             void Walk(XElement el, XElement? para, string style)
             {
@@ -199,6 +270,36 @@ static class WordXml
                         bm.Text = Norm(string.Concat(buffers.GetValueOrDefault(id) ?? []));
                     }
                 }
+                else if (el.Name == W + "fldChar")
+                {
+                    var kind = ((string?)el.Attribute(W + "fldCharType") ?? "").ToLowerInvariant();
+                    if (kind == "begin")
+                    {
+                        fieldOn = true;
+                        fieldInstr.Clear();
+                        fieldText.Clear();
+                    }
+                    else if (kind == "separate")
+                    {
+                        fieldText.Clear();
+                    }
+                    else if (kind == "end" && fieldOn)
+                    {
+                        FlushField();
+                    }
+                }
+                else if (el.Name == W + "instrText")
+                {
+                    var instr = el.Value ?? "";
+                    if (fieldOn)
+                    {
+                        fieldInstr.Add(instr);
+                    }
+                    else if (instr.IndexOf("HYPERLINK", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        AddHyperlink("", "", "", instr.Trim());
+                    }
+                }
                 else if (el.Name == W + "t")
                 {
                     var text = el.Value;
@@ -208,6 +309,11 @@ static class WordXml
                         {
                             buffers.GetValueOrDefault(id)?.Add(text);
                         }
+
+                        if (fieldOn)
+                        {
+                            fieldText.Add(text);
+                        }
                     }
                 }
                 else if (el.Name == W + "hyperlink")
@@ -215,14 +321,7 @@ static class WordXml
                     var text = Norm(string.Concat(el.Descendants(W + "t").Select(t => t.Value)));
                     var anchor = (string?)el.Attribute(W + "anchor") ?? "";
                     var rid = (string?)el.Attribute(R + "id") ?? "";
-                    rels.TryGetValue(rid, out var rel);
-                    if (anchor.Length == 0 && rel.Target.StartsWith("#", StringComparison.Ordinal))
-                    {
-                        anchor = rel.Target[1..];
-                    }
-
-                    var external = rel.Mode == "External" || (rel.Target.Length > 0 && anchor.Length == 0);
-                    hyperlinks.Add(new HyperlinkFact { Text = text, Anchor = anchor, External = external });
+                    AddHyperlink(text, anchor, rid);
                 }
 
                 foreach (var child in el.Elements())
@@ -233,6 +332,7 @@ static class WordXml
 
             var body = root.Element(W + "body") ?? root;
             Walk(body, null, "");
+            FlushField();
 
             foreach (var kv in openIds)
             {
@@ -242,11 +342,25 @@ static class WordXml
                 }
             }
 
+            var unique = new List<HyperlinkFact>();
+            var seenLinks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var link in hyperlinks)
+            {
+                var key = $"{Norm(link.Text)}\0{link.Anchor}\0{link.External}";
+                if (!seenLinks.Add(key))
+                {
+                    continue;
+                }
+
+                unique.Add(link);
+            }
+
+            foreach (var link in unique)
             {
                 if (facts.Bookmarks.TryGetValue(link.Anchor, out var bm))
                 {
                     link.TargetHeading = bm.Heading;
+                    link.TargetText = bm.Text;
                 }
 
                 if (link.External)
@@ -758,6 +872,17 @@ static class WordGrade
         return new LocalCriterion(item.Id, "fail", 0, item.Weight, item.Feedback.Fail ?? "Bookmark sai phạm vi.");
     }
 
+    static bool LinkHitsHeading(HyperlinkFact link, string heading)
+    {
+        if (WordXml.Same(link.TargetHeading, heading) || WordXml.Same(link.TargetText, heading))
+        {
+            return true;
+        }
+
+        var slug = (link.Anchor ?? "").Replace("_", " ").Trim(' ', '_');
+        return slug.Length > 0 && WordXml.Same(slug, heading);
+    }
+
     static LocalCriterion Hyperlink(WordFacts facts, JsonCriterion item)
     {
         var label = item.Predicate.Text ?? item.Selector.TocLabel ?? "";
@@ -768,7 +893,7 @@ static class WordGrade
             return new LocalCriterion(item.Id, "fail", 0, item.Weight, item.Feedback.Fail ?? "Thiếu liên kết mục lục.");
         }
 
-        if (matches.Any(h => WordXml.Same(h.TargetHeading, heading)))
+        if (matches.Any(h => LinkHitsHeading(h, heading)))
         {
             return new LocalCriterion(item.Id, "pass", item.Weight, item.Weight, item.Feedback.Pass ?? "Đạt.");
         }

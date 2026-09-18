@@ -343,3 +343,95 @@ def test_post_evidence_json_is_stored(client):
     assert again.json()["stored"] == 0
     got = client.get(f"/api/v1/attempts/{attempt_id}/evidence", headers=headers).json()
     assert any(e.get("query") == "to" for e in got["events"])
+    assert posted.json().get("regraded") is False
+
+
+def test_post_evidence_regrades_existing_checkpoint(client):
+    import json
+
+    from tests.test_word_actions import DEMO_W11
+
+    token = _token(client, "hocsinh")
+    headers = {"Authorization": f"Bearer {token}"}
+    started = client.post(
+        "/api/v1/attempts",
+        headers=headers,
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    attempt_id = started.json()["attempt_id"]
+    check = client.post(
+        f"/api/v1/attempts/{attempt_id}/checkpoints",
+        headers=headers,
+        files={"file": ("Word_1-1_results.docx", WORD11_RESULTS.read_bytes(), WORD_MIME)},
+    )
+    assert check.status_code == 200
+    assert check.json()["score"]["verified"] == 62
+    assert check.json()["score"]["pending"] == 38
+
+    posted = client.post(
+        f"/api/v1/attempts/{attempt_id}/evidence",
+        headers=headers,
+        json={"events": DEMO_W11},
+    )
+    assert posted.status_code == 200, posted.text
+    body = posted.json()
+    assert body["regraded"] is True
+    assert body["score"]["verified"] == 100
+    assert body["score"]["pending"] == 0
+    assert body["score"]["complete"] is True
+    assert body["score"]["grader_version"] == "1.3.1"
+    statuses = {c["criterion_id"]: c["status"] for c in body["score"]["criteria"]}
+    assert statuses["W11-S01"] == "pass"
+    assert statuses["W11-N02"] == "pass"
+    assert statuses["W11-H03"] == "pass"
+
+    stored = client.get(f"/api/v1/attempts/{attempt_id}/evidence", headers=headers)
+    assert stored.status_code == 200
+    assert stored.json()["verified_score"] == 100
+    assert stored.json()["pending_score"] == 0
+
+
+def test_late_evidence_regrades_submitted_attempt(client):
+    import json
+
+    from tests.test_word_actions import DEMO_W11
+
+    token = _token(client, "hocsinh")
+    headers = {"Authorization": f"Bearer {token}"}
+    started = client.post(
+        "/api/v1/attempts",
+        headers=headers,
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    attempt_id = started.json()["attempt_id"]
+    submitted = client.post(
+        f"/api/v1/attempts/{attempt_id}/submit",
+        headers=headers,
+        files={"file": ("Word_1-1_results.docx", WORD11_RESULTS.read_bytes(), WORD_MIME)},
+    )
+    assert submitted.status_code == 200
+    assert submitted.json()["score"]["verified"] == 62
+    assert submitted.json()["score"]["pending"] == 38
+    submission_id = submitted.json()["submission_id"]
+
+    posted = client.post(
+        f"/api/v1/attempts/{attempt_id}/evidence",
+        headers=headers,
+        json={"events": DEMO_W11},
+    )
+    assert posted.status_code == 200, posted.text
+    assert posted.json()["regraded"] is True
+    assert posted.json()["score"]["verified"] == 100
+    assert posted.json()["score"]["pending"] == 0
+
+    listed = client.get("/api/v1/attempts", headers=headers).json()
+    hit = next(a for a in listed["attempts"] if a["id"] == attempt_id)
+    assert hit["verified_score"] == 100
+    assert hit["pending_score"] == 0
+    got = client.get(f"/api/v1/submissions/{submission_id}", headers=headers)
+    assert got.status_code == 200
+    payload = got.json()["submission"]["payload"]
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    assert payload["verified"] == 100
+    assert payload["pending"] == 0

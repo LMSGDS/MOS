@@ -21,7 +21,7 @@ DEMO_W11 = [
 
 
 def test_grader_version_action_kit():
-    assert GRADER_VERSION == "1.3.0"
+    assert GRADER_VERSION == "1.3.1"
 
 
 def test_word_11_demo_evidence_makes_results_complete():
@@ -115,3 +115,11 @@ def test_demo_evidence_json_roundtrip():
     graded = grade_path(RESULTS, RUBRIC, evidence=raw)
     assert graded["verified"] == 100
     assert graded["pending"] == 0
+    assert graded["grader_version"] == "1.3.1"
+
+
+def test_goto_page_accepts_int_float_and_string():
+    for page in (3, 3.0, "3", "3.0"):
+        graded = grade_path(RESULTS, RUBRIC, evidence=[{"action": "goto_page", "page": page}])
+        by_id = {c["criterion_id"]: c for c in graded["criteria"]}
+        assert by_id["W11-N02"]["status"] == "pass", page

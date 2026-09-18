@@ -237,3 +237,55 @@ def test_action_evidence_without_observer_stays_unverified():
     assert by_id["W11-N01"]["status"] == "unverified"
     empty = evaluate_facts(extract_word_facts(RESULTS), RUBRIC, evidence=[])
     assert empty["pending"] == 38
+
+
+def test_hyperlink_field_code_recognition(tmp_path):
+    path = write_docx(
+        tmp_path / "field-link.docx",
+        """
+        <w:p>
+          <w:pPr><w:pStyle w:val="Heading1"/></w:pPr>
+          <w:bookmarkStart w:id="0" w:name="_Recognition"/>
+          <w:r><w:t>Recognition</w:t></w:r>
+          <w:bookmarkEnd w:id="0"/>
+        </w:p>
+        <w:p>
+          <w:r><w:fldChar w:fldCharType="begin"/></w:r>
+          <w:r><w:instrText xml:space="preserve"> HYPERLINK \\l "_Recognition" </w:instrText></w:r>
+          <w:r><w:fldChar w:fldCharType="separate"/></w:r>
+          <w:r><w:t>Recognition</w:t></w:r>
+          <w:r><w:fldChar w:fldCharType="end"/></w:r>
+        </w:p>
+        """,
+    )
+    facts = extract_word_facts(path)
+    internals = facts["internal_hyperlinks"]
+    assert internals, facts
+    assert any(same(h.get("text"), "Recognition") and h.get("anchor") == "_Recognition" for h in internals)
+    graded = grade_path(path, RUBRIC)
+    by_id = {c["criterion_id"]: c for c in graded["criteria"]}
+    assert by_id["W11-H03"]["status"] == "pass"
+    assert by_id["W11-H03"]["reason_code"] == "internal_hyperlink_matches"
+
+
+def test_hyperlink_anchor_slug_when_heading_empty(tmp_path):
+    path = write_docx(
+        tmp_path / "slug.docx",
+        """
+        <w:p>
+          <w:bookmarkStart w:id="0" w:name="_Make_It_Your_Own"/>
+          <w:bookmarkEnd w:id="0"/>
+        </w:p>
+        <w:p>
+          <w:hyperlink w:anchor="_Make_It_Your_Own">
+            <w:r><w:t>Make It Your Own</w:t></w:r>
+          </w:hyperlink>
+        </w:p>
+        """,
+    )
+    facts = extract_word_facts(path)
+    link = facts["internal_hyperlinks"][0]
+    assert not link.get("target_heading")
+    graded = grade_path(path, RUBRIC)
+    by_id = {c["criterion_id"]: c for c in graded["criteria"]}
+    assert by_id["W11-H04"]["status"] == "pass"
