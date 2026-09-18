@@ -411,11 +411,18 @@ sealed class HomeDash : FlowLayoutPanel
         }
 
         var pct = attempt.ProgressPct;
-        _resumeTitle.Text = attempt.DisplayTitle;
-        _resumeLead.Text = pct is { } n
-            ? Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode) + " — Đã hoàn thành " + n + "%"
-            : Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode) + " — Đang làm dở";
-        _resumeBar.Value = pct ?? 0;
+        if (pct is { } n)
+        {
+            _resumeTitle.Text = attempt.DisplayTitle + " – Đã hoàn thành " + n + "%";
+            _resumeLead.Text = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode);
+            _resumeBar.Value = n;
+        }
+        else
+        {
+            _resumeTitle.Text = attempt.DisplayTitle;
+            _resumeLead.Text = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode) + " — Đang làm dở";
+            _resumeBar.Value = 0;
+        }
         _resumeGo.Text = "Tiếp tục";
     }
 
