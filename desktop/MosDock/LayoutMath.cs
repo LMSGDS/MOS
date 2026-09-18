@@ -100,26 +100,70 @@ public static class LayoutMath
         return state is not "left" and not "right";
     }
 
-    public static (int W, int H) SizeFor(Rect work, string state, bool compact = true)
+    public static int ThicknessOf(Rect dock, string state) =>
+        Horizontal(state) ? dock.H : dock.W;
+
+    public static int ClampThickness(Rect work, string state, int thickness)
+    {
+        var min = Horizontal(state) ? Math.Max(OverlayMinH, BarHMin) : Math.Max(OverlayMinW, BarWMin);
+        var span = Horizontal(state) ? work.H : work.W;
+        var cap = span * OverlayCapPct / 100;
+        var max = Math.Max(min, Math.Min(cap, span - MinWord));
+        return Math.Clamp(thickness, min, max);
+    }
+
+    public static Rect WithThickness(Rect dock, Rect work, string state, int thickness)
+    {
+        thickness = ClampThickness(work, state, thickness);
+        return Horizontal(state)
+            ? PinToWork(new Rect(dock.X, dock.Y, dock.W, thickness), work, state)
+            : PinToWork(new Rect(dock.X, dock.Y, thickness, dock.H), work, state);
+    }
+
+    public static (int W, int H) SizeFor(Rect work, string state, bool compact = true, int? thickness = null)
     {
         var nav = Measure(work);
         state = (state ?? "bottom").ToLowerInvariant();
         compact = compact || state == "minimized";
         if (state is "left" or "right")
         {
-            return (compact ? nav.ClusterW : nav.ExpandedSideW, work.H);
+            var w = compact ? nav.ClusterW : nav.ExpandedSideW;
+            if (compact && thickness is int t)
+            {
+                w = ClampThickness(work, state, t);
+            }
+
+            return (w, work.H);
         }
 
-        return (work.W, compact ? nav.ClusterH : nav.ExpandedEdgeH);
+        var h = compact ? nav.ClusterH : nav.ExpandedEdgeH;
+        if (compact && thickness is int custom)
+        {
+            h = ClampThickness(work, state, custom);
+        }
+
+        return (work.W, h);
     }
 
-    public static (Rect Dock, Rect Word) Compute(Rect work, string state, bool compact = false, float scale = 1f)
+    public static (Rect Dock, Rect Word) Compute(Rect work, string state, bool compact = false, float scale = 1f, int? thickness = null)
     {
         state = (state ?? "bottom").ToLowerInvariant();
         compact = compact || state == "minimized";
         var nav = Measure(ScaleWork(work, scale));
         var side = compact ? nav.ClusterW : nav.ExpandedSideW;
         var edge = compact ? nav.ClusterH : nav.ExpandedEdgeH;
+        if (compact && thickness is int custom)
+        {
+            var t = ClampThickness(work, state, custom);
+            if (state is "left" or "right")
+            {
+                side = t;
+            }
+            else
+            {
+                edge = t;
+            }
+        }
         Rect dock;
         if (state == "left")
         {

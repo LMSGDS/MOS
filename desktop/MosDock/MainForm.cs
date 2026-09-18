@@ -25,6 +25,7 @@ sealed class MainForm : Form
     readonly ListView _tasks = new();
     readonly Label _examStatus = new();
     readonly Panel _dockChrome = new();
+    readonly Panel _navGrip = new();
     readonly FlowLayoutPanel _dockFlow = new();
     readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang vị trí khác", Ui.DockBlue);
     readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.DockBlue);
@@ -71,6 +72,10 @@ sealed class MainForm : Form
     bool _pinned = true;
     bool _helpVisible = true;
     bool _summaryOpen;
+    bool _navResizing;
+    int? _navThickness;
+    int _navResizeOrigin;
+    int _navResizeStart;
     int _helpScale;
     int _taskIndex;
     NavMetrics _nav = LayoutMath.Measure(new Rect(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH));
@@ -115,6 +120,7 @@ sealed class MainForm : Form
         BuildListPage(_resume, _resumeList, "Tiếp tục bài", "Chọn bài đang làm dở để mở lại trên Office máy.");
         BuildListPage(_done, _doneList, "Bài đã nộp", "Điểm hiển thị phần đã xác minh. Find/Go To có thể còn chưa xác minh.");
         BuildExam();
+        LoadNavThickness();
 
         _body.Dock = DockStyle.Fill;
         _body.BackColor = Ui.PageBg;
@@ -173,6 +179,10 @@ sealed class MainForm : Form
         _keepWord.Interval = 1200;
         _keepWord.Tick += (_, _) =>
         {
+            if (_navResizing)
+            {
+                return;
+            }
             ApplyWordOnly();
             try
             {
@@ -216,13 +226,15 @@ sealed class MainForm : Form
         _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
     ];
 
-    void ApplyNavChrome(NavMetrics nav)
+        void ApplyNavChrome(NavMetrics nav)
     {
         _nav = nav;
+        var thick = _navThickness ?? (LayoutMath.Horizontal(_state) ? nav.ClusterH : nav.ClusterW);
+        var icon = Math.Clamp(thick - 2 * nav.ChromePad, 24, 56);
         _dockChrome.Padding = new Padding(nav.ChromePad);
         foreach (var btn in DockButtons())
         {
-            btn.Size = new Size(nav.Icon, nav.Icon);
+            btn.Size = new Size(icon, icon);
             btn.Margin = new Padding(nav.IconGap);
         }
 
@@ -234,16 +246,29 @@ sealed class MainForm : Form
         if (_docking && _compact && _state is "left" or "right")
         {
             _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
-            _dockChrome.Width = _nav.ClusterW;
+            _dockChrome.Width = Math.Max(8, ClientSize.Width - _navGrip.Width);
             _dockFlow.FlowDirection = FlowDirection.TopDown;
             _dockFlow.WrapContents = false;
+            _navGrip.Visible = true;
+            _navGrip.Dock = _state == "left" ? DockStyle.Right : DockStyle.Left;
+            _navGrip.Width = 6;
+            _navGrip.Cursor = Cursors.SizeWE;
+            _navGrip.BringToFront();
             return;
         }
 
         _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
-        _dockChrome.Height = _nav.ClusterH;
+        _dockChrome.Height = Math.Max(8, ClientSize.Height - (_docking && _compact ? _navGrip.Height : 0));
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
         _dockFlow.WrapContents = false;
+        _navGrip.Visible = _docking && _compact;
+        if (_navGrip.Visible)
+        {
+            _navGrip.Dock = _state == "top" ? DockStyle.Bottom : DockStyle.Top;
+            _navGrip.Height = 6;
+            _navGrip.Cursor = Cursors.SizeNS;
+            _navGrip.BringToFront();
+        }
     }
 
     void BuildHeader()
@@ -438,6 +463,14 @@ sealed class MainForm : Form
 
         _dockChrome.Controls.Add(_dockFlow);
 
+        _navGrip.BackColor = Color.FromArgb(176, 190, 197);
+        _navGrip.Height = 6;
+        _navGrip.Cursor = Cursors.SizeNS;
+        Ui.DockTips.SetToolTip(_navGrip, "Kéo để đổi kích thước thanh Navigation");
+        _navGrip.MouseDown += OnNavGripDown;
+        _navGrip.MouseMove += OnNavGripMove;
+        _navGrip.MouseUp += OnNavGripUp;
+
         _dockMenuStrip.Font = new Font("Segoe UI", 10f);
         _dockMenuStrip.Items.Add(DockMenuItem("←  left", "left"));
         _dockMenuStrip.Items.Add(DockMenuItem("→  right", "right"));
@@ -449,6 +482,20 @@ sealed class MainForm : Form
         extraHome.Click += (_, _) => SaveAndHome();
         var extraUndock = new ToolStripMenuItem("Tháo dock");
         extraUndock.Click += (_, _) => UnDock();
+        var extraThicker = new ToolStripMenuItem("Thanh Navigation dày hơn");
+        extraThicker.Click += (_, _) => NudgeNavThickness(12);
+        var extraThinner = new ToolStripMenuItem("Thanh Navigation mỏng hơn");
+        extraThinner.Click += (_, _) => NudgeNavThickness(-12);
+        var extraResetNav = new ToolStripMenuItem("Đặt lại kích thước thanh Navigation");
+        extraResetNav.Click += (_, _) =>
+        {
+            _navThickness = null;
+            SaveNavThickness();
+            if (_docking)
+            {
+                ApplyDock(waitForWord: true);
+            }
+        };
         var extraSubmit = new ToolStripMenuItem("Nộp bài");
         extraSubmit.Click += async (_, _) => await SubmitExam();
         var extraCheck = new ToolStripMenuItem("Kiểm tra nhiệm vụ");
@@ -459,6 +506,9 @@ sealed class MainForm : Form
         _extraMenu.Items.Add(extraDemo);
         _extraMenu.Items.Add(extraSubmit);
         _extraMenu.Items.Add(new ToolStripSeparator());
+        _extraMenu.Items.Add(extraThicker);
+        _extraMenu.Items.Add(extraThinner);
+        _extraMenu.Items.Add(extraResetNav);
         _extraMenu.Items.Add(extraUndock);
         _extraMenu.Items.Add(extraHome);
 
@@ -501,6 +551,7 @@ sealed class MainForm : Form
         _exam.Controls.Add(_summary);
         _exam.Controls.Add(_tasks);
         _exam.Controls.Add(_helpPane);
+        _exam.Controls.Add(_navGrip);
         _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_examStatus);
         _exam.Controls.Add(_examMeta);
@@ -1121,6 +1172,7 @@ sealed class MainForm : Form
         _exam.BackColor = showTasks || showSummary ? Color.White : Color.FromArgb(245, 247, 249);
         _summary.Visible = showSummary;
         _dockChrome.Visible = !showSummary;
+        _navGrip.Visible = !showSummary && _docking && _compact;
         if (_docking && _compact && !showSummary)
         {
             OrientNav();
@@ -1688,9 +1740,115 @@ sealed class MainForm : Form
             SetWindowPos(Handle, IntPtr.Zero, x, y, w, h, SwpNozorder | SwpNoactivate | SwpFramechanged);
         }
 
-        MinimumSize = new Size(w, h);
-        MaximumSize = new Size(w, h);
+        MinimumSize = new Size(LayoutMath.OverlayMinW, LayoutMath.OverlayMinH);
+        MaximumSize = Size.Empty;
         ResumeLayout(true);
+    }
+
+    static string NavSizePath()
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MOS-KulKul");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "nav-thickness.txt");
+    }
+
+    void LoadNavThickness()
+    {
+        try
+        {
+            var raw = File.ReadAllText(NavSizePath()).Trim();
+            if (int.TryParse(raw, out var t) && t >= LayoutMath.OverlayMinH)
+            {
+                _navThickness = t;
+            }
+        }
+        catch
+        {
+            // first run
+        }
+    }
+
+    void SaveNavThickness()
+    {
+        try
+        {
+            var path = NavSizePath();
+            if (_navThickness is int t)
+            {
+                File.WriteAllText(path, t.ToString());
+            }
+            else if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+    }
+
+    void NudgeNavThickness(int delta)
+    {
+        if (!_docking || !_compact)
+        {
+            return;
+        }
+
+        var work = CurrentWork();
+        var current = _navThickness ?? LayoutMath.ThicknessOf(DockAndWord(work).Dock, _state);
+        _navThickness = LayoutMath.ClampThickness(work, _state, current + delta);
+        SaveNavThickness();
+        ApplyDock(waitForWord: true);
+    }
+
+    void OnNavGripDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left || !_docking || !_compact)
+        {
+            return;
+        }
+
+        _navResizing = true;
+        _navGrip.Capture = true;
+        var work = CurrentWork();
+        _navResizeOrigin = _navThickness ?? LayoutMath.ThicknessOf(DockAndWord(work).Dock, _state);
+        _navResizeStart = LayoutMath.Horizontal(_state) ? Cursor.Position.Y : Cursor.Position.X;
+    }
+
+    void OnNavGripMove(object? sender, MouseEventArgs e)
+    {
+        if (!_navResizing)
+        {
+            return;
+        }
+
+        var work = CurrentWork();
+        var pos = LayoutMath.Horizontal(_state) ? Cursor.Position.Y : Cursor.Position.X;
+        var delta = pos - _navResizeStart;
+        var next = _state switch
+        {
+            "bottom" => _navResizeOrigin - delta,
+            "top" => _navResizeOrigin + delta,
+            "left" => _navResizeOrigin + delta,
+            "right" => _navResizeOrigin - delta,
+            _ => _navResizeOrigin - delta,
+        };
+        _navThickness = LayoutMath.ClampThickness(work, _state, next);
+        ApplyDock(waitForWord: false);
+    }
+
+    void OnNavGripUp(object? sender, MouseEventArgs e)
+    {
+        if (!_navResizing)
+        {
+            return;
+        }
+
+        _navResizing = false;
+        _navGrip.Capture = false;
+        SaveNavThickness();
+        ApplyDock(waitForWord: true);
     }
 
     void ApplyDock(bool waitForWord)
@@ -1748,7 +1906,7 @@ sealed class MainForm : Form
 
     (Rect Dock, Rect Word) DockAndWord(Rect work)
     {
-        var (dock, _) = LayoutMath.Compute(work, _state, _compact);
+        var (dock, _) = LayoutMath.Compute(work, _state, _compact, thickness: _navThickness);
         if (_compact && HelpOpen)
         {
             dock = LayoutMath.GrowForHelp(dock, work, _state);

@@ -192,9 +192,10 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.4" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.5" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "PinToWork" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
@@ -294,6 +295,14 @@ def test_layout_api_side_docks_leave_word_visible():
     assert left_c["word"]["x"] == 72
     assert left_c["help"]["h"] == 1040
     assert left_c["help"]["w"] <= 1920 * 16 / 100
+    sized = c.get(
+        "/api/layout",
+        params={"state": "bottom", "w": 1920, "h": 1040, "compact": 1, "thickness": 120},
+    ).json()
+    assert sized["dock"]["h"] == 120
+    assert sized["dock"]["w"] == 1920
+    assert sized["word"]["h"] == 920
+    assert sized["nav"]["thickness"] == 120
 
 
 def test_kulkul_home_after_login():
