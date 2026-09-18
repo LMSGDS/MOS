@@ -50,6 +50,17 @@ sealed class MainForm : Form
     readonly Button _summaryGo = Ui.PrimaryBtn("Đến", 120);
     readonly Button _summarySave = Ui.PrimaryBtn("Lưu bài", 120);
     readonly Button _summaryFinish = Ui.PrimaryBtn("Nộp bài", 120);
+    readonly Button _summaryCheck = Ui.PrimaryBtn("Chấm lại", 120);
+    readonly Label _summaryStats = new();
+    readonly ProgressBar _summaryBar = new();
+    readonly ComboBox _summaryFilter = new();
+    readonly Panel _summarySplit = new();
+    readonly Panel _summaryDetail = new();
+    readonly Label _detailHead = new();
+    readonly Label _detailStatus = new();
+    readonly Label _detailScore = new();
+    readonly TextBox _detailAnalysis = new();
+    readonly Label _detailHint = new();
     readonly System.Windows.Forms.Timer _keepWord = new();
     LocalAgent? _agent;
     string _state = "bottom";
@@ -594,10 +605,13 @@ sealed class MainForm : Form
             ShowSummary(false);
             await SubmitExam();
         };
+        _summaryCheck.Click += async (_, _) => await CheckTasks();
         Ui.DockTips.SetToolTip(_summaryGo, "Đến nhiệm vụ đang chọn");
         Ui.DockTips.SetToolTip(_summarySave, "Lưu bài, chưa nộp");
         Ui.DockTips.SetToolTip(_summaryFinish, "Nộp bài và kết thúc");
-        foreach (var btn in new[] { _summaryCancel, _summaryGo, _summarySave, _summaryFinish })
+        Ui.DockTips.SetToolTip(_summaryCheck, "Chấm lại tệp Word và phân tích từng kỹ năng");
+        _summaryCheck.BackColor = Ui.Success;
+        foreach (var btn in new[] { _summaryCancel, _summaryGo, _summaryCheck, _summarySave, _summaryFinish })
         {
             btn.Margin = new Padding(0, 0, 10, 0);
             btn.Height = 40;
@@ -607,21 +621,86 @@ sealed class MainForm : Form
         _summaryList.Dock = DockStyle.Fill;
         _summaryList.View = System.Windows.Forms.View.Details;
         _summaryList.FullRowSelect = true;
+        _summaryList.HideSelection = false;
         _summaryList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         _summaryList.BorderStyle = BorderStyle.None;
-        _summaryList.Columns.Add("#", 48);
-        _summaryList.Columns.Add("Tên nhiệm vụ", 480);
-        _summaryList.Columns.Add("Kết quả", 90);
+        _summaryList.Columns.Add("#", 44);
+        _summaryList.Columns.Add("Kỹ năng", 260);
+        _summaryList.Columns.Add("Kết quả", 88);
         _summaryList.DoubleClick += (_, _) => JumpSelectedSummary();
+        _summaryList.SelectedIndexChanged += (_, _) => RenderSummaryDetail();
+
+        var listPane = new Panel { Dock = DockStyle.Left, Width = 420, Padding = new Padding(0, 0, 12, 0) };
+        listPane.Controls.Add(_summaryList);
+
+        _summaryDetail.Dock = DockStyle.Fill;
+        _summaryDetail.BackColor = Ui.PageBg;
+        _summaryDetail.Padding = new Padding(16, 12, 16, 12);
+        _detailHead.Dock = DockStyle.Top;
+        _detailHead.Font = Ui.HeadFont;
+        _detailHead.ForeColor = Ui.Text;
+        _detailHead.UseMnemonic = false;
+        Ui.BindWrap(_detailHead, 8);
+        _detailStatus.Dock = DockStyle.Top;
+        _detailStatus.Font = Ui.BtnFont;
+        _detailStatus.UseMnemonic = false;
+        Ui.BindWrap(_detailStatus, 6);
+        _detailScore.Dock = DockStyle.Top;
+        _detailScore.ForeColor = Ui.Muted;
+        _detailScore.UseMnemonic = false;
+        Ui.BindWrap(_detailScore, 4);
+        _detailHint.Dock = DockStyle.Bottom;
+        _detailHint.ForeColor = Ui.Muted;
+        _detailHint.UseMnemonic = false;
+        Ui.BindWrap(_detailHint, 8);
+        _detailAnalysis.Dock = DockStyle.Fill;
+        _detailAnalysis.Multiline = true;
+        _detailAnalysis.ReadOnly = true;
+        _detailAnalysis.BorderStyle = BorderStyle.None;
+        _detailAnalysis.BackColor = Color.White;
+        _detailAnalysis.ForeColor = Ui.Text;
+        _detailAnalysis.ScrollBars = ScrollBars.Vertical;
+        _detailAnalysis.Font = Ui.BodyFont;
+        var analysisWrap = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.White,
+            Padding = new Padding(12),
+            Margin = new Padding(0, 8, 0, 8),
+        };
+        analysisWrap.Controls.Add(_detailAnalysis);
+        _summaryDetail.Controls.Add(analysisWrap);
+        _summaryDetail.Controls.Add(_detailHint);
+        _summaryDetail.Controls.Add(_detailScore);
+        _summaryDetail.Controls.Add(_detailStatus);
+        _summaryDetail.Controls.Add(_detailHead);
+
+        _summarySplit.Dock = DockStyle.Fill;
+        _summarySplit.Controls.Add(_summaryDetail);
+        _summarySplit.Controls.Add(listPane);
+        _summary.Resize += (_, _) =>
+        {
+            listPane.Width = Math.Clamp(_summary.ClientSize.Width * 46 / 100, 280, 520);
+            if (_summaryList.Columns.Count >= 2)
+            {
+                _summaryList.Columns[1].Width = Math.Max(160, listPane.ClientSize.Width - 150);
+            }
+        };
 
         var searchRow = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.White };
         var find = Ui.PrimaryBtn("Tìm", 88);
         find.Dock = DockStyle.Right;
         find.Height = 36;
         find.Click += (_, _) => FillSummary();
+        _summaryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+        _summaryFilter.Width = 148;
+        _summaryFilter.Dock = DockStyle.Right;
+        _summaryFilter.Items.AddRange(["Tất cả", "Đã đạt", "Chưa đạt", "Chưa xác minh", "Chưa chấm"]);
+        _summaryFilter.SelectedIndex = 0;
+        _summaryFilter.SelectedIndexChanged += (_, _) => FillSummary();
         _summarySearch.Dock = DockStyle.Fill;
         _summarySearch.Font = Ui.BodyFont;
-        _summarySearch.PlaceholderText = "Tìm tên hoặc mã nhiệm vụ";
+        _summarySearch.PlaceholderText = "Tìm tên hoặc mã kỹ năng";
         _summarySearch.KeyDown += (_, e) =>
         {
             if (e.KeyCode == Keys.Enter)
@@ -631,7 +710,19 @@ sealed class MainForm : Form
             }
         };
         searchRow.Controls.Add(_summarySearch);
+        searchRow.Controls.Add(_summaryFilter);
         searchRow.Controls.Add(find);
+
+        var meta = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Color.White };
+        _summaryBar.Dock = DockStyle.Bottom;
+        _summaryBar.Height = 10;
+        _summaryBar.Style = ProgressBarStyle.Continuous;
+        _summaryStats.Dock = DockStyle.Fill;
+        _summaryStats.ForeColor = Ui.Muted;
+        _summaryStats.TextAlign = ContentAlignment.MiddleLeft;
+        _summaryStats.UseMnemonic = false;
+        meta.Controls.Add(_summaryStats);
+        meta.Controls.Add(_summaryBar);
 
         _summaryTitle.Dock = DockStyle.Top;
         _summaryTitle.Height = 40;
@@ -640,9 +731,10 @@ sealed class MainForm : Form
         _summaryTitle.ForeColor = Ui.Text;
         _summaryTitle.UseMnemonic = false;
 
-        _summary.Controls.Add(_summaryList);
+        _summary.Controls.Add(_summarySplit);
         _summary.Controls.Add(actions);
         _summary.Controls.Add(searchRow);
+        _summary.Controls.Add(meta);
         _summary.Controls.Add(_summaryTitle);
     }
 
@@ -671,8 +763,9 @@ sealed class MainForm : Form
         _summaryOpen = open;
         if (open)
         {
-            _summaryTitle.Text = ExamSession.ProjectTitle ?? "Danh sách nhiệm vụ";
+            _summaryTitle.Text = (ExamSession.ProjectTitle ?? "Danh sách kỹ năng") + " — Tổng hợp";
             _summarySearch.Text = "";
+            _summaryCheck.Visible = ExamSession.Mode != "testing";
             FillSummary();
         }
 
@@ -701,23 +794,74 @@ sealed class MainForm : Form
     void FillSummary()
     {
         var q = (_summarySearch.Text ?? "").Trim();
+        var filter = _summaryFilter.SelectedItem as string ?? "Tất cả";
+        var rows = ExamSession.LastCheck;
         _summaryList.BeginUpdate();
         _summaryList.Items.Clear();
+        var pass = 0;
+        var fail = 0;
+        var pending = 0;
+        var ungraded = 0;
         for (var i = 0; i < _tasks.Items.Count; i++)
         {
             var src = _tasks.Items[i];
             var name = src.Text;
-            var status = src.SubItems.Count > 1 ? src.SubItems[1].Text : "";
+            var id = src.Tag as string ?? "";
+            var hit = SkillReview.Find(rows, id, i);
+            var status = hit.Status;
+            if (string.IsNullOrWhiteSpace(status) && src.SubItems.Count > 1)
+            {
+                status = src.SubItems[1].Text switch
+                {
+                    "Đạt" => "pass",
+                    "Chưa đạt" => "fail",
+                    "Chưa XN" => "unverified",
+                    "Lỗi" => "error",
+                    _ => "",
+                };
+            }
+
+            if (status == "pass")
+            {
+                pass++;
+            }
+            else if (status == "fail" || status == "error")
+            {
+                fail++;
+            }
+            else if (status == "unverified")
+            {
+                pending++;
+            }
+            else
+            {
+                ungraded++;
+            }
+
             if (q.Length > 0 &&
                 name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
-                (src.Tag as string ?? "").IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
+                id.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
                 (i + 1).ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
             {
                 continue;
             }
 
-            var row = new ListViewItem([(i + 1).ToString(), name, status]) { Tag = i };
-            row.ForeColor = src.ForeColor;
+            var wanted = filter switch
+            {
+                "Đã đạt" => status == "pass",
+                "Chưa đạt" => status is "fail" or "error",
+                "Chưa xác minh" => status == "unverified",
+                "Chưa chấm" => string.IsNullOrWhiteSpace(status),
+                _ => true,
+            };
+            if (!wanted)
+            {
+                continue;
+            }
+
+            var label = SkillReview.Label(status);
+            var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = i };
+            row.ForeColor = SkillReview.ColorOf(status);
             if (i == _taskIndex)
             {
                 row.Selected = true;
@@ -727,10 +871,55 @@ sealed class MainForm : Form
         }
 
         _summaryList.EndUpdate();
-        if (_summaryList.Columns.Count >= 2)
+        var total = _tasks.Items.Count;
+        _summaryBar.Maximum = Math.Max(1, total);
+        _summaryBar.Value = SkillReview.HideScores ? 0 : Math.Min(_summaryBar.Maximum, pass);
+        _summaryStats.Text = SkillReview.HideScores
+            ? "Chế độ thi: ẩn Đạt / Chưa đạt đến khi nộp bài."
+            : $"Tiến độ: {pass}/{total} đạt  ·  {fail} chưa đạt  ·  {pending} chưa xác minh  ·  {ungraded} chưa chấm";
+        if (_summaryList.Items.Count == 0)
         {
-            _summaryList.Columns[1].Width = Math.Max(240, _summary.ClientSize.Width - 180);
+            RenderSummaryDetail();
         }
+        else if (_summaryList.SelectedItems.Count == 0)
+        {
+            _summaryList.Items[0].Selected = true;
+        }
+        else
+        {
+            RenderSummaryDetail();
+        }
+    }
+
+    void RenderSummaryDetail()
+    {
+        if (_summaryList.SelectedItems.Count == 0)
+        {
+            _detailHead.Text = "Chọn một kỹ năng bên trái.";
+            _detailStatus.Text = "";
+            _detailScore.Text = "";
+            _detailAnalysis.Text = "";
+            _detailHint.Text = "";
+            return;
+        }
+
+        var i = _summaryList.SelectedItems[0].Tag is int idx ? idx : 0;
+        i = Math.Clamp(i, 0, Math.Max(0, _tasks.Items.Count - 1));
+        var id = _tasks.Items.Count > 0 ? _tasks.Items[i].Tag as string : "";
+        var name = _tasks.Items.Count > 0 ? _tasks.Items[i].Text : "";
+        var item = ExamSession.Rubric?.Criteria?.FirstOrDefault(c => c.Id == id);
+        if (item == null && ExamSession.Rubric?.Criteria is { Count: > 0 } list && i < list.Count)
+        {
+            item = list[i];
+        }
+
+        var hit = SkillReview.Find(ExamSession.LastCheck, id, i);
+        _detailHead.Text = $"{i + 1}. {name}";
+        _detailStatus.Text = SkillReview.Headline(hit.Status);
+        _detailStatus.ForeColor = SkillReview.ColorOf(hit.Status);
+        _detailScore.Text = string.IsNullOrWhiteSpace(id) ? "" : id + (hit.Possible > 0 && !SkillReview.HideScores ? $"  ·  {hit.Earned:0}/{hit.Possible:0} điểm" : "");
+        _detailAnalysis.Text = SkillReview.Analysis(hit, item);
+        _detailHint.Text = SkillReview.Hint(hit, item);
     }
 
     void JumpSelectedSummary()
@@ -1107,7 +1296,7 @@ sealed class MainForm : Form
     {
         var modeText = mode == "testing"
             ? "Thi: ẩn điểm và hướng dẫn cho đến khi nộp bài."
-            : "Luyện tập: hiện hướng dẫn từng bước, nút AAA đổi cỡ chữ, và Kiểm tra nhiệm vụ.";
+            : "Luyện tập: hiện hướng dẫn từng bước, nút AAA đổi cỡ chữ, Kiểm tra nhiệm vụ, và tổng hợp phân tích Đạt / Chưa đạt từng kỹ năng.";
         var ask = MessageBox.Show(
             "Mở «" + project.Title + "» trên " + Ui.AppName(project.Program) + " đã cài trên máy?\n\n" + modeText,
             "Bắt đầu bài MOS",
@@ -1142,6 +1331,7 @@ sealed class MainForm : Form
         _dockHint.Visible = train;
         _helpVisible = train;
         _summaryOpen = false;
+        ExamSession.LastCheck = [];
         _taskIndex = 0;
         _examStatus.Text = train
             ? "Bóng đèn: hướng dẫn. Danh sách: tổng hợp nhiệm vụ. Đĩa: lưu và thoát."
@@ -1179,55 +1369,38 @@ sealed class MainForm : Form
 
     async Task CheckTasks()
     {
-        if (_summaryOpen)
-        {
-            ShowSummary(false);
-        }
-
         if (ExamSession.Mode == "testing")
         {
             _examStatus.Text = "Chế độ thi ẩn kết quả. Nộp bài khi xong.";
+            ShowSummary(true);
             return;
         }
 
         _examStatus.Text = "Đang lưu đúng tài liệu bài thi và chấm…";
+        Cursor = Cursors.WaitCursor;
         var (ok, summary, criteria) = await ExamHub.CheckTasksAsync(_app);
+        Cursor = Cursors.Default;
+        ExamSession.LastCheck = criteria;
         _examStatus.Text = summary;
         foreach (ListViewItem item in _tasks.Items)
         {
             var id = item.Tag as string;
-            var hit = criteria.FirstOrDefault(c => c.Id == id);
-            if (string.IsNullOrEmpty(hit.Id) && criteria.Count == _tasks.Items.Count)
-            {
-                hit = criteria[_tasks.Items.IndexOf(item)];
-            }
-
-            if (string.IsNullOrEmpty(hit.Id))
+            var hit = SkillReview.Find(criteria, id, _tasks.Items.IndexOf(item));
+            if (string.IsNullOrEmpty(hit.Id) && string.IsNullOrEmpty(hit.Status))
             {
                 continue;
             }
 
-            item.SubItems[1].Text = hit.Status switch
-            {
-                "pass" => "Đạt",
-                "fail" => "Chưa đạt",
-                "unverified" => "Chưa XN",
-                "error" => "Lỗi",
-                _ => hit.Status,
-            };
-            item.ForeColor = hit.Status switch
-            {
-                "pass" => Ui.Success,
-                "fail" => Ui.Danger,
-                "unverified" => Ui.Muted,
-                _ => Ui.Text,
-            };
+            item.SubItems[1].Text = SkillReview.Label(hit.Status);
+            item.ForeColor = SkillReview.ColorOf(hit.Status);
         }
 
         if (!ok)
         {
             MessageBox.Show(summary, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+
+        ShowSummary(true);
     }
 
     async Task SubmitExam()

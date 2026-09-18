@@ -12,6 +12,7 @@ static class ExamSession
     public static string? LocalPath { get; set; }
     public static string? RubricVersion { get; set; }
     public static JsonRubric? Rubric { get; set; }
+    public static IReadOnlyList<LocalCriterion> LastCheck { get; set; } = [];
 
     public static string DataDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -27,5 +28,6 @@ static class ExamSession
         LocalPath = null;
         RubricVersion = null;
         Rubric = null;
+        LastCheck = [];
     }
 }
