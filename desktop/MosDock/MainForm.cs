@@ -14,7 +14,7 @@ sealed class MainForm : Form
     readonly Panel _home = new();
     readonly HomeDash _dash = new();
     readonly Panel _catalog = new();
-    readonly FlowLayoutPanel _products = new();
+    readonly TableLayoutPanel _products = new();
     readonly FlowLayoutPanel _tests = new();
     readonly Panel _resume = new();
     readonly FlowLayoutPanel _resumeList = new();
@@ -382,13 +382,24 @@ sealed class MainForm : Form
         _catalog.Dock = DockStyle.Fill;
         _catalog.BackColor = Ui.PageBg;
         _products.Dock = DockStyle.Top;
-        _products.AutoSize = true;
-        _products.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-        _products.WrapContents = true;
+        _products.Height = 108;
+        _products.ColumnCount = 3;
+        _products.RowCount = 1;
         _products.BackColor = Ui.PageBg;
-        _products.Controls.Add(Ui.Tile("Word", "Microsoft Word trên máy — mở ứng dụng đã cài.", Ui.Word, () => _ = LoadCatalog("word")));
-        _products.Controls.Add(Ui.Tile("Excel", "Microsoft Excel trên máy — mở ứng dụng đã cài.", Ui.Excel, () => _ = LoadCatalog("excel")));
-        _products.Controls.Add(Ui.Tile("PowerPoint", "Microsoft PowerPoint trên máy — mở ứng dụng đã cài.", Ui.Ppt, () => _ = LoadCatalog("powerpoint")));
+        _products.Margin = new Padding(0, 0, 0, 8);
+        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
+        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
+        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.4f));
+        var word = Ui.ProgramTile("word", "Word", Ui.Word, "W", () => _ = LoadCatalog("word"));
+        var excel = Ui.ProgramTile("excel", "Excel", Ui.Excel, "X", () => _ = LoadCatalog("excel"));
+        var ppt = Ui.ProgramTile("powerpoint", "PowerPoint", Ui.Ppt, "P", () => _ = LoadCatalog("powerpoint"));
+        word.Margin = new Padding(0, 0, 8, 8);
+        excel.Margin = new Padding(4, 0, 8, 8);
+        ppt.Margin = new Padding(4, 0, 0, 8);
+        word.Dock = excel.Dock = ppt.Dock = DockStyle.Fill;
+        _products.Controls.Add(word, 0, 0);
+        _products.Controls.Add(excel, 1, 0);
+        _products.Controls.Add(ppt, 2, 0);
         _tests.Dock = DockStyle.Fill;
         _tests.AutoScroll = true;
         _tests.WrapContents = true;
@@ -1475,6 +1486,7 @@ sealed class MainForm : Form
     async Task LoadCatalog(string program)
     {
         _app = program;
+        Ui.MarkProgramTiles(_products, program);
         _tests.Controls.Clear();
         _tests.Controls.Add(new Label
         {
@@ -1518,9 +1530,10 @@ sealed class MainForm : Form
             BackColor = Ui.Card,
         };
         var train = Ui.PrimaryBtn("Luyện tập", 120);
+        train.Margin = new Padding(0, 0, 0, 8);
         train.Click += async (_, _) => await ConfirmStart(project, "training");
-        var test = Ui.PrimaryBtn("Thi", 120);
-        test.BackColor = Ui.Orange;
+        var test = Ui.OutlineBtn("Thi", Ui.Orange, 120);
+        test.Margin = new Padding(0);
         test.Click += async (_, _) => await ConfirmStart(project, "testing");
         actions.Controls.Add(train);
         actions.Controls.Add(test);

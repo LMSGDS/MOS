@@ -262,6 +262,27 @@ static class Ui
         return btn;
     }
 
+    public static Button OutlineBtn(string text, Color accent, int minWidth = 128)
+    {
+        var btn = PrimaryBtn(text, minWidth);
+        btn.BackColor = Card;
+        btn.ForeColor = accent;
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.BorderColor = accent;
+        btn.FlatAppearance.MouseOverBackColor = Blend(accent, Card, 28);
+        btn.FlatAppearance.MouseDownBackColor = Blend(accent, Card, 46);
+        return btn;
+    }
+
+    public static Color Blend(Color tint, Color onto, int amount)
+    {
+        var a = Math.Clamp(amount, 0, 255);
+        return Color.FromArgb(
+            (tint.R * a + onto.R * (255 - a)) / 255,
+            (tint.G * a + onto.G * (255 - a)) / 255,
+            (tint.B * a + onto.B * (255 - a)) / 255);
+    }
+
     public static Button NavBtn(string text, int minWidth = 120)
     {
         var btn = PrimaryBtn(text, minWidth);
@@ -576,6 +597,120 @@ static class Ui
         return page;
     }
 
+    public static Panel ProgramTile(string program, string title, Color accent, string glyph, Action onClick)
+    {
+        var shell = SoftCard(out var inner);
+        shell.Dock = DockStyle.Fill;
+        shell.Margin = new Padding(0, 0, 10, 10);
+        inner.Cursor = Cursors.Hand;
+        inner.Padding = new Padding(16, 12, 16, 12);
+        var bar = new Panel { Dock = DockStyle.Top, Height = 5, BackColor = accent, Cursor = Cursors.Hand };
+        var row = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        var glyphBox = new Panel
+        {
+            Size = new Size(44, 44),
+            Dock = DockStyle.Left,
+            Width = 48,
+            Cursor = Cursors.Hand,
+            BackColor = Card,
+        };
+        glyphBox.Paint += (_, e) =>
+        {
+            var wash = glyphBox.BackColor;
+            e.Graphics.Clear(wash);
+            PaintAppGlyph(e.Graphics, new Rectangle(0, 4, 36, 36), accent, glyph);
+        };
+        var h = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+            Padding = new Padding(10, 0, 0, 0),
+        };
+        row.Controls.Add(h);
+        row.Controls.Add(glyphBox);
+        inner.Controls.Add(row);
+        inner.Controls.Add(bar);
+
+        var state = new ProgramTileState
+        {
+            Id = program,
+            Accent = accent,
+            Inner = inner,
+            Bar = bar,
+            Title = h,
+            Glyph = glyphBox,
+            Row = row,
+        };
+        shell.Tag = state;
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, inner, bar, row, glyphBox, h })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+            c.MouseEnter += (_, _) =>
+            {
+                state.Hover = true;
+                PaintProgramTile(state);
+            };
+            c.MouseLeave += (_, _) =>
+            {
+                state.Hover = inner.RectangleToScreen(inner.ClientRectangle).Contains(Cursor.Position);
+                PaintProgramTile(state);
+            };
+        }
+
+        PaintProgramTile(state);
+        return shell;
+    }
+
+    public static void MarkProgramTiles(Control host, string active)
+    {
+        foreach (Control child in host.Controls)
+        {
+            if (child.Tag is ProgramTileState state)
+            {
+                state.Active = string.Equals(state.Id, active, StringComparison.OrdinalIgnoreCase);
+                PaintProgramTile(state);
+            }
+        }
+    }
+
+    static void PaintProgramTile(ProgramTileState state)
+    {
+        var wash = state.Active
+            ? Blend(state.Accent, Card, 22)
+            : state.Hover
+                ? Color.FromArgb(252, 249, 245)
+                : Card;
+        state.Inner.BackColor = wash;
+        state.Row.BackColor = wash;
+        state.Glyph.BackColor = wash;
+        state.Title.BackColor = wash;
+        state.Title.ForeColor = state.Active ? Text : Muted;
+        state.Bar.Height = state.Active ? 7 : 4;
+        state.Glyph.Invalidate();
+    }
+
+    sealed class ProgramTileState
+    {
+        public string Id = "";
+        public Color Accent;
+        public Panel Inner = null!;
+        public Panel Bar = null!;
+        public Label Title = null!;
+        public Panel Glyph = null!;
+        public Panel Row = null!;
+        public bool Active;
+        public bool Hover;
+    }
+
     public static Panel Tile(string title, string lead, Color accent, Action onClick)
     {
         const int innerW = 244;
@@ -647,23 +782,23 @@ static class Ui
         var card = new Panel
         {
             Width = 720,
-            Height = 88,
+            Height = 104,
             BackColor = Line,
             Padding = new Padding(1),
-            Margin = new Padding(0, 0, 0, 10),
+            Margin = new Padding(0, 0, 0, 14),
             Tag = "card",
         };
-        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 12) };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(24, 18, 22, 18) };
         if (action is not null)
         {
             var side = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = Math.Max(136, action.Width + 8),
+                Width = Math.Max(148, action.Width + 16),
                 BackColor = Card,
-                Padding = new Padding(8, 0, 0, 0),
+                Padding = new Padding(16, 2, 4, 2),
             };
-            action.Location = new Point(8, 4);
+            action.Location = new Point(16, 4);
             side.Controls.Add(action);
             inner.Controls.Add(side);
         }
@@ -696,10 +831,10 @@ static class Ui
 
         void Fit(object? _, EventArgs e)
         {
-            var actionW = action is null ? 0 : Math.Max(136, action.Width + 24);
-            var tw = Math.Max(160, card.ClientSize.Width - 36 - actionW);
-            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 36;
-            var ah = action is null ? 0 : action.Height + 28;
+            var actionW = action is null ? 0 : Math.Max(148, action.Width + 40);
+            var tw = Math.Max(160, card.ClientSize.Width - 52 - actionW);
+            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 48;
+            var ah = action is null ? 0 : action.Height + 40;
             var next = Math.Max(72, Math.Max(th, ah));
             if (card.Height != next)
             {
