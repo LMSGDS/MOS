@@ -1,5 +1,5 @@
 # MOS-KulKul — cài Windows, không tải file qua trình duyệt.
-# Máy chủ hiện tại có /cai-dat/windows (exe). ZIP và windows.ps1 chỉ có sau khi server git pull.
+# Ưu tiên bản đầy đủ để chỉ hiện một cửa sổ Inno Setup (stub + full = cài hai lần).
 #
 # Đã mở PowerShell thì dán khối lệnh trên trang /cai-dat (không gõ thêm powershell -Command).
 $ErrorActionPreference = "Stop"
@@ -24,14 +24,16 @@ New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $blob = Join-Path $tmp "download.bin"
 
 $downloaded = $false
-foreach ($rel in @("/cai-dat/windows", "/cai-dat/windows.zip", "/cai-dat/windows-full")) {
+foreach ($rel in @("/cai-dat/windows-full", "/cai-dat/windows-full.zip", "/cai-dat/windows.zip")) {
     try {
         Invoke-WebRequest -Uri ($Base + $rel) -OutFile $blob -UseBasicParsing
-        if ((Get-Item $blob).Length -gt 1000) {
-            Write-Host "Tai xong: $rel"
-            $downloaded = $true
-            break
+        if ((Get-Item $blob).Length -lt 5000000) {
+            Write-Host "Bo qua $rel (bo cai nho se mo them mot cua so cai)."
+            continue
         }
+        Write-Host "Tai xong: $rel"
+        $downloaded = $true
+        break
     }
     catch {
         Write-Host "Chua tai duoc $($Base + $rel), thu link khac..."

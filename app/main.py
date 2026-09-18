@@ -267,7 +267,7 @@ Không tải .exe/.zip bằng Chrome/Edge: trình duyệt luôn quét virus vì 
 chưa mua chữ ký Authenticode (không phải mã độc).
 
 Cách nên dùng — đã mở PowerShell thì dán (không gói powershell -Command):
-  $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
+  $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $d=Join-Path $env:TEMP 'MOS-KulKul'; New-Item -ItemType Directory -Force $d|Out-Null; $f=Join-Path $d 'MOS-KulKul-Setup.exe'; Invoke-WebRequest 'https://mos.gds.edu.vn/cai-dat/windows-full' -OutFile $f -UseBasicParsing; Unblock-File $f; Start-Process $f
 
 Nếu đã giải nén file này:
 1. Chuột phải file .exe → Thuộc tính → bỏ chọn Chặn / Bỏ chặn → OK.

@@ -49,7 +49,7 @@ def test_install_page_lists_windows_and_macos():
     assert "Windows" in r.text
     assert "macOS" in r.text
     assert "Invoke-WebRequest" in r.text
-    assert "https://mos.gds.edu.vn/cai-dat/windows" in r.text
+    assert "https://mos.gds.edu.vn/cai-dat/windows-full" in r.text
     assert "Sao chép lệnh" in r.text
     assert "MOS-KulKul-Setup-Windows.exe" in r.text
     assert "macOS" in r.text
@@ -111,7 +111,7 @@ def test_install_page_lists_windows_and_macos():
     assert "text/plain" in (ps1.headers.get("content-type") or "")
     assert "mos.gds.edu.vn" in ps1.text
     assert "Unblock-File" in ps1.text
-    assert "/cai-dat/windows" in ps1.text
+    assert "/cai-dat/windows-full" in ps1.text
     assert "Start-Process" in ps1.text
     src = c.get("/cai-dat/macos-files/mosdock_mac.py")
     assert src.status_code == 200
@@ -153,7 +153,7 @@ def test_wrap_installer_zip_includes_readme(tmp_path):
         guide = zf.read("HUONG-DAN-CAI.txt").decode("utf-8")
         assert "SmartScreen" in guide
         assert "mos.gds.edu.vn" in guide
-        assert "cai-dat/windows" in guide
+        assert "cai-dat/windows-full" in guide
     assert wrap_installer_zip(exe) == zipped
     assert len(sha256_path(zipped)) == 64
 
