@@ -129,7 +129,28 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.14.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.14.9" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+
+
+def test_word_window_only_docks_current_exam():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    win = (root / "WordWindow.cs").read_text(encoding="utf-8")
+    com = (root / "WordCom.cs").read_text(encoding="utf-8")
+    probe = (root / "WordActionProbe.cs").read_text(encoding="utf-8")
+    assert "ResolveExamWindow" in win
+    assert "TitleMatchesExam" in win
+    assert "CancelPlace" in win
+    assert "SWP_NOZORDER" in win
+    assert "SW_SHOWNOACTIVATE" in win
+    assert "ForceBounds(hwnd, target)" in win
+    assert "bool activate" in com
+    assert "if (activate)" in com
+    assert "ActiveDocument.FullName" in probe
+    stem = "Word_6-2"
+    assert stem in "Word_6-2 - Saved"
+    assert stem not in "Word_1-1 - Word"
 
 
 def test_brand_icon_is_multi_size_ico():

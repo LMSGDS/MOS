@@ -9,17 +9,19 @@ namespace MosDock;
 /// </summary>
 static class WordWindow
 {
-    const uint SWP_SHOWWINDOW = 0x0040;
     const uint SWP_FRAMECHANGED = 0x0020;
     const uint SWP_NOACTIVATE = 0x0010;
-    const int SW_RESTORE = 9;
-    const int SW_SHOWNORMAL = 1;
+    const uint SWP_NOZORDER = 0x0004;
+    const int SW_SHOWNOACTIVATE = 4;
     const int GWL_STYLE = -16;
     const int GWL_EXSTYLE = -20;
     const int GW_OWNER = 4;
     const int WS_MAXIMIZE = 0x01000000;
     const int WS_EX_TOOLWINDOW = 0x00000080;
     const int WS_EX_NOACTIVATE = 0x08000000;
+    const int PlaceSlack = 12;
+
+    static CancellationTokenSource? _place;
 
     static readonly string[] SkipClasses =
     [
@@ -33,30 +35,68 @@ static class WordWindow
 
     public static bool Apply(Rect target, string? app = null)
     {
-        var spec = OfficeApp.Resolve(app);
-        var moved = false;
-        foreach (var hwnd in FindMainWindows(spec))
+        var hwnd = ResolveExamWindow(app);
+        if (hwnd == IntPtr.Zero)
         {
-            ForceBounds(hwnd, target);
-            moved = true;
+            return false;
         }
 
-        return moved;
+        if (AlreadyPlaced(hwnd, target))
+        {
+            return true;
+        }
+
+        ForceBounds(hwnd, target);
+        return true;
     }
 
-    public static void ApplySoon(Rect target, string? app = null, int timeoutMs = 20000)
+    public static void CancelPlace()
     {
+        try
+        {
+            _place?.Cancel();
+        }
+        catch
+        {
+            // already disposed
+        }
+    }
+
+    public static void ApplySoon(Rect target, string? app = null, int timeoutMs = 12000)
+    {
+        CancelPlace();
+        var cts = new CancellationTokenSource();
+        _place = cts;
+        var token = cts.Token;
         _ = Task.Run(async () =>
         {
-            var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            while (DateTime.UtcNow < until)
+            try
             {
-                Apply(target, app);
-                await Task.Delay(200);
-            }
+                var until = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+                while (DateTime.UtcNow < until && !token.IsCancellationRequested)
+                {
+                    if (Apply(target, app))
+                    {
+                        await Task.Delay(400, token);
+                        if (Apply(target, app))
+                        {
+                            return;
+                        }
+                    }
 
-            Apply(target, app);
-        });
+                    await Task.Delay(300, token);
+                }
+
+                if (!token.IsCancellationRequested)
+                {
+                    Apply(target, app);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                // replaced by a newer place, or left dock
+            }
+        }, token);
     }
 
     public static void Launch(string? app, string? documentUrl = null)
@@ -111,20 +151,110 @@ static class WordWindow
         }
     }
 
+    public static bool TitleMatchesExam(string? title, string? localPath)
+    {
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(localPath))
+        {
+            return false;
+        }
+
+        var stem = Path.GetFileNameWithoutExtension(localPath);
+        var name = Path.GetFileName(localPath);
+        if (string.IsNullOrWhiteSpace(stem))
+        {
+            return false;
+        }
+
+        return title.IndexOf(stem, StringComparison.OrdinalIgnoreCase) >= 0
+            || (!string.IsNullOrWhiteSpace(name) && title.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    static IntPtr ResolveExamWindow(string? app)
+    {
+        var spec = OfficeApp.Resolve(app);
+        var wanted = ExamSession.LocalPath;
+        if (spec.Id == "word")
+        {
+            var comHwnd = HwndFromExamDocument();
+            if (comHwnd != IntPtr.Zero)
+            {
+                return comHwnd;
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(wanted))
+        {
+            return IntPtr.Zero;
+        }
+
+        foreach (var hwnd in FindMainWindows(spec))
+        {
+            if (TitleMatchesExam(Caption(hwnd), wanted))
+            {
+                return hwnd;
+            }
+        }
+
+        return IntPtr.Zero;
+    }
+
+    static IntPtr HwndFromExamDocument()
+    {
+        try
+        {
+            if (!WordCom.TryBind(out _, out dynamic? doc) || doc is null)
+            {
+                return IntPtr.Zero;
+            }
+
+            try
+            {
+                return new IntPtr((int)doc.Windows[1].Hwnd);
+            }
+            catch
+            {
+                return new IntPtr((int)doc.ActiveWindow.Hwnd);
+            }
+        }
+        catch
+        {
+            return IntPtr.Zero;
+        }
+    }
+
+    static string Caption(IntPtr hwnd)
+    {
+        var text = new StringBuilder(512);
+        GetWindowText(hwnd, text, text.Capacity);
+        return text.ToString();
+    }
+
+    static bool AlreadyPlaced(IntPtr hwnd, Rect target)
+    {
+        if (!GetWindowRect(hwnd, out var rc))
+        {
+            return false;
+        }
+
+        return Math.Abs(rc.Left - target.X) <= PlaceSlack
+            && Math.Abs(rc.Top - target.Y) <= PlaceSlack
+            && Math.Abs((rc.Right - rc.Left) - target.W) <= PlaceSlack * 2
+            && Math.Abs((rc.Bottom - rc.Top) - target.H) <= PlaceSlack * 2;
+    }
+
     static void ForceBounds(IntPtr hwnd, Rect target)
     {
-        ShowWindow(hwnd, SW_RESTORE);
-
         var style = GetWindowLongPtr(hwnd, GWL_STYLE).ToInt64();
         if ((style & WS_MAXIMIZE) != 0)
         {
+            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
             SetWindowLongPtr(hwnd, GWL_STYLE, (nint)(style & ~WS_MAXIMIZE));
         }
 
         var wp = new WINDOWPLACEMENT();
         wp.length = Marshal.SizeOf<WINDOWPLACEMENT>();
         GetWindowPlacement(hwnd, ref wp);
-        wp.showCmd = SW_SHOWNORMAL;
+        wp.showCmd = SW_SHOWNOACTIVATE;
         wp.flags = 0;
         wp.rcNormalPosition = new RECT
         {
@@ -142,7 +272,7 @@ static class WordWindow
             target.Y,
             target.W,
             target.H,
-            SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOACTIVATE);
+            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     }
 
     static IEnumerable<IntPtr> FindMainWindows(OfficeApp spec)
@@ -235,6 +365,9 @@ static class WordWindow
         public Point ptMaxPosition;
         public RECT rcNormalPosition;
     }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
     [DllImport("user32.dll")]
     static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);

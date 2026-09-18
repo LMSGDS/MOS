@@ -19,7 +19,7 @@ static class WordActionDemo
         }
         else if (!WordCom.TryBind(out _, out _))
         {
-            WordWindow.Launch("word", null);
+            WordWindow.Launch("word", ExamSession.LocalPath);
         }
 
         if (!WordCom.WaitForWord())
@@ -27,9 +27,9 @@ static class WordActionDemo
             return "Không kết nối được Microsoft Word. Mở bài MOS Word trên máy rồi chạy lại «Demo tất cả bài tập».";
         }
 
-        if (!WordCom.TryBind(out dynamic? word, out dynamic? doc) || word is null || doc is null)
+        if (!WordCom.TryBind(out dynamic? word, out dynamic? doc, activate: true) || word is null || doc is null)
         {
-            return "Word đang mở nhưng chưa có tài liệu. Mở đề MOS rồi chạy lại demo.";
+            return "Word đang mở nhưng chưa có tài liệu của bài này. Mở đúng đề MOS rồi chạy lại demo.";
         }
 
         var log = new List<string>();

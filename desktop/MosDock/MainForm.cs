@@ -169,7 +169,7 @@ sealed class MainForm : Form
         };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         DpiChanged += (_, _) => RelayoutDock();
-        _keepWord.Interval = 700;
+        _keepWord.Interval = 1200;
         _keepWord.Tick += (_, _) =>
         {
             ApplyWordOnly();
@@ -1068,6 +1068,7 @@ sealed class MainForm : Form
         _docking = false;
         _compact = false;
         _keepWord.Stop();
+        WordWindow.CancelPlace();
         _header.Visible = false;
         _body.Visible = false;
         _exam.Visible = true;
@@ -1573,6 +1574,7 @@ sealed class MainForm : Form
         _docking = false;
         _compact = false;
         _keepWord.Stop();
+        WordWindow.CancelPlace();
         _header.Visible = true;
         _body.Visible = true;
         _exam.Visible = false;
@@ -1702,6 +1704,9 @@ sealed class MainForm : Form
         var work = CurrentWork();
         var (_, word) = LayoutMath.Compute(work, _state, _compact);
         WordWindow.Apply(word, _app);
-        TopMost = true;
+        if (_pinned && !TopMost)
+        {
+            TopMost = true;
+        }
     }
 }

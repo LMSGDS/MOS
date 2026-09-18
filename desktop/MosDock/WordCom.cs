@@ -13,7 +13,7 @@ static class WordCom
     public const int WdGoToLast = 5;
     public const int WdExportFormatPdf = 17;
 
-    public static bool TryBind(out dynamic? word, out dynamic? doc)
+    public static bool TryBind(out dynamic? word, out dynamic? doc, bool activate = false)
     {
         word = null;
         doc = null;
@@ -26,7 +26,7 @@ static class WordCom
             }
 
             word = com;
-            doc = BindDocument(word);
+            doc = BindDocument(word, activate);
             return doc is not null;
         }
         catch
@@ -53,7 +53,7 @@ static class WordCom
         return TryBind(out _, out _);
     }
 
-    static dynamic? BindDocument(dynamic word)
+    static dynamic? BindDocument(dynamic word, bool activate)
     {
         dynamic docs = word.Documents;
         int count = (int)docs.Count;
@@ -66,10 +66,23 @@ static class WordCom
                 string full = (string)item.FullName;
                 if (OfficeCapture.SamePath(full, wanted))
                 {
-                    item.Activate();
+                    if (activate)
+                    {
+                        try
+                        {
+                            item.Activate();
+                        }
+                        catch
+                        {
+                            // other document keeps focus
+                        }
+                    }
+
                     return item;
                 }
             }
+
+            return null;
         }
 
         try

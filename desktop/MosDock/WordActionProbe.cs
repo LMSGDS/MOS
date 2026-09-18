@@ -23,7 +23,20 @@ static class WordActionProbe
 
     public static void Poll()
     {
-        if (!WordCom.TryBind(out dynamic? word, out _))
+        if (string.IsNullOrWhiteSpace(ExamSession.LocalPath) || !WordCom.TryBind(out dynamic? word, out _))
+        {
+            return;
+        }
+
+        try
+        {
+            string active = (string)word!.ActiveDocument.FullName;
+            if (!OfficeCapture.SamePath(active, ExamSession.LocalPath))
+            {
+                return;
+            }
+        }
+        catch
         {
             return;
         }
