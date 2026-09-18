@@ -30,8 +30,8 @@ def seed() -> None:
     users = load_users()
     with cursor() as cur:
         cur.execute(
-            "INSERT INTO orgs (id, name) VALUES (1, %s) ON CONFLICT (id) DO NOTHING",
-            ("Trường GDS",),
+            "INSERT INTO orgs (id, name) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
+            ("mos.gds.edu.vn",),
         )
         cur.execute(
             "SELECT setval(pg_get_serial_sequence('orgs', 'id'), GREATEST(1, COALESCE((SELECT MAX(id) FROM orgs), 1)))"
