@@ -120,7 +120,8 @@ static class WordXml
 
         try
         {
-            using var zip = ZipFile.OpenRead(path);
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var zip = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
             var docEntry = zip.GetEntry("word/document.xml");
             if (docEntry is null)
             {

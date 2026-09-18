@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.1" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -243,8 +243,16 @@ def test_windows_sources_include_action_demo():
     assert "GetProgressAsync" in hub
     assert "ListProgramProgressAsync" in hub
     assert "public bool IsOpen" in hub
+    assert "SnapshotWork" in hub
+    lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
+    assert "FileShare.ReadWrite" in lockf
+    assert "FileShare.ReadWrite" in (root / "WordGrade.cs").read_text(encoding="utf-8")
+    assert "LockedFile.ReadAllBytes" in (root / "Portal.cs").read_text(encoding="utf-8")
+    assert "BackgroundSave" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
+    assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
+    assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.0"' in (
+    assert 'MyAppVersion "1.16.1"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

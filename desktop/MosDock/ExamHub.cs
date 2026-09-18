@@ -433,11 +433,12 @@ static class ExamHub
 
         try
         {
+            var snap = SnapshotWork(path);
             await FlushActionsAsync();
             await FlushOrQueueAsync();
             using var submitted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/submit",
-                path,
+                snap,
                 EvidenceFields());
             var scoreEl = submitted.RootElement.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
@@ -453,7 +454,9 @@ static class ExamHub
             {
                 events = new object[] { new { skill = "", action = "submit-offline", detail = new { error = ex.Message } } },
             });
-            return (false, "Chưa gửi được, đã xếp hàng đợi: " + ex.Message);
+            return (false, LockedFile.IsSharing(ex)
+                ? "Word đang giữ tệp bài làm. MOS đã lưu bản sao và xếp hàng đợi — bấm Nộp bài lại sau 1–2 giây."
+                : "Chưa gửi được, đã xếp hàng đợi: " + ex.Message);
         }
     }
 
@@ -578,7 +581,28 @@ static class ExamHub
         var snapDir = Path.Combine(Path.GetDirectoryName(ExamSession.LocalPath)!, "snapshots");
         Directory.CreateDirectory(snapDir);
         var snap = Path.Combine(snapDir, DateTime.UtcNow.ToString("yyyyMMddHHmmss") + Path.GetExtension(path));
-        File.Copy(path, snap, overwrite: true);
+        try
+        {
+            OfficeCapture.SaveCopy(program, snap);
+        }
+        catch
+        {
+            // fall through to shared copy
+        }
+
+        if (!File.Exists(snap) || new FileInfo(snap).Length == 0)
+        {
+            try
+            {
+                LockedFile.Copy(path, snap);
+            }
+            catch (Exception ex)
+            {
+                return (false, LockedFile.IsSharing(ex)
+                    ? "Word đang giữ tệp bài làm. Đợi 1–2 giây rồi chấm lại — không cần đóng Word."
+                    : "Không sao chép được bài đang mở: " + ex.Message, []);
+            }
+        }
 
         var local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
         try
@@ -669,6 +693,29 @@ static class ExamHub
 
         var raw = p.GetString() ?? "";
         return DateTimeOffset.TryParse(raw, out var dt) ? dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : raw;
+    }
+
+    static string SnapshotWork(string path)
+    {
+        var root = Path.GetDirectoryName(ExamSession.LocalPath ?? path) ?? Path.GetTempPath();
+        var dir = Path.Combine(root, "snapshots");
+        Directory.CreateDirectory(dir);
+        var dest = Path.Combine(dir, DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + Path.GetExtension(path));
+        try
+        {
+            OfficeCapture.SaveCopy(ExamSession.Program, dest);
+        }
+        catch
+        {
+            // Word không có SaveCopyAs — đọc khi tệp đang mở
+        }
+
+        if (!File.Exists(dest) || new FileInfo(dest).Length == 0)
+        {
+            LockedFile.Copy(path, dest);
+        }
+
+        return dest;
     }
 
     static async Task FlushOrQueueAsync()

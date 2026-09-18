@@ -140,7 +140,7 @@ static class Portal
     {
         ApplyAuth();
         using var form = new MultipartFormDataContent();
-        var bytes = await File.ReadAllBytesAsync(filePath);
+        var bytes = LockedFile.ReadAllBytes(filePath);
         var file = new ByteArrayContent(bytes);
         file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
         form.Add(file, "file", Path.GetFileName(filePath));
