@@ -789,6 +789,12 @@ static class Ui
             case NavIcon.Check:
                 g.DrawLines(pen, new[] { new Point(cx - 6, cy), new Point(cx - 1, cy + 5), new Point(cx + 7, cy - 6) });
                 break;
+            case NavIcon.Camera:
+                g.DrawRectangle(pen, new Rectangle(cx - 8, cy - 5, 16, 12));
+                g.FillRectangle(brush, new Rectangle(cx - 3, cy - 8, 6, 4));
+                g.DrawEllipse(pen, cx - 4, cy - 3, 8, 8);
+                g.FillEllipse(brush, cx - 2, cy - 1, 4, 4);
+                break;
             case NavIcon.Submit:
                 g.DrawLine(pen, cx, cy + 6, cx, cy - 6);
                 g.DrawLines(pen, new[] { new Point(cx - 5, cy - 1), new Point(cx, cy - 6), new Point(cx + 5, cy - 1) });
@@ -819,4 +825,5 @@ enum NavIcon
     Collapse,
     Check,
     Submit,
+    Camera,
 }

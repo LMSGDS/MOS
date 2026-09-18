@@ -188,7 +188,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.2" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.3" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
@@ -212,6 +212,24 @@ def test_word_window_only_docks_current_exam():
     assert "bool activate" in com
     assert "if (activate)" in com
     assert "ActiveDocument.FullName" in probe
+
+
+def test_layout_shot_captures_occupied_region():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    shot = (root / "LayoutShot.cs").read_text(encoding="utf-8")
+    math = (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    form = (root / "MainForm.cs").read_text(encoding="utf-8")
+    ui = (root / "Ui.cs").read_text(encoding="utf-8")
+    assert "CopyFromScreen" in shot
+    assert "Screenshots" in shot
+    assert "Occupied" in math
+    assert "CaptureLayoutShot" in form
+    assert "Chụp vùng layout" in form
+    assert "LayoutShot.Grab" in form
+    assert "NavIcon.Camera" in form
+    assert "NavIcon.Camera" in ui
     stem = "Word_6-2"
     assert stem in "Word_6-2 - Saved"
     assert stem not in "Word_1-1 - Word"

@@ -11,8 +11,10 @@ from app.kulkul_layout import (
     compute,
     grow_for_help,
     measure,
+    occupied,
     overlap,
     size_for,
+    word_beside,
 )
 
 WORK = Rect(0, 0, 1920, 1040)
@@ -239,7 +241,20 @@ def test_compact_scales_with_desktop_size():
     assert grown.bottom == dock.bottom
 
 
-def test_unknown_state_defaults_to_bottom():
+def test_occupied_layout_is_union_of_dock_and_word():
+    for state in ("left", "right", "top", "bottom"):
+        dock, word = compute(WORK, state, compact=True)
+        area = occupied(dock, word)
+        assert area.x == WORK.x
+        assert area.y == WORK.y
+        assert area.w == WORK.w
+        assert area.h == WORK.h
+        grown = grow_for_help(dock, WORK, state)
+        word2 = word_beside(WORK, grown, state)
+        shot = occupied(grown, word2)
+        assert shot.w == WORK.w
+        assert shot.h == WORK.h
+        assert not overlap(grown, word2)
     dock, word = compute(WORK, None)
     dock2, word2 = compute(WORK, "bottom")
     assert dock == dock2

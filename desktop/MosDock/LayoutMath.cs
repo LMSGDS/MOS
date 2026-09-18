@@ -141,7 +141,15 @@ public static class LayoutMath
         return (dock, WordBeside(work, dock, state));
     }
 
-    /// <summary>Word occupies the leftover working area; Navigation never covers the document.</summary>
+    /// <summary>Vùng layout đang chiếm màn hình: dock ∪ Word.</summary>
+    public static Rect Occupied(Rect a, Rect b)
+    {
+        var x = Math.Min(a.X, b.X);
+        var y = Math.Min(a.Y, b.Y);
+        var right = Math.Max(a.Right, b.Right);
+        var bottom = Math.Max(a.Bottom, b.Bottom);
+        return new Rect(x, y, Math.Max(1, right - x), Math.Max(1, bottom - y));
+    }
     public static Rect WordBeside(Rect work, Rect dock, string state)
     {
         state = (state ?? "bottom").ToLowerInvariant();
