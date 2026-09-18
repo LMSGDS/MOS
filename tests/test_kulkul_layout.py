@@ -89,6 +89,31 @@ def test_grow_for_help_keeps_top_cluster_at_top():
     assert grown.h == CLUSTER_H + HELP_H
 
 
+def test_help_overlay_is_small_gmetrix_card():
+    """Thanh Navigation + Help không được chiếm nửa màn hình như panel 960×600."""
+    dock, word = compute(WORK, "left", compact=True)
+    grown = grow_for_help(dock, WORK, "left")
+    assert word == WORK
+    assert grown.w <= HELP_W
+    assert grown.h == CLUSTER_H + HELP_H
+    assert grown.w < WORK.w / 2
+    assert grown.h < WORK.h / 2
+    assert grown.w <= 320
+    assert grown.h <= 400
+    assert grown.x == WORK.x + 8
+
+
+def test_compact_cluster_scales_with_dpi():
+    dock, _ = compute(WORK, "bottom", compact=True, scale=1.5)
+    assert dock.w == round(CLUSTER_W * 1.5)
+    assert dock.h == round(CLUSTER_H * 1.5)
+    grown = grow_for_help(dock, WORK, "bottom", scale=1.5)
+    assert grown.w == round(HELP_W * 1.5)
+    assert grown.h <= WORK.h * 2 // 5
+    assert grown.h >= dock.h
+    assert grown.h < WORK.h / 2
+
+
 def test_unknown_state_defaults_to_bottom():
     dock, word = compute(WORK, None)
     dock2, word2 = compute(WORK, "bottom")

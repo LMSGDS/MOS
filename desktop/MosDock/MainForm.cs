@@ -86,7 +86,7 @@ sealed class MainForm : Form
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96f, 96f);
         ClientSize = new Size(1080, 700);
-        MinimumSize = new Size(960, 600);
+        MinimumSize = new Size(LayoutMath.HubMinW, LayoutMath.HubMinH);
         BackColor = Ui.PageBg;
         Font = Ui.BodyFont;
         Ui.ApplyWindowIcon(this);
@@ -299,7 +299,7 @@ sealed class MainForm : Form
         _dockChrome.Dock = DockStyle.Bottom;
         _dockChrome.Height = LayoutMath.ClusterH;
         _dockChrome.BackColor = Color.FromArgb(236, 239, 241);
-        _dockChrome.Padding = new Padding(8, 6, 8, 6);
+        _dockChrome.Padding = new Padding(6, 4, 6, 4);
 
         var row1 = Ui.DockChip();
         var row2 = new FlowLayoutPanel
@@ -425,15 +425,15 @@ sealed class MainForm : Form
         _helpPane.Dock = DockStyle.Top;
         _helpPane.Height = LayoutMath.HelpH;
         _helpPane.BackColor = Color.FromArgb(245, 247, 249);
-        _helpPane.Padding = new Padding(14, 10, 14, 6);
+        _helpPane.Padding = new Padding(8, 6, 8, 4);
         _helpPane.Visible = false;
 
         _taskPrompt.Dock = DockStyle.Top;
         _taskPrompt.AutoSize = false;
         _taskPrompt.UseMnemonic = false;
         _taskPrompt.ForeColor = Ui.Text;
-        _taskPrompt.Padding = new Padding(2, 0, 2, 8);
-        Ui.BindWrap(_taskPrompt, 12);
+        _taskPrompt.Padding = new Padding(2, 0, 2, 4);
+        Ui.BindWrap(_taskPrompt, 6);
 
         var card = new Panel
         {
@@ -447,7 +447,7 @@ sealed class MainForm : Form
             e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
         };
 
-        var header = new Panel { Dock = DockStyle.Top, Height = 56, BackColor = Color.White, Padding = new Padding(16, 10, 16, 0) };
+        var header = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.White, Padding = new Padding(12, 4, 12, 0) };
         header.Paint += (_, e) =>
         {
             using var pen = new Pen(Color.FromArgb(226, 230, 234));
@@ -463,9 +463,9 @@ sealed class MainForm : Form
         var footer = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 48,
+            Height = 40,
             BackColor = Color.FromArgb(248, 249, 250),
-            Padding = new Padding(12, 6, 8, 6),
+            Padding = new Padding(8, 4, 8, 4),
             WrapContents = false,
         };
         footer.Paint += (_, e) =>
@@ -499,7 +499,7 @@ sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = Color.White,
-            Padding = new Padding(18, 14, 18, 10),
+            Padding = new Padding(12, 8, 12, 8),
         };
         bodyWrap.Controls.Add(_helpBody);
 
@@ -633,7 +633,7 @@ sealed class MainForm : Form
                 var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
                 var w = Math.Min(LayoutMath.SummaryW, wa.Width - 40);
                 var h = Math.Min(LayoutMath.SummaryH, wa.Height - 40);
-                Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
+                FitOverlay(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
                 ApplyExamChrome();
             }
             else
@@ -706,9 +706,9 @@ sealed class MainForm : Form
 
     void ApplyHelpFonts()
     {
-        var promptPt = _helpScale switch { 2 => 18f, 1 => 15f, _ => 13f };
-        var bodyPt = _helpScale switch { 2 => 13f, 1 => 11.5f, _ => 10f };
-        var titlePt = _helpScale switch { 2 => 24f, 1 => 21f, _ => 18f };
+        var promptPt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 12f };
+        var bodyPt = _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
+        var titlePt = _helpScale switch { 2 => 20f, 1 => 17f, _ => 15f };
         _taskPrompt.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
         _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Regular);
         _helpBody.Font = new Font("Segoe UI", bodyPt);
@@ -716,7 +716,7 @@ sealed class MainForm : Form
 
     void RenderHelp()
     {
-        var bodyPt = _helpScale switch { 2 => 13f, 1 => 11.5f, _ => 10f };
+        var bodyPt = _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
         var criteria = ExamSession.Rubric?.Criteria;
         if (criteria is not { Count: > 0 })
         {
@@ -805,18 +805,7 @@ sealed class MainForm : Form
         ControlBox = true;
         Text = "MOS-KulKul";
         ApplyExamChrome();
-        if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
-        {
-            Bounds = saved;
-        }
-        else
-        {
-            var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
-            var w = Math.Min(980, wa.Width - 40);
-            var h = Math.Min(640, wa.Height - 40);
-            Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
-        }
-
+        RestoreHubWindow();
         if (switching)
         {
             Show();
@@ -855,15 +844,23 @@ sealed class MainForm : Form
         _exam.BackColor = showTasks || showSummary ? Color.White : Color.FromArgb(245, 247, 249);
         _summary.Visible = showSummary;
         _dockChrome.Visible = !showSummary;
+        if (_docking && _compact && !showSummary)
+        {
+            var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
+            _dockChrome.Height = LayoutMath.Px(LayoutMath.ClusterH, scale);
+        }
         _helpPane.Visible = showHelp;
         if (showHelp && _compact && _docking)
         {
             _helpPane.Dock = DockStyle.Fill;
+            _helpPane.Padding = new Padding(8, 6, 8, 4);
         }
         else
         {
             _helpPane.Dock = DockStyle.Top;
-            _helpPane.Height = LayoutMath.HelpH;
+            var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
+            _helpPane.Height = LayoutMath.Px(LayoutMath.HelpH, scale);
+            _helpPane.Padding = new Padding(12, 8, 12, 6);
         }
         _tasks.Visible = showTasks;
         _examTitle.Visible = showTasks;
@@ -1137,12 +1134,6 @@ sealed class MainForm : Form
             ShowSummary(false);
         }
 
-        if (_compact)
-        {
-            _compact = false;
-            EnterDock(compact: false);
-        }
-
         if (ExamSession.Mode == "testing")
         {
             _examStatus.Text = "Chế độ thi ẩn kết quả. Nộp bài khi xong.";
@@ -1247,18 +1238,7 @@ sealed class MainForm : Form
         MaximizeBox = true;
         ControlBox = true;
         Text = "MOS-KulKul";
-        if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
-        {
-            Bounds = saved;
-        }
-        else
-        {
-            var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
-            var w = Math.Min(980, wa.Width - 40);
-            var h = Math.Min(640, wa.Height - 40);
-            Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
-        }
-
+        RestoreHubWindow();
         if (switching)
         {
             Show();
@@ -1271,6 +1251,8 @@ sealed class MainForm : Form
         if (switching && FormBorderStyle != FormBorderStyle.None)
         {
             _savedWorkspace = Bounds;
+            MaximumSize = Size.Empty;
+            MinimumSize = new Size(LayoutMath.OverlayMinW, LayoutMath.OverlayMinH);
             Hide();
         }
 
@@ -1296,6 +1278,36 @@ sealed class MainForm : Form
         }
     }
 
+    void RestoreHubWindow()
+    {
+        MaximumSize = Size.Empty;
+        MinimumSize = new Size(LayoutMath.HubMinW, LayoutMath.HubMinH);
+        if (_savedWorkspace is { } saved && saved.Width > 200 && saved.Height > 200)
+        {
+            Bounds = saved;
+            return;
+        }
+
+        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
+        var w = Math.Min(980, wa.Width - 40);
+        var h = Math.Min(640, wa.Height - 40);
+        Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
+    }
+
+    void FitOverlay(int x, int y, int w, int h)
+    {
+        w = Math.Max(LayoutMath.OverlayMinW, w);
+        h = Math.Max(LayoutMath.OverlayMinH, h);
+        SuspendLayout();
+        MaximumSize = Size.Empty;
+        MinimumSize = new Size(LayoutMath.OverlayMinW, LayoutMath.OverlayMinH);
+        Location = new Point(x, y);
+        Size = new Size(w, h);
+        MinimumSize = new Size(w, h);
+        MaximumSize = new Size(w, h);
+        ResumeLayout(true);
+    }
+
     void ApplyDock(bool waitForWord)
     {
         if (!_docking)
@@ -1311,13 +1323,14 @@ sealed class MainForm : Form
 
         var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
+        var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
+        var (dock, word) = LayoutMath.Compute(work, _state, _compact, scale);
         if (_compact && HelpOpen)
         {
-            dock = LayoutMath.GrowForHelp(dock, work, _state);
+            dock = LayoutMath.GrowForHelp(dock, work, _state, scale);
         }
 
-        Bounds = new Rectangle(dock.X, dock.Y, dock.W, dock.H);
+        FitOverlay(dock.X, dock.Y, dock.W, dock.H);
         TopMost = _pinned;
         ApplyExamChrome();
         if (_tasks.Visible && _tasks.Columns.Count >= 1)
@@ -1344,7 +1357,8 @@ sealed class MainForm : Form
 
         var wa = Screen.FromHandle(Handle).WorkingArea;
         var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var (_, word) = LayoutMath.Compute(work, _state, _compact);
+        var scale = DeviceDpi / 96f;
+        var (_, word) = LayoutMath.Compute(work, _state, _compact, scale);
         WordWindow.Apply(word, _app);
         TopMost = true;
     }
