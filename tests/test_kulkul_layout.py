@@ -7,10 +7,15 @@ from app.kulkul_layout import (
     Rect,
     compute,
     grow_for_help,
+    measure,
     overlap,
+    size_for,
 )
 
-WORK = Rect(0, 0, 1920, 1040)  # 1080p trừ taskbar
+WORK = Rect(0, 0, 1920, 1040)  # 1080p trừ taskbar — tỉ lệ chuẩn = 1
+LAPTOP = Rect(0, 0, 1366, 728)
+QHD = Rect(0, 0, 2560, 1400)
+UHD = Rect(0, 0, 3840, 2120)
 
 
 def test_bottom_default_no_overlap():
@@ -103,15 +108,68 @@ def test_help_overlay_is_small_gmetrix_card():
     assert grown.x == WORK.x + 8
 
 
-def test_compact_cluster_scales_with_dpi():
-    dock, _ = compute(WORK, "bottom", compact=True, scale=1.5)
+def test_reference_desktop_fit_is_one():
+    nav = measure(WORK)
+    assert nav.fit == 1.0
+    assert nav.cluster_w == CLUSTER_W
+    assert nav.cluster_h == CLUSTER_H
+    assert nav.help_w == HELP_W
+    assert nav.help_h == HELP_H
+
+
+def test_each_position_uses_measured_cluster_size():
+    nav = measure(WORK)
+    for state in ("left", "right", "top", "bottom"):
+        w, h = size_for(WORK, state, compact=True)
+        assert (w, h) == (nav.cluster_w, nav.cluster_h)
+        dock, word = compute(WORK, state, compact=True)
+        assert dock.w == w
+        assert dock.h == h
+        assert word == WORK
+
+
+def test_laptop_desktop_shrinks_navigation():
+    nav = measure(LAPTOP)
+    assert nav.fit < 1
+    assert nav.cluster_w < CLUSTER_W
+    assert nav.cluster_h < CLUSTER_H
+    for state in ("left", "right", "top", "bottom"):
+        dock, word = compute(LAPTOP, state, compact=True)
+        assert dock.w == nav.cluster_w
+        assert dock.h == nav.cluster_h
+        assert dock.w < LAPTOP.w / 3
+        assert dock.h < LAPTOP.h / 3
+        assert word == LAPTOP
+        grown = grow_for_help(dock, LAPTOP, state)
+        assert grown.w < LAPTOP.w / 2
+        assert grown.h < LAPTOP.h / 2
+
+
+def test_large_desktop_grows_navigation():
+    nav_qhd = measure(QHD)
+    nav_uhd = measure(UHD)
+    assert nav_qhd.fit > 1
+    assert nav_uhd.fit > nav_qhd.fit
+    qhd, _ = compute(QHD, "bottom", compact=True)
+    uhd, _ = compute(UHD, "left", compact=True)
+    assert qhd.w > CLUSTER_W
+    assert qhd.h > CLUSTER_H
+    assert uhd.w > qhd.w
+    assert uhd.h > qhd.h
+    assert uhd.w < UHD.w / 3
+    assert uhd.h < UHD.h / 3
+
+
+def test_compact_scales_with_desktop_size():
+    big = Rect(0, 0, 2880, 1560)
+    dock, _ = compute(big, "bottom", compact=True)
     assert dock.w == round(CLUSTER_W * 1.5)
     assert dock.h == round(CLUSTER_H * 1.5)
-    grown = grow_for_help(dock, WORK, "bottom", scale=1.5)
+    grown = grow_for_help(dock, big, "bottom")
     assert grown.w == round(HELP_W * 1.5)
-    assert grown.h <= WORK.h * 2 // 5
+    assert grown.h <= big.h * 2 // 5
     assert grown.h >= dock.h
-    assert grown.h < WORK.h / 2
+    assert grown.h < big.h / 2
 
 
 def test_unknown_state_defaults_to_bottom():

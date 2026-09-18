@@ -61,6 +61,7 @@ sealed class MainForm : Form
     bool _summaryOpen;
     int _helpScale;
     int _taskIndex;
+    NavMetrics _nav = LayoutMath.Measure(new Rect(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH));
     Rectangle? _savedWorkspace;
     readonly bool _launchOnStart;
     readonly string? _fileOnStart;
@@ -140,9 +141,58 @@ sealed class MainForm : Form
             }
         };
 
-        FormClosed += (_, _) => _agent?.Dispose();
+        FormClosed += (_, _) =>
+        {
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+            _agent?.Dispose();
+        };
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        DpiChanged += (_, _) => RelayoutDock();
         _keepWord.Interval = 700;
         _keepWord.Tick += (_, _) => ApplyWordOnly();
+    }
+
+    void OnDisplaySettingsChanged(object? sender, EventArgs e) => RelayoutDock();
+
+    void RelayoutDock()
+    {
+        if (IsDisposed || !IsHandleCreated || !_docking)
+        {
+            return;
+        }
+
+        if (InvokeRequired)
+        {
+            BeginInvoke(RelayoutDock);
+            return;
+        }
+
+        ApplyDock(waitForWord: true);
+    }
+
+    Rect CurrentWork()
+    {
+        var screen = IsHandleCreated ? Screen.FromHandle(Handle) : Screen.PrimaryScreen;
+        var wa = (screen ?? Screen.PrimaryScreen)?.WorkingArea ?? new Rectangle(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH);
+        return new Rect(wa.X, wa.Y, wa.Width, wa.Height);
+    }
+
+    Button[] DockButtons() =>
+    [
+        _dockPos, _dockSave, _dockTasks, _dockCheck, _dockPin,
+        _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
+    ];
+
+    void ApplyNavChrome(NavMetrics nav)
+    {
+        _nav = nav;
+        _dockChrome.Height = nav.ClusterH;
+        _dockChrome.Padding = new Padding(nav.ChromePad);
+        foreach (var btn in DockButtons())
+        {
+            btn.Size = new Size(nav.Icon, nav.Icon);
+            btn.Margin = new Padding(nav.IconGap);
+        }
     }
 
     void BuildHeader()
@@ -630,10 +680,11 @@ sealed class MainForm : Form
         {
             if (open)
             {
-                var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
-                var w = Math.Min(LayoutMath.SummaryW, wa.Width - 40);
-                var h = Math.Min(LayoutMath.SummaryH, wa.Height - 40);
-                FitOverlay(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
+                var work = CurrentWork();
+                var nav = LayoutMath.Measure(work);
+                var w = Math.Min(nav.SummaryW, work.W - 40);
+                var h = Math.Min(nav.SummaryH, work.H - 40);
+                FitOverlay(work.X + (work.W - w) / 2, work.Y + (work.H - h) / 2, w, h);
                 ApplyExamChrome();
             }
             else
@@ -846,8 +897,8 @@ sealed class MainForm : Form
         _dockChrome.Visible = !showSummary;
         if (_docking && _compact && !showSummary)
         {
-            var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
-            _dockChrome.Height = LayoutMath.Px(LayoutMath.ClusterH, scale);
+            _dockChrome.Height = _nav.ClusterH;
+            _dockChrome.Padding = new Padding(_nav.ChromePad);
         }
         _helpPane.Visible = showHelp;
         if (showHelp && _compact && _docking)
@@ -858,8 +909,7 @@ sealed class MainForm : Form
         else
         {
             _helpPane.Dock = DockStyle.Top;
-            var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
-            _helpPane.Height = LayoutMath.Px(LayoutMath.HelpH, scale);
+            _helpPane.Height = _nav.HelpH;
             _helpPane.Padding = new Padding(12, 8, 12, 6);
         }
         _tasks.Visible = showTasks;
@@ -1288,7 +1338,7 @@ sealed class MainForm : Form
             return;
         }
 
-        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, 1280, 720);
+        var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH);
         var w = Math.Min(980, wa.Width - 40);
         var h = Math.Min(640, wa.Height - 40);
         Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
@@ -1321,13 +1371,13 @@ sealed class MainForm : Form
             return;
         }
 
-        var wa = Screen.FromHandle(IsHandleCreated ? Handle : IntPtr.Zero).WorkingArea;
-        var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var scale = IsHandleCreated ? DeviceDpi / 96f : 1f;
-        var (dock, word) = LayoutMath.Compute(work, _state, _compact, scale);
+        var work = CurrentWork();
+        var nav = LayoutMath.Measure(work);
+        ApplyNavChrome(nav);
+        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
         if (_compact && HelpOpen)
         {
-            dock = LayoutMath.GrowForHelp(dock, work, _state, scale);
+            dock = LayoutMath.GrowForHelp(dock, work, _state);
         }
 
         FitOverlay(dock.X, dock.Y, dock.W, dock.H);
@@ -1355,10 +1405,8 @@ sealed class MainForm : Form
             return;
         }
 
-        var wa = Screen.FromHandle(Handle).WorkingArea;
-        var work = new Rect(wa.X, wa.Y, wa.Width, wa.Height);
-        var scale = DeviceDpi / 96f;
-        var (_, word) = LayoutMath.Compute(work, _state, _compact, scale);
+        var work = CurrentWork();
+        var (_, word) = LayoutMath.Compute(work, _state, _compact);
         WordWindow.Apply(word, _app);
         TopMost = true;
     }
