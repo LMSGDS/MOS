@@ -28,18 +28,19 @@ sealed class MainForm : Form
     readonly Panel _dockChrome = new();
     readonly Panel _navGrip = new();
     readonly FlowLayoutPanel _dockFlow = new();
-    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang vị trí khác", Ui.DockBlue);
-    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.DockBlue);
-    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Hiện danh sách nhiệm vụ", Ui.DockBlue);
-    readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Kiểm tra nhiệm vụ", Ui.DockBlue);
-    readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim luôn trên cùng", Ui.DockBlue);
-    readonly Button _dockMenu = Ui.DockSquare(NavIcon.Menu, "Menu tùy chọn thêm", Ui.DockTeal);
-    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hiện hướng dẫn", Ui.DockTeal);
-    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.DockBlue);
-    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước, không chấm", Ui.DockBlue);
-    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Sang nhiệm vụ sau", Ui.DockGreen);
-    readonly ContextMenuStrip _dockMenuStrip = new();
-    readonly ContextMenuStrip _extraMenu = new();
+    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang trái, phải, trên hoặc dưới", Ui.DockQuiet);
+    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu bài và về Trang chủ — chưa nộp", Ui.DockQuiet);
+    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Chấm bài đang làm và hiện danh sách nhiệm vụ", Ui.DockQuiet);
+    readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Chấm lại tệp Word đang mở", Ui.DockQuiet);
+    readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim MOS-KulKul luôn trên cùng", Ui.DockQuiet);
+    readonly Button _dockSettings = Ui.DockSquare(NavIcon.Settings, "Cài đặt giao diện: dock, kích thước, Trang chủ", Ui.DockQuiet);
+    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hiện hoặc ẩn hướng dẫn từng bước", Ui.DockHint);
+    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.DockQuiet);
+    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Về nhiệm vụ trước", Ui.DockQuiet);
+    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Sang nhiệm vụ sau", Ui.DockBlue);
+    readonly Button _dockSubmit = Ui.DockSquare(NavIcon.Submit, "Nộp bài — hành động chốt, có hộp xác nhận", Ui.Success);
+    readonly ContextMenuStrip _settingsMenu = new();
+    readonly ToolStripMenuItem _pinItem = new("Ghim luôn trên cùng");
     readonly Panel _helpPane = new();
     readonly Panel _promptCard = new();
     readonly Label _promptTitle = new();
@@ -234,8 +235,8 @@ sealed class MainForm : Form
 
     Button[] DockButtons() =>
     [
-        _dockPos, _dockSave, _dockTasks, _dockCheck, _dockPin,
-        _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
+        _dockTasks, _dockCheck, _dockHint, _dockBack, _dockNext,
+        _dockSave, _dockSettings, _dockSubmit,
     ];
 
     void ApplyNavChrome(NavMetrics nav)
@@ -444,27 +445,19 @@ sealed class MainForm : Form
         _dockFlow.Padding = Padding.Empty;
         _dockFlow.Margin = Padding.Empty;
 
-        _dockPos.Click += (_, _) =>
-        {
-            _dockMenuStrip.Show(_dockPos, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
-        };
         _dockSave.Click += (_, _) => SaveAndHome();
         _dockTasks.Click += async (_, _) => await CheckTasks();
         _dockCheck.Click += async (_, _) => await CheckTasks();
-        _dockPin.Click += (_, _) =>
+        _dockSettings.Click += (_, _) =>
         {
-            _pinned = !_pinned;
-            TopMost = _pinned;
-            HighlightDockIcons();
-        };
-        _dockMenu.Click += (_, _) =>
-        {
-            _extraMenu.Show(_dockMenu, new Point(0, -4), ToolStripDropDownDirection.AboveRight);
+            _pinItem.Checked = _pinned;
+            _settingsMenu.Show(_dockSettings, new Point(0, -4), ToolStripDropDownDirection.AboveRight);
         };
         _dockHint.Click += (_, _) => ToggleHelp();
         _dockShare.Click += (_, _) => StepTask(1);
         _dockBack.Click += (_, _) => StepTask(-1);
         _dockNext.Click += (_, _) => StepTask(1);
+        _dockSubmit.Click += async (_, _) => await AskSubmit();
 
         foreach (var btn in DockButtons())
         {
@@ -481,21 +474,18 @@ sealed class MainForm : Form
         _navGrip.MouseMove += OnNavGripMove;
         _navGrip.MouseUp += OnNavGripUp;
 
-        _dockMenuStrip.Font = new Font("Segoe UI", 10f);
-        _dockMenuStrip.Items.Add(DockMenuItem("←  left", "left"));
-        _dockMenuStrip.Items.Add(DockMenuItem("→  right", "right"));
-        _dockMenuStrip.Items.Add(DockMenuItem("↑  Top", "top"));
-        _dockMenuStrip.Items.Add(DockMenuItem("↓  Bottom", "bottom"));
-
-        _extraMenu.Font = new Font("Segoe UI", 10f);
-        var extraHome = new ToolStripMenuItem("Trang chủ");
-        extraHome.Click += (_, _) => SaveAndHome();
-        var extraUndock = new ToolStripMenuItem("Tháo dock");
-        extraUndock.Click += (_, _) => UnDock();
-        var extraThicker = new ToolStripMenuItem("Thanh Navigation dày hơn");
-        extraThicker.Click += (_, _) => NudgeNavThickness(12);
-        var extraThinner = new ToolStripMenuItem("Thanh Navigation mỏng hơn");
-        extraThinner.Click += (_, _) => NudgeNavThickness(-12);
+        _settingsMenu.Font = new Font("Segoe UI", 10f);
+        _pinItem.Click += (_, _) =>
+        {
+            _pinned = !_pinned;
+            TopMost = _pinned;
+            HighlightDockIcons();
+        };
+        var dockSide = new ToolStripMenuItem("Vị trí thanh bài thi");
+        dockSide.DropDownItems.Add(DockMenuItem("Trái", "left"));
+        dockSide.DropDownItems.Add(DockMenuItem("Phải", "right"));
+        dockSide.DropDownItems.Add(DockMenuItem("Trên", "top"));
+        dockSide.DropDownItems.Add(DockMenuItem("Dưới", "bottom"));
         var extraResetNav = new ToolStripMenuItem("Đặt lại kích thước thanh Navigation");
         extraResetNav.Click += (_, _) =>
         {
@@ -506,21 +496,19 @@ sealed class MainForm : Form
                 ApplyDock(waitForWord: true);
             }
         };
-        var extraSubmit = new ToolStripMenuItem("Nộp bài");
-        extraSubmit.Click += async (_, _) => await SubmitExam();
-        var extraCheck = new ToolStripMenuItem("Kiểm tra nhiệm vụ");
-        extraCheck.Click += async (_, _) => await CheckTasks();
+        var extraUndock = new ToolStripMenuItem("Tháo dock");
+        extraUndock.Click += (_, _) => UnDock();
+        var extraHome = new ToolStripMenuItem("Trang chủ");
+        extraHome.Click += (_, _) => SaveAndHome();
         var extraDemo = new ToolStripMenuItem("Demo tất cả bài tập");
         extraDemo.Click += async (_, _) => await RunActionDemo();
-        _extraMenu.Items.Add(extraCheck);
-        _extraMenu.Items.Add(extraDemo);
-        _extraMenu.Items.Add(extraSubmit);
-        _extraMenu.Items.Add(new ToolStripSeparator());
-        _extraMenu.Items.Add(extraThicker);
-        _extraMenu.Items.Add(extraThinner);
-        _extraMenu.Items.Add(extraResetNav);
-        _extraMenu.Items.Add(extraUndock);
-        _extraMenu.Items.Add(extraHome);
+        _settingsMenu.Items.Add(_pinItem);
+        _settingsMenu.Items.Add(dockSide);
+        _settingsMenu.Items.Add(extraResetNav);
+        _settingsMenu.Items.Add(extraUndock);
+        _settingsMenu.Items.Add(new ToolStripSeparator());
+        _settingsMenu.Items.Add(extraDemo);
+        _settingsMenu.Items.Add(extraHome);
 
         _examTitle.Dock = DockStyle.Top;
         _examTitle.Font = Ui.HeadFont;
@@ -722,7 +710,7 @@ sealed class MainForm : Form
         _summaryFinish.Click += async (_, _) =>
         {
             ShowSummary(false);
-            await SubmitExam();
+            await AskSubmit();
         };
         _summaryCheck.Click += async (_, _) => await CheckTasks();
         Ui.DockTips.SetToolTip(_summarySave, "Lưu bài, chưa nộp");
@@ -1335,25 +1323,16 @@ sealed class MainForm : Form
 
     void HighlightDockIcons()
     {
-        foreach (ToolStripItem item in _dockMenuStrip.Items)
-        {
-            if (item.Tag is string state)
-            {
-                item.BackColor = state == _state ? Ui.DockBlue : Color.White;
-                item.ForeColor = state == _state ? Color.White : Ui.Text;
-            }
-        }
-
-        Ui.SetIconActive(_dockPin, _pinned);
-        _dockPin.BackColor = _pinned ? Ui.DockBlue : Color.FromArgb(148, 163, 184);
-        Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn" : "Hiện hướng dẫn");
+        _pinItem.Checked = _pinned;
+        Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn từng bước" : "Hiện hướng dẫn từng bước");
         Ui.DockTips.SetToolTip(_dockTasks, "Chấm bài đang làm và hiện danh sách nhiệm vụ");
-        Ui.DockTips.SetToolTip(_dockSave, "Lưu và thoát bài");
-        Ui.DockTips.SetToolTip(_dockShare, "Bỏ qua chấm, sang nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockBack, "Nhiệm vụ trước, không chấm");
+        Ui.DockTips.SetToolTip(_dockCheck, "Chấm lại tệp Word đang mở");
+        Ui.DockTips.SetToolTip(_dockSave, "Lưu bài và về Trang chủ — chưa nộp");
+        Ui.DockTips.SetToolTip(_dockBack, "Về nhiệm vụ trước");
         Ui.DockTips.SetToolTip(_dockNext, "Sang nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockPos, "Gắn thanh bài thi sang vị trí khác");
-        Ui.DockTips.SetToolTip(_dockMenu, "Menu tùy chọn thêm");
+        Ui.DockTips.SetToolTip(_dockSettings, "Cài đặt giao diện: dock, kích thước, Trang chủ");
+        Ui.DockTips.SetToolTip(_dockSubmit, "Nộp bài — hành động chốt, có hộp xác nhận");
+        Ui.DockTips.SetToolTip(_navGrip, "Kéo mép thanh để đổi kích thước Navigation");
     }
 
     void ApplyExamChrome()
@@ -1397,6 +1376,7 @@ sealed class MainForm : Form
         _examMeta.Visible = showTasks;
         _examStatus.Visible = showTasks;
         _dockTasks.Visible = true;
+        _dockSubmit.Visible = true;
         _dockHint.Visible = ExamSession.Mode != "testing";
         RenderHelp();
         HighlightDockIcons();
@@ -1676,7 +1656,7 @@ sealed class MainForm : Form
         _taskIndex = 0;
         _examStatus.Text = train
             ? "Bóng đèn: hướng dẫn. Danh sách: tổng hợp nhiệm vụ. Đĩa: lưu và thoát."
-            : "Danh sách nhiệm vụ. Đĩa: lưu và thoát. Nộp bài trong menu hoặc Nộp bài.";
+            : "Danh sách nhiệm vụ. Đĩa: lưu. Mũi tên: chuyển câu. Nút gửi: nộp bài.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
             ? criteria.Select(c => (c.Id, Ui.StripMarks(string.IsNullOrWhiteSpace(c.Prompt) ? c.Id : c.Prompt))).ToList()
@@ -1861,8 +1841,38 @@ sealed class MainForm : Form
         }
     }
 
+    IReadOnlyList<int> LeftoverTaskNumbers()
+    {
+        var leftover = new List<int>();
+        var rows = ExamSession.LastCheck;
+        for (var i = 0; i < _tasks.Items.Count; i++)
+        {
+            var id = _tasks.Items[i].Tag as string;
+            var hit = SkillReview.Find(rows, id, i);
+            if (!string.Equals(hit.Status, "pass", StringComparison.OrdinalIgnoreCase))
+            {
+                leftover.Add(i + 1);
+            }
+        }
+
+        return leftover;
+    }
+
+    async Task AskSubmit()
+    {
+        using var ask = new ConfirmSubmitForm(LeftoverTaskNumbers());
+        if (ask.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        await SubmitExam();
+    }
+
     async Task SubmitExam()
     {
+        var projectId = ExamSession.ProjectId;
+        var program = ExamSession.Program;
         _examStatus.Text = "Đang lưu và nộp bài…";
         var (ok, msg) = await ExamHub.SubmitAsync(_app);
         if (!ok)
@@ -1872,9 +1882,28 @@ sealed class MainForm : Form
             return;
         }
 
-        MessageBox.Show("Đã nộp bài.\n\n" + msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Information);
         ExamSession.ClearExam();
-        await ShowCompleted();
+        using var done = new PostSubmitForm(msg);
+        var next = done.ShowDialog(this);
+        if (next == DialogResult.Retry && !string.IsNullOrWhiteSpace(projectId))
+        {
+            Cursor = Cursors.WaitCursor;
+            var (started, startMsg) = await ExamHub.StartProjectAsync(program, projectId, "training");
+            Cursor = Cursors.Default;
+            if (!started)
+            {
+                MessageBox.Show(startMsg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ShowHome();
+                return;
+            }
+
+            _app = program;
+            ShowExamUi();
+            EnterDock(compact: true);
+            return;
+        }
+
+        ShowHome();
     }
 
     void SaveAndHome()

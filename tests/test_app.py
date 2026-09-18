@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.6" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -287,6 +287,20 @@ def test_windows_sources_include_action_demo():
     assert '_eye.Text = "Hiện"' not in login
     assert "PaintGlobe" in login
     assert "ClassifyLogin" in portal
+    confirm = (root / "ConfirmSubmitForm.cs").read_text(encoding="utf-8")
+    assert "Xác nhận nộp bài thi" in confirm
+    assert "Quay lại làm tiếp" in confirm
+    assert "Nộp bài ngay" in confirm
+    assert "nhiệm vụ chưa hoàn thành" in confirm
+    assert "Làm lại bài này" in confirm
+    assert "Quay về Trang chủ" in confirm
+    assert "DockQuiet" in ui
+    assert "DockHint" in ui
+    assert "NavIcon.Settings" in form
+    assert "AskSubmit" in form
+    assert "_dockSubmit" in form
+    assert "Menu tùy chọn thêm" not in form
+    assert "Q-matrix SOP" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "ProgramTile" in ui
     assert "MarkProgramTiles" in ui
     assert "OutlineBtn" in ui
@@ -301,7 +315,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.6"' in (
+    assert 'MyAppVersion "1.16.7"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

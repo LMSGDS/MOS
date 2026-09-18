@@ -162,6 +162,10 @@ static class SkillReview
         return raw;
     }
 
+    /// <summary>
+    /// Q-matrix SOP: help_steps are atomic skills in order (locate → tool → configure).
+    /// The first unmet step is the fail log shown under Thao tác đúng.
+    /// </summary>
     static ReviewBlock[] FailBlocks(string msg, JsonCriterion? item, LocalCriterion hit)
     {
         var correct = HintSteps(item);

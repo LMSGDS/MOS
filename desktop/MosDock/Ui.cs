@@ -32,6 +32,8 @@ static class Ui
     public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
     public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
     public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
+    public static readonly Color DockQuiet = Color.FromArgb(120, 136, 156);
+    public static readonly Color DockHint = Color.FromArgb(201, 148, 36);
 
     /// <summary>
     /// Form error SOP: radius 8, idle Line, focus Primary + soft shadow,
@@ -1074,7 +1076,7 @@ static class Ui
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             var kind = btn.Tag is NavIcon n ? n : icon;
-            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White);
+            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White, btn.BackColor);
         };
         RoundControl(btn, 6);
         return btn;
@@ -1563,7 +1565,7 @@ static class Ui
         btn.Invalidate();
     }
 
-    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color)
+    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color, Color cutout)
     {
         using var pen = new Pen(color, 1.6f);
         using var brush = new SolidBrush(color);
@@ -1599,7 +1601,7 @@ static class Ui
                 break;
             case NavIcon.Save:
                 g.FillRectangle(brush, new Rectangle(cx - 8, cy - 8, 16, 16));
-                using (var hole = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                using (var hole = new SolidBrush(cutout))
                 {
                     g.FillRectangle(hole, new Rectangle(cx - 4, cy - 6, 8, 5));
                     g.FillRectangle(hole, new Rectangle(cx - 5, cy + 2, 10, 5));
@@ -1624,6 +1626,20 @@ static class Ui
                 g.DrawLine(pen, cx - 8, cy - 5, cx + 8, cy - 5);
                 g.DrawLine(pen, cx - 8, cy, cx + 8, cy);
                 g.DrawLine(pen, cx - 8, cy + 5, cx + 8, cy + 5);
+                break;
+            case NavIcon.Settings:
+                g.DrawEllipse(pen, cx - 4, cy - 4, 8, 8);
+                for (var i = 0; i < 6; i++)
+                {
+                    var a = i * Math.PI / 3.0;
+                    g.DrawLine(
+                        pen,
+                        cx + (float)Math.Cos(a) * 5,
+                        cy + (float)Math.Sin(a) * 5,
+                        cx + (float)Math.Cos(a) * 9,
+                        cy + (float)Math.Sin(a) * 9);
+                }
+
                 break;
             case NavIcon.Hint:
                 g.FillEllipse(brush, cx - 6, cy - 8, 12, 12);
@@ -1682,4 +1698,5 @@ enum NavIcon
     Collapse,
     Check,
     Submit,
+    Settings,
 }
