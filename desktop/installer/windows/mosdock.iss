@@ -1,7 +1,7 @@
 ; MOS-KulKul — cài per-user, không cần Admin
 #define MyAppName "MOS-KulKul"
 #define MyAppVersion "1.15.4"
-#define MyAppPublisher "Trường GDS"
+#define MyAppPublisher "mos.gds.edu.vn"
 #define MyAppURL "https://mos.gds.edu.vn/cai-dat"
 #ifndef Dist
   #define Dist "..\..\..\dist-win"

@@ -165,6 +165,10 @@ def test_windows_web_stub_iss_downloads_full_from_server():
     stub = (folder / "mosdock-web.iss").read_text(encoding="utf-8")
     full = (folder / "mosdock.iss").read_text(encoding="utf-8")
     assert "https://mos.gds.edu.vn/cai-dat/windows-full" in stub
+    assert 'MyAppPublisher "mos.gds.edu.vn"' in stub
+    assert 'MyAppPublisher "mos.gds.edu.vn"' in full
+    assert "Trường GDS" not in stub
+    assert "Trường GDS" not in full
     assert "CreateAppDir=no" in stub
     assert "Uninstallable=no" in stub
     assert "CreateDownloadPage" in stub
@@ -298,6 +302,8 @@ def test_kulkul_home_after_login():
     assert r.status_code == 200
     assert "Xin chào" in r.text
     assert "Cài MOS-KulKul" in r.text
+    assert "Trường GDS" not in r.text
+    assert "mos.gds.edu.vn" in r.text
     assert "program-menu" not in r.text
     assert "word-sim" not in r.text
     assert "office.com" not in r.text.lower()

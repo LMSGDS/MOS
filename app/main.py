@@ -261,7 +261,7 @@ def install_page(request: Request):
 INSTALLER_DIR = ROOT / "data" / "installers"
 _HASH_CACHE: dict[str, tuple[float, int, str]] = {}
 
-INSTALL_README = """MOS-KulKul — Trường GDS (mos.gds.edu.vn)
+INSTALL_README = """MOS-KulKul — mos.gds.edu.vn
 
 Không tải .exe/.zip bằng Chrome/Edge: trình duyệt luôn quét virus vì bộ cài
 chưa mua chữ ký Authenticode (không phải mã độc).
