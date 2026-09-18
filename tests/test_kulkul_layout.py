@@ -8,10 +8,13 @@ from app.kulkul_layout import (
     HELP_H,
     HELP_W,
     Rect,
+    cluster,
     compute,
     grow_for_help,
     measure,
     overlap,
+    pin_to_work,
+    place,
     size_for,
 )
 
@@ -255,3 +258,39 @@ def test_laptop_help_bar_stays_on_screen_edge():
     assert grown.w == LAPTOP.w
     assert grown.h <= LAPTOP.h * DOCK_MAX_PCT // 100
     assert grown.y > LAPTOP.y + LAPTOP.h // 2
+
+
+def test_place_top_bottom_spans_full_working_width():
+    """Cụm Place cũ (~200px giữa màn) phải bung hết chiều ngang."""
+    bottom = place(WORK, "bottom", CLUSTER_W, CLUSTER_H)
+    assert bottom.x == WORK.x
+    assert bottom.w == WORK.w
+    assert bottom.h == CLUSTER_H
+    assert bottom.bottom == WORK.bottom
+    top = place(WORK, "top", CLUSTER_W, CLUSTER_H)
+    assert top.x == WORK.x
+    assert top.w == WORK.w
+    assert top.y == WORK.y
+    left = place(WORK, "left", CLUSTER_W, CLUSTER_H)
+    assert left.y == WORK.y
+    assert left.h == WORK.h
+    assert left.w == CLUSTER_W
+    assert cluster(WORK, "bottom").w == WORK.w
+    assert cluster(LAPTOP, "bottom").w == LAPTOP.w
+
+
+def test_pin_expands_screenshot_centered_cluster():
+    """Ảnh laptop: card ~200×162 giữa màn → bung full width, dính đáy working area."""
+    fake = Rect(580, 520, 200, 162)
+    pinned = pin_to_work(fake, WORK, "bottom")
+    assert pinned.x == 0
+    assert pinned.w == 1920
+    assert pinned.h == 162
+    assert pinned.bottom == WORK.bottom
+    leftover = Rect(WORK.x, WORK.y, WORK.w, pinned.y - WORK.y)
+    assert not overlap(pinned, leftover)
+    laptop_fake = Rect(500, 480, 210, 160)
+    laptop_pin = pin_to_work(laptop_fake, LAPTOP, "bottom")
+    assert laptop_pin.w == LAPTOP.w
+    assert laptop_pin.x == LAPTOP.x
+    assert laptop_pin.bottom == LAPTOP.bottom

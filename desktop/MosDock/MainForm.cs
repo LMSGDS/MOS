@@ -236,14 +236,14 @@ sealed class MainForm : Form
             _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
             _dockChrome.Width = _nav.ClusterW;
             _dockFlow.FlowDirection = FlowDirection.TopDown;
-            _dockFlow.WrapContents = true;
+            _dockFlow.WrapContents = false;
             return;
         }
 
         _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
         _dockChrome.Height = _nav.ClusterH;
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
-        _dockFlow.WrapContents = true;
+        _dockFlow.WrapContents = false;
     }
 
     void BuildHeader()
@@ -404,7 +404,7 @@ sealed class MainForm : Form
 
         _dockFlow.Dock = DockStyle.Fill;
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
-        _dockFlow.WrapContents = true;
+        _dockFlow.WrapContents = false;
         _dockFlow.BackColor = Color.Transparent;
         _dockFlow.Padding = Padding.Empty;
         _dockFlow.Margin = Padding.Empty;
@@ -1653,6 +1653,7 @@ sealed class MainForm : Form
         {
             Show();
             TopMost = _pinned;
+            ApplyDock(waitForWord: true);
         }
     }
 
@@ -1677,16 +1678,14 @@ sealed class MainForm : Form
         w = Math.Max(LayoutMath.OverlayMinW, w);
         h = Math.Max(LayoutMath.OverlayMinH, h);
         AutoScaleMode = AutoScaleMode.None;
+        AutoSize = false;
         SuspendLayout();
         MaximumSize = Size.Empty;
         MinimumSize = Size.Empty;
+        Bounds = new Rectangle(x, y, w, h);
         if (IsHandleCreated)
         {
             SetWindowPos(Handle, IntPtr.Zero, x, y, w, h, SwpNozorder | SwpNoactivate | SwpFramechanged);
-        }
-        else
-        {
-            Bounds = new Rectangle(x, y, w, h);
         }
 
         MinimumSize = new Size(w, h);
@@ -1711,6 +1710,8 @@ sealed class MainForm : Form
         var nav = LayoutMath.Measure(work);
         ApplyNavChrome(nav);
         var (dock, word) = DockAndWord(work);
+        dock = LayoutMath.PinToWork(dock, work, _state);
+        word = LayoutMath.WordBeside(work, dock, _state);
         FitOverlay(dock.X, dock.Y, dock.W, dock.H);
         TopMost = _pinned;
         ApplyExamChrome();
@@ -1747,14 +1748,14 @@ sealed class MainForm : Form
 
     (Rect Dock, Rect Word) DockAndWord(Rect work)
     {
-        var (dock, word) = LayoutMath.Compute(work, _state, _compact);
+        var (dock, _) = LayoutMath.Compute(work, _state, _compact);
         if (_compact && HelpOpen)
         {
             dock = LayoutMath.GrowForHelp(dock, work, _state);
-            word = LayoutMath.WordBeside(work, dock, _state);
         }
 
-        return (dock, word);
+        dock = LayoutMath.PinToWork(dock, work, _state);
+        return (dock, LayoutMath.WordBeside(work, dock, _state));
     }
 
     const uint SwpNoactivate = 0x0010;

@@ -188,7 +188,9 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.3" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.15.4" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "PinToWork" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")

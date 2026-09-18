@@ -138,7 +138,27 @@ public static class LayoutMath
             dock = new Rect(work.X, work.Bottom - edge, work.W, edge);
         }
 
+        dock = PinToWork(dock, work, state);
         return (dock, WordBeside(work, dock, state));
+    }
+
+    /// <summary>
+    /// Top/bottom luôn bung 100% chiều ngang working area; left/right bung 100% chiều dọc.
+    /// Cụm icon giữa màn (Place cũ) bị kéo sát cạnh và kéo hết cạnh dài.
+    /// </summary>
+    public static Rect PinToWork(Rect dock, Rect work, string state)
+    {
+        state = (state ?? "bottom").ToLowerInvariant();
+        if (state is "left" or "right")
+        {
+            var w = Math.Clamp(Math.Max(OverlayMinW, dock.W), OverlayMinW, Math.Max(OverlayMinW, work.W));
+            var x = state == "left" ? work.X : work.Right - w;
+            return new Rect(x, work.Y, w, work.H);
+        }
+
+        var h = Math.Clamp(Math.Max(OverlayMinH, dock.H), OverlayMinH, Math.Max(OverlayMinH, work.H));
+        var y = state == "top" ? work.Y : work.Bottom - h;
+        return new Rect(work.X, y, work.W, h);
     }
 
     /// <summary>Word occupies the leftover working area; Navigation never covers the document.</summary>
@@ -163,17 +183,8 @@ public static class LayoutMath
 
     public static Rect Place(Rect work, string state, int w, int h, int margin = ClusterMargin)
     {
-        var m = Math.Max(4, margin);
-        state = (state ?? "bottom").ToLowerInvariant();
-        w = Math.Max(OverlayMinW, w);
-        h = Math.Max(OverlayMinH, h);
-        return state switch
-        {
-            "left" => new Rect(work.X + m, work.Y + Math.Max(m, (work.H - h) / 2), w, h),
-            "right" => new Rect(work.Right - w - m, work.Y + Math.Max(m, (work.H - h) / 2), w, h),
-            "top" => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Y + m, w, h),
-            _ => new Rect(work.X + Math.Max(m, (work.W - w) / 2), work.Bottom - h - m, w, h),
-        };
+        _ = margin;
+        return PinToWork(new Rect(work.X, work.Y, Math.Max(OverlayMinW, w), Math.Max(OverlayMinH, h)), work, state);
     }
 
     public static Rect GrowForHelp(Rect dock, Rect work, string state, float scale = 1f)
@@ -185,13 +196,13 @@ public static class LayoutMath
             var cap = Math.Max(nav.ClusterW, work.W * OverlayCapPct / 100);
             var w = Math.Min(Math.Max(dock.W, dock.W + nav.HelpW), Math.Min(cap, Math.Max(dock.W, work.W - MinWord)));
             var x = state == "left" ? work.X : work.Right - w;
-            return new Rect(x, work.Y, w, work.H);
+            return PinToWork(new Rect(x, work.Y, w, work.H), work, state);
         }
 
         var capH = Math.Max(nav.ClusterH, work.H * OverlayCapPct / 100);
         var h = Math.Min(Math.Max(dock.H, dock.H + nav.HelpH), Math.Min(capH, Math.Max(dock.H, work.H - MinWord)));
         var y = state == "top" ? work.Y : work.Bottom - h;
-        return new Rect(work.X, y, work.W, h);
+        return PinToWork(new Rect(work.X, y, work.W, h), work, state);
     }
 
     static Rect ScaleWork(Rect work, float scale)

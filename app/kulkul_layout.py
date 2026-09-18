@@ -151,17 +151,8 @@ def _scale_work(work: Rect, scale: float) -> Rect:
 
 
 def place(work: Rect, state: str, w: int, h: int, margin: int = CLUSTER_MARGIN) -> Rect:
-    m = max(4, margin)
-    state = (state or "bottom").lower()
-    w = max(OVERLAY_MIN_W, w)
-    h = max(OVERLAY_MIN_H, h)
-    if state == "left":
-        return Rect(work.x + m, work.y + max(m, (work.h - h) // 2), w, h)
-    if state == "right":
-        return Rect(work.right - w - m, work.y + max(m, (work.h - h) // 2), w, h)
-    if state == "top":
-        return Rect(work.x + max(m, (work.w - w) // 2), work.y + m, w, h)
-    return Rect(work.x + max(m, (work.w - w) // 2), work.bottom - h - m, w, h)
+    del margin
+    return pin_to_work(Rect(work.x, work.y, max(OVERLAY_MIN_W, w), max(OVERLAY_MIN_H, h)), work, state)
 
 
 def cluster(work: Rect, state: str, scale: float = 1.0) -> Rect:
@@ -197,7 +188,20 @@ def compute(work: Rect, state: str, compact: bool = False, scale: float = 1.0) -
         dock = Rect(work.x, work.y, work.w, edge)
     else:
         dock = Rect(work.x, work.bottom - edge, work.w, edge)
+    dock = pin_to_work(dock, work, state)
     return dock, word_beside(work, dock, state)
+
+
+def pin_to_work(dock: Rect, work: Rect, state: str | None) -> Rect:
+    """Top/bottom = 100% chiều ngang working area; left/right = 100% chiều dọc."""
+    state = (state or "bottom").lower()
+    if state in ("left", "right"):
+        w = max(OVERLAY_MIN_W, min(max(OVERLAY_MIN_W, dock.w), max(OVERLAY_MIN_W, work.w)))
+        x = work.x if state == "left" else work.right - w
+        return Rect(x, work.y, w, work.h)
+    h = max(OVERLAY_MIN_H, min(max(OVERLAY_MIN_H, dock.h), max(OVERLAY_MIN_H, work.h)))
+    y = work.y if state == "top" else work.bottom - h
+    return Rect(work.x, y, work.w, h)
 
 
 def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rect:
@@ -208,11 +212,11 @@ def grow_for_help(dock: Rect, work: Rect, state: str, scale: float = 1.0) -> Rec
         cap = max(nav.cluster_w, work.w * DOCK_MAX_PCT // 100)
         w = min(max(dock.w, dock.w + nav.help_w), cap, max(dock.w, work.w - MIN_WORD))
         x = work.x if state == "left" else work.right - w
-        return Rect(x, work.y, w, work.h)
+        return pin_to_work(Rect(x, work.y, w, work.h), work, state)
     cap = max(nav.cluster_h, work.h * DOCK_MAX_PCT // 100)
     h = min(max(dock.h, dock.h + nav.help_h), cap, max(dock.h, work.h - MIN_WORD))
     y = work.y if state == "top" else work.bottom - h
-    return Rect(work.x, y, work.w, h)
+    return pin_to_work(Rect(work.x, y, work.w, h), work, state)
 
 
 def overlap(a: Rect, b: Rect) -> bool:
