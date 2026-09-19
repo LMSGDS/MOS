@@ -487,7 +487,10 @@ def admin_lti(request: Request):
         return RedirectResponse("/dang-nhap", status_code=303)
     if not _leaders(user):
         return RedirectResponse("/quan-tri", status_code=303)
-    from app.lti import list_platforms
+    try:
+        from app.lti import list_platforms
+    except Exception:
+        return HTMLResponse("LTI chưa sẵn sàng (cần PyJWT). Chờ git-sync pip install.", status_code=503)
 
     host = request.headers.get("host", "mos.gds.edu.vn")
     scheme = "https" if "edu.vn" in host else request.url.scheme
@@ -524,7 +527,10 @@ def admin_lti_save(
         return RedirectResponse("/dang-nhap", status_code=303)
     if not _leaders(user):
         return RedirectResponse("/quan-tri", status_code=303)
-    from app.lti import register_platform
+    try:
+        from app.lti import register_platform
+    except Exception:
+        return RedirectResponse("/quan-tri/lti", status_code=303)
 
     register_platform(
         name=name,

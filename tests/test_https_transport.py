@@ -172,12 +172,24 @@ def test_github_sync_downloads_installers_over_https():
     assert "sync-installers.sh" in git_sync
     assert 'pip" install' in git_sync or "pip install" in git_sync
     assert "requirements.txt" in git_sync
+    assert git_sync.find("systemctl restart") < git_sync.rfind("sync-installers.sh")
     assert "x-access-token:" in git_sync
     assert "AUTHORIZATION: basic" in git_sync
     assert "reset --hard" in git_sync
     assert "merge --ff-only" not in git_sync
     assert "AUTHORIZATION: bearer" not in git_sync.lower()
     assert "-GDS.exe" not in main
+    assert "from app.lti import router" in main
+    assert "LTI chua san sang" in main
+    tokens = (root / "app" / "tokens.py").read_text(encoding="utf-8")
+    assert "import jwt" not in tokens
+    from app.tokens import decode, issue
+
+    tok = issue({"username": "hs-boot", "name": "Học sinh", "role": "student", "id": 7})
+    data = decode(tok)
+    assert data["sub"] == "hs-boot"
+    assert data["uid"] == 7
+    assert decode("not-a-token") is None
     hooks = (root / "app" / "hooks.py").read_text(encoding="utf-8")
     assert "timeout=300" in hooks
     portal = (ROOT / "desktop" / "MosDock" / "Portal.cs").read_text(encoding="utf-8")

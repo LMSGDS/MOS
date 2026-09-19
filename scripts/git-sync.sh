@@ -45,14 +45,15 @@ elif command -v python3 >/dev/null 2>&1; then
   python3 -m pip install -q -r "$ROOT/requirements.txt" || echo "pip: bo qua (thieu goi moi)" >&2
 fi
 
-if [[ "${MOS_SYNC_INSTALLERS:-1}" == "1" ]]; then
-  bash "$ROOT/scripts/sync-installers.sh" || echo "sync-installers: bo qua (khong chan git pull)" >&2
-fi
-
+# Bật cổng trước, rồi mới tải Full.exe (~120MB) để /healthz không đứng 502.
 if [[ "${MOS_RESTART:-1}" == "1" ]]; then
   if command -v systemctl >/dev/null 2>&1; then
     systemctl restart mos.service 2>/dev/null || sudo -n systemctl restart mos.service 2>/dev/null || true
   fi
+fi
+
+if [[ "${MOS_SYNC_INSTALLERS:-1}" == "1" ]]; then
+  bash "$ROOT/scripts/sync-installers.sh" || echo "sync-installers: bo qua (khong chan git pull)" >&2
 fi
 
 git rev-parse --short HEAD
