@@ -44,7 +44,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul9")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul10")
 SESSION_SECRET = _session_secret()
 
 

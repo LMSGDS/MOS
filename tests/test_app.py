@@ -539,6 +539,12 @@ def test_kulkul_home_after_login():
     assert "KulKul" in r.text
     assert "GMetrix" not in r.text
     assert "/quan-tri" in r.text
+    assert "ic-app-header" in r.text
+    assert "menu-canvas" in r.text
+    assert "Bảng tin" in r.text
+    assert "Lớp học" in r.text
+    assert "Giám sát" in r.text
+    assert "ic-app-header" not in TestClient(app).get("/dang-nhap").text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text
