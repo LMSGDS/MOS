@@ -640,4 +640,70 @@ static class ExamHub
             // giữ hàng đợi
         }
     }
+
+    public static string ObjectiveMajor(string? projectId)
+    {
+        var id = projectId ?? "";
+        const string prefix = "word-objective-";
+        if (!id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
+        }
+
+        var tail = id[prefix.Length..];
+        var dash = tail.IndexOf('-');
+        return dash > 0 ? tail[..dash] : tail;
+    }
+
+    public static IReadOnlyList<ProjectGroup> GroupByObjective(IEnumerable<MosProject> projects)
+    {
+        var buckets = new Dictionary<string, List<MosProject>>(StringComparer.OrdinalIgnoreCase);
+        var order = new List<string>();
+        foreach (var project in projects)
+        {
+            var major = ObjectiveMajor(project.Id);
+            var key = string.IsNullOrWhiteSpace(major) ? project.Id : major;
+            if (!buckets.TryGetValue(key, out var list))
+            {
+                list = [];
+                buckets[key] = list;
+                order.Add(key);
+            }
+
+            list.Add(project);
+        }
+
+        return order.Select(key => new ProjectGroup(key, GroupTitle(key, buckets[key]), buckets[key])).ToList();
+    }
+
+    public static string GroupTitle(string key, IReadOnlyList<MosProject> items)
+    {
+        if (items.Count == 1 && string.IsNullOrWhiteSpace(ObjectiveMajor(items[0].Id)))
+        {
+            return items[0].Title;
+        }
+
+        return items.Count == 1
+            ? items[0].Title
+            : $"Objective {key} · {items.Count} đề";
+    }
+
+    public static string OverviewText(JsonRubric? rubric, string? title, int taskCount)
+    {
+        if (!string.IsNullOrWhiteSpace(rubric?.Scenario))
+        {
+            return rubric.Scenario.Trim();
+        }
+
+        var name = !string.IsNullOrWhiteSpace(rubric?.Title) ? rubric!.Title : title ?? "bài MOS";
+        var n = Math.Max(0, taskCount);
+        if (!string.IsNullOrWhiteSpace(rubric?.Objective))
+        {
+            return $"Nhóm Objective {rubric.Objective}. Bạn đang làm «{name}» — {n} nhiệm vụ. Chọn Nhiệm vụ 1 để bắt đầu.";
+        }
+
+        return $"Bạn đang làm «{name}». Có {n} nhiệm vụ. Chọn Nhiệm vụ 1 để bắt đầu.";
+    }
 }
+
+readonly record struct ProjectGroup(string Key, string Title, IReadOnlyList<MosProject> Projects);

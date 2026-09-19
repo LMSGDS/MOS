@@ -1122,6 +1122,9 @@ static class WordGrade
 
 sealed class JsonRubric
 {
+    public string Title { get; set; } = "";
+    public string Objective { get; set; } = "";
+    public string Scenario { get; set; } = "";
     public List<JsonCriterion> Criteria { get; set; } = [];
 }
 

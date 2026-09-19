@@ -250,6 +250,51 @@ def test_windows_sources_include_action_demo():
     ).read_text(encoding="utf-8")
 
 
+def test_exam_chrome_help_vs_huong_dan():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    form = (root / "MainForm.cs").read_text(encoding="utf-8")
+    ui = (root / "Ui.cs").read_text(encoding="utf-8")
+    hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
+    layout = (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    grade = (root / "WordGrade.cs").read_text(encoding="utf-8")
+    assert "Tổng quan" in form
+    assert "FillObjectiveTabs" in form
+    assert "RenderBrief" in form
+    assert "GroupByObjective" in form
+    assert "GroupByObjective" in hub
+    assert "OverviewText" in hub
+    assert "GrowForPrompt" in form
+    assert "PromptBand" in layout
+    assert "Un-dock" in form
+    assert "↑  Top" in form
+    assert "↓  Bottom" in form
+    assert "_dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint" in form
+    assert "NavIcon.Help" in ui
+    assert "Help — mẹo giao diện" in form
+    assert "Thi không trợ giúp" in form
+    assert "HelpOpen => _helpVisible && ExamSession.Mode != \"testing\"" in form
+    assert "if (ExamSession.Mode == \"testing\")" in form
+    assert "_dockHint.Visible = ExamSession.Mode != \"testing\"" in form
+    assert "ShowTips" in form
+    assert "Alt+F" in form
+    assert "Alt+H" in form
+    assert "public string Scenario" in grade
+    assert "_dockShare" not in form.split("DockButtons()")[1].split("];")[0]
+
+
+def test_objective_group_key_from_project_id():
+    from pathlib import Path
+
+    hub = (
+        Path(__file__).resolve().parent.parent / "desktop" / "MosDock" / "ExamHub.cs"
+    ).read_text(encoding="utf-8")
+    assert 'const string prefix = "word-objective-"' in hub
+    assert 'return dash > 0 ? tail[..dash] : tail' in hub
+    assert 'Objective {key} · {items.Count} đề' in hub
+
+
 def _autofit_columns(inner_w: int, min_w: int, gap: int) -> int:
     span = max(1, inner_w)
     cell = max(1, min_w + gap)
