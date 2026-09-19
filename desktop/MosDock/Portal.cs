@@ -118,12 +118,31 @@ static class Portal
         return await resp.Content.ReadAsByteArrayAsync();
     }
 
-    public static async Task<JsonDocument> PostJsonAsync(string path, object body)
+    public static Dictionary<string, string> SyncHeaders(string? filePath = null, string? updatedAt = null)
+    {
+        var headers = new Dictionary<string, string>
+        {
+            ["X-MOS-Updated-At"] = string.IsNullOrWhiteSpace(updatedAt) ? LocalExamStore.NowIso() : updatedAt,
+        };
+        if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
+        {
+            headers["X-MOS-Artifact-SHA256"] = LocalExamStore.Sha256File(filePath);
+        }
+
+        return headers;
+    }
+
+    public static async Task<JsonDocument> PostJsonAsync(
+        string path,
+        object body,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         ApplyAuth();
         var payload = JsonSerializer.Serialize(body);
-        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-        using var resp = await Http.PostAsync(Origin + path, content);
+        using var req = new HttpRequestMessage(HttpMethod.Post, Origin + path);
+        req.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        ApplyExtra(req, headers);
+        using var resp = await Http.SendAsync(req);
         var text = await resp.Content.ReadAsStringAsync();
         if (!resp.IsSuccessStatusCode)
         {
@@ -136,7 +155,8 @@ static class Portal
     public static async Task<JsonDocument> PostFileAsync(
         string path,
         string filePath,
-        IReadOnlyDictionary<string, string>? fields = null)
+        IReadOnlyDictionary<string, string>? fields = null,
+        IReadOnlyDictionary<string, string>? headers = null)
     {
         ApplyAuth();
         using var form = new MultipartFormDataContent();
@@ -151,7 +171,11 @@ static class Portal
                 form.Add(new StringContent(kv.Value), kv.Key);
             }
         }
-        using var resp = await Http.PostAsync(Origin + path, form);
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, Origin + path);
+        req.Content = form;
+        ApplyExtra(req, headers);
+        using var resp = await Http.SendAsync(req);
         var text = await resp.Content.ReadAsStringAsync();
         if (!resp.IsSuccessStatusCode)
         {
@@ -159,5 +183,18 @@ static class Portal
         }
 
         return JsonDocument.Parse(text);
+    }
+
+    static void ApplyExtra(HttpRequestMessage req, IReadOnlyDictionary<string, string>? headers)
+    {
+        if (headers is null)
+        {
+            return;
+        }
+
+        foreach (var kv in headers)
+        {
+            req.Headers.TryAddWithoutValidation(kv.Key, kv.Value);
+        }
     }
 }

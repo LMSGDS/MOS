@@ -512,3 +512,11 @@ body.exam-running .word-sim-page {
 }
 .skill-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
 .grid a { color: var(--gds-dark); font-weight: 700; text-decoration: none; }
+.live-filter { margin: 12px 0; }
+.q-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 720px) { .q-wrap { grid-template-columns: 1fr; } }
+@keyframes live-flash {
+  0% { background: #bbf7d0; }
+  100% { background: transparent; }
+}
+tr.just-submitted td { animation: live-flash 1.8s ease; }

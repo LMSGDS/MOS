@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Giám sát phòng thi{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Giám sát phòng thi</h1>
+  <p class="lead">Phiên MOS-KulKul đồng bộ lên PostgreSQL. Nộp bài làm hàng giáo viên chớp sáng, không cần tải lại trang.</p>
+  {% include "admin_nav.html" %}
+  <form method="get" action="/quan-tri/giam-sat" class="live-filter">
+    <label>Lớp
+      <select name="lop" onchange="this.form.submit()">
+        <option value="0" {% if class_id == 0 %}selected{% endif %}>Tất cả lớp</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}{% if c.teacher %} · {{ c.teacher }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+  <p class="hint" id="live-status">Đang chờ sự kiện nộp bài…</p>
+  <table class="grid" id="live-table">
+    <thead>
+      <tr>
+        <th>Học sinh</th>
+        <th>Bài</th>
+        <th>Trạng thái</th>
+        <th>Tiến trình</th>
+        <th>Điểm</th>
+        <th>Cập nhật</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr data-session="{{ s.session_id }}">
+        <td>{{ s.student }}{% if s.student_code %} <span class="hint">{{ s.student_code }}</span>{% endif %}</td>
+        <td>{{ s.title }}</td>
+        <td class="live-status">{{ s.status }}</td>
+        <td>
+          <span class="bar"><span style="width: {{ s.progress_pct or 0 }}%"></span></span>
+          <span class="live-progress">{{ s.progress_pct or 0 }}%</span>
+        </td>
+        <td class="live-score">{% if s.verified_score is not none %}{{ s.verified_score }}{% elif s.score is not none %}{{ s.score }}{% else %}—{% endif %}</td>
+        <td class="live-updated">{{ s.updated_at }}</td>
+      </tr>
+      {% else %}
+      <tr class="empty-row"><td colspan="6">Chưa có phiên đang mở.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+<script>
+(function () {
+  var classId = {{ class_id|int }};
+  var table = document.getElementById("live-table").tBodies[0];
+  var statusEl = document.getElementById("live-status");
+  function rowFor(id) {
+    return table.querySelector('tr[data-session="' + id + '"]');
+  }
+  function upsert(ev) {
+    if (!ev || !ev.session_id) return;
+    var empty = table.querySelector(".empty-row");
+    if (empty) empty.remove();
+    var row = rowFor(ev.session_id);
+    if (!row) {
+      row = table.insertRow(0);
+      row.setAttribute("data-session", ev.session_id);
+      row.innerHTML = "<td></td><td></td><td class='live-status'></td><td><span class='bar'><span></span></span> <span class='live-progress'></span></td><td class='live-score'></td><td class='live-updated'></td>";
+      row.cells[0].textContent = ev.student || ev.student_id || "";
+      row.cells[1].textContent = ev.title || ev.exam_id || "";
+    }
+    row.querySelector(".live-status").textContent = ev.status || "";
+    var pct = ev.progress_pct == null ? 0 : ev.progress_pct;
+    row.querySelector(".bar span").style.width = pct + "%";
+    row.querySelector(".live-progress").textContent = pct + "%";
+    row.querySelector(".live-score").textContent = ev.score == null || ev.score === "" ? "—" : ev.score;
+    row.querySelector(".live-updated").textContent = ev.updated_at || "";
+    if (ev.type === "submit") {
+      row.classList.remove("just-submitted");
+      void row.offsetWidth;
+      row.classList.add("just-submitted");
+      statusEl.textContent = "Đã nộp: " + (ev.student || "") + " — " + (ev.title || ev.exam_id || "");
+    }
+  }
+  var src = new EventSource("/api/v1/classes/" + classId + "/live");
+  src.onopen = function () { statusEl.textContent = "Trực tuyến — chờ học sinh nộp bài."; };
+  src.onerror = function () { statusEl.textContent = "Mất kết nối trực tuyến, đang thử lại…"; };
+  src.onmessage = function (msg) {
+    try { upsert(JSON.parse(msg.data)); } catch (e) {}
+  };
+})();
+</script>
+{% endblock %}

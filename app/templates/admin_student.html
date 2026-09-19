@@ -37,6 +37,38 @@
     </tbody>
   </table>
 
+  <h2 style="margin-top:28px;font-size:18px">Q-Matrix kỹ năng</h2>
+  <div class="q-wrap">
+    <svg class="q-radar" viewBox="0 0 200 200" width="200" height="200" aria-label="Radar Q-Matrix">
+      {% set axes = q_axes|default({}) %}
+      {% set loc = (axes.locate or 0) / 100 %}
+      {% set tool = (axes.tool or 0) / 100 %}
+      {% set cfg = (axes.configure or 0) / 100 %}
+      <polygon points="100,20 176,155 24,155" fill="none" stroke="#cbd5e1" />
+      <polygon points="100,{{ 100 - 80 * loc }} {{ 100 + 76 * tool }},{{ 100 + 55 * tool }} {{ 100 - 76 * cfg }},{{ 100 + 55 * cfg }}" fill="rgba(0,142,226,0.28)" stroke="#008EE2" />
+      <text x="100" y="14" text-anchor="middle" font-size="11">Định vị {{ axes.locate|default(0) }}%</text>
+      <text x="186" y="172" text-anchor="end" font-size="11">Công cụ {{ axes.tool|default(0) }}%</text>
+      <text x="14" y="172" text-anchor="start" font-size="11">Cấu hình {{ axes.configure|default(0) }}%</text>
+    </svg>
+    <table class="grid">
+      <thead><tr><th>Bài</th><th>Tiêu chí</th><th>Định vị</th><th>Công cụ</th><th>Cấu hình</th><th>Kết quả</th></tr></thead>
+      <tbody>
+        {% for q in q_matrix %}
+        <tr>
+          <td>{{ q.title }}</td>
+          <td>{{ q.criterion_id }}</td>
+          <td>{{ q.locate or "—" }}</td>
+          <td>{{ q.tool or "—" }}</td>
+          <td>{{ q.configure or "—" }}</td>
+          <td>{{ q.status }} · {{ q.earned }}/{{ q.possible }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">Chưa có Q-Matrix từ MOS-KulKul.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
   <h2 style="margin-top:28px;font-size:18px">Kỹ năng chưa đạt / đã đạt</h2>
   <div class="eval-split">
     <div>

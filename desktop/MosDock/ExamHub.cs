@@ -118,6 +118,12 @@ static class ExamHub
 
             ExamSession.Mode = mode is "testing" ? "testing" : "training";
             ExamSession.Program = program;
+            var localRunning = LocalExamStore.FindRunning(chosen.Id);
+            if (localRunning is not null && !string.IsNullOrWhiteSpace(localRunning.AttemptId))
+            {
+                return await ResumeFromLocalAsync(localRunning, chosen, launchWord);
+            }
+
             using var started = await Portal.PostJsonAsync("/api/v1/attempts", new
             {
                 project_id = chosen.Id,
@@ -132,6 +138,7 @@ static class ExamHub
             await LoadRubricAsync(chosen.Id, dir);
             BindSession(chosen, attemptId, local);
             WriteMeta(dir);
+            LocalExamStore.SaveCurrent();
             await TrackAsync("open", new { file = chosen.Filename, program });
             if (launchWord)
             {
@@ -143,6 +150,33 @@ static class ExamHub
         {
             return (false, ex.Message);
         }
+    }
+
+    static async Task<(bool Ok, string Message)> ResumeFromLocalAsync(LocalExamState local, MosProject chosen, bool launchWord)
+    {
+        var dir = Path.Combine(ExamSession.DataDir, "attempts", local.AttemptId);
+        Directory.CreateDirectory(dir);
+        var filename = string.IsNullOrWhiteSpace(chosen.Filename) ? chosen.Id + ".bin" : chosen.Filename;
+        var path = string.IsNullOrWhiteSpace(local.LocalPath) ? Path.Combine(dir, filename) : local.LocalPath;
+        if (!File.Exists(path))
+        {
+            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
+            path = Path.Combine(dir, filename);
+            await File.WriteAllBytesAsync(path, bytes);
+        }
+
+        await LoadRubricAsync(chosen.Id, dir);
+        ExamSession.Mode = local.Mode is "testing" ? "testing" : "training";
+        ExamSession.Program = chosen.Program;
+        BindSession(chosen, local.AttemptId, path);
+        WriteMeta(dir);
+        LocalExamStore.SaveCurrent(local.ProgressPct);
+        if (launchWord)
+        {
+            WordWindow.Launch(chosen.Program, path);
+        }
+
+        return (true, chosen.Title + " (tiếp tục bài đã lưu trên máy)");
     }
 
     public static async Task<string> DemoAllAsync(Action<string>? status = null)
@@ -281,6 +315,7 @@ static class ExamHub
                 attempt.Id,
                 local);
             WriteMeta(dir);
+            LocalExamStore.SaveCurrent();
             WordWindow.Launch(attempt.Program, local);
             return (true, attempt.Title);
         }
@@ -355,10 +390,13 @@ static class ExamHub
         {
             await FlushActionsAsync();
             await FlushOrQueueAsync();
+            LocalExamStore.SaveCurrent(pendingSubmit: path);
             using var submitted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/submit",
                 path,
-                EvidenceFields());
+                EvidenceFields(),
+                Portal.SyncHeaders(path));
+            LocalExamStore.MarkSubmitted(ExamSession.AttemptId!);
             var scoreEl = submitted.RootElement.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
                 ? v
@@ -369,11 +407,12 @@ static class ExamHub
         }
         catch (Exception ex)
         {
+            LocalExamStore.SaveCurrent(pendingSubmit: path);
             OfflineQueue.Enqueue(ExamSession.AttemptId!, new
             {
                 events = new object[] { new { skill = "", action = "submit-offline", detail = new { error = ex.Message } } },
             });
-            return (false, "Chưa gửi được, đã xếp hàng đợi: " + ex.Message);
+            return (false, "Chưa gửi được, đã lưu cục bộ và xếp hàng đợi: " + ex.Message);
         }
     }
 
@@ -504,11 +543,19 @@ static class ExamHub
         try
         {
             await FlushActionsAsync();
+            LocalExamStore.SaveCurrent(progressPct: (int)Math.Round(local.Verified), pendingCheckpoint: snap, verified: local.Verified, pending: local.Pending);
             using var posted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/checkpoints",
                 snap,
-                EvidenceFields());
+                EvidenceFields(),
+                Portal.SyncHeaders(snap));
             var root = posted.RootElement;
+            if (root.TryGetProperty("stale", out var stale) && stale.ValueKind == JsonValueKind.True)
+            {
+                return (true, "Máy chủ giữ bản mới hơn (Last-Write-Wins).", local.Criteria);
+            }
+
+            LocalExamStore.ClearPending(ExamSession.AttemptId!, checkpoint: true, submit: false);
             if (root.TryGetProperty("score", out var scoreEl))
             {
                 var criteria = ParseCriteria(scoreEl);
@@ -523,7 +570,8 @@ static class ExamHub
         }
         catch (Exception ex)
         {
-            var summary = $"{local.Verified}/100 đã xác minh trên máy · {local.Pending} chưa xác minh. {ex.Message}";
+            LocalExamStore.SaveCurrent(progressPct: (int)Math.Round(local.Verified), pendingCheckpoint: snap);
+            var summary = $"{local.Verified}/100 đã xác minh trên máy · {local.Pending} chưa xác minh. Đã lưu cục bộ. {ex.Message}";
             return (true, summary, local.Criteria);
         }
     }

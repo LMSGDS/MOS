@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.accounts import create_account, list_classes
 from app.db import cursor
+from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
     STATUS_LABELS,
@@ -238,6 +239,7 @@ def admin_student(request: Request, user_id: int):
     if evaluation:
         evaluation["weak_skills"] = _jsonish(evaluation.get("weak_skills"))
         evaluation["strong_skills"] = _jsonish(evaluation.get("strong_skills"))
+    q_rows, q_axes = _q_matrix_for_user(user_id)
     return TEMPLATES.TemplateResponse(
         request,
         "admin_student.html",
@@ -250,6 +252,66 @@ def admin_student(request: Request, user_id: int):
                 "exercises": list_student_exercises(user_id, "word"),
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),
+                "q_matrix": q_rows,
+                "q_axes": q_axes,
+            },
+        ),
+    )
+
+
+def _q_matrix_for_user(user_id: int) -> tuple[list[dict], dict]:
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT q.criterion_id, q.locate, q.tool, q.configure, q.status,
+                   q.earned, q.possible, p.title, a.project_id, a.id AS attempt_id
+            FROM q_matrix_results q
+            JOIN attempts a ON a.id = q.attempt_id
+            JOIN projects p ON p.id = a.project_id
+            WHERE a.user_id = %s
+            ORDER BY q.created_at DESC
+            LIMIT 80
+            """,
+            (user_id,),
+        )
+        rows = list(cur.fetchall())
+    axes = {"locate": 0.0, "tool": 0.0, "configure": 0.0}
+    totals = {"locate": 0, "tool": 0, "configure": 0}
+    hits = {"locate": 0, "tool": 0, "configure": 0}
+    for row in rows:
+        for key in axes:
+            val = str(row.get(key) or "")
+            if not val:
+                continue
+            totals[key] += 1
+            if val == "pass":
+                hits[key] += 1
+    for key in axes:
+        axes[key] = round(100 * hits[key] / totals[key], 1) if totals[key] else 0.0
+    return rows, axes
+
+
+@router.get("/quan-tri/giam-sat", response_class=HTMLResponse)
+def admin_live(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    classes = list_classes()
+    raw = request.query_params.get("lop") or "0"
+    class_id = int(raw) if str(raw).isdigit() else 0
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_live.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "live",
+                "classes": classes,
+                "class_id": class_id,
+                "sessions": list_class_sessions(class_id),
             },
         ),
     )

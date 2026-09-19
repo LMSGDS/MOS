@@ -140,7 +140,7 @@ ALTER TABLE attempts ADD COLUMN IF NOT EXISTS verified_score DOUBLE PRECISION;
 ALTER TABLE attempts ADD COLUMN IF NOT EXISTS pending_score DOUBLE PRECISION;
 ALTER TABLE attempts DROP CONSTRAINT IF EXISTS attempts_status_check;
 ALTER TABLE attempts ADD CONSTRAINT attempts_status_check
-  CHECK (status IN ('running', 'submitted', 'graded', 'technical_error'));
+  CHECK (status IN ('running', 'submitted', 'graded', 'abandoned', 'technical_error'));
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS event_id TEXT;
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS sequence INTEGER;
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS document_id TEXT;
@@ -163,6 +163,47 @@ CREATE INDEX IF NOT EXISTS idx_criterion_run ON criterion_results(grading_run_id
 ALTER TABLE users ADD COLUMN IF NOT EXISTS student_code TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_client TEXT;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS progress_pct INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS q_matrix_results (
+  id            BIGSERIAL PRIMARY KEY,
+  attempt_id    TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+  criterion_id  TEXT NOT NULL,
+  locate        TEXT NOT NULL DEFAULT '',
+  tool          TEXT NOT NULL DEFAULT '',
+  configure     TEXT NOT NULL DEFAULT '',
+  status        TEXT NOT NULL DEFAULT '',
+  earned        DOUBLE PRECISION NOT NULL DEFAULT 0,
+  possible      DOUBLE PRECISION NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_qmatrix_attempt ON q_matrix_results(attempt_id);
+
+CREATE OR REPLACE VIEW exam_sessions AS
+SELECT
+  a.id AS session_id,
+  a.user_id AS student_id,
+  a.project_id AS exam_id,
+  a.class_id,
+  CASE a.status
+    WHEN 'running' THEN 'IN_PROGRESS'
+    WHEN 'submitted' THEN 'SUBMITTED'
+    WHEN 'graded' THEN 'SUBMITTED'
+    WHEN 'abandoned' THEN 'ABANDONED'
+    ELSE upper(a.status)
+  END AS status,
+  a.progress_pct,
+  a.mode,
+  a.score,
+  a.verified_score,
+  a.updated_at,
+  a.client_updated_at,
+  a.started_at,
+  a.submitted_at
+FROM attempts a;
 ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;

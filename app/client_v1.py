@@ -17,6 +17,14 @@ from app.demo_all import results_file
 from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.programs import normalize
 from app.progress import record_attempt_event
+from app.sync import (
+    abandon_other_running,
+    apply_client_clock,
+    progress_from_score,
+    reactivate_if_abandoned,
+    store_q_matrix,
+    verify_artifact_sha256,
+)
 from app.scoring import score_file
 from app.security import bearer_user
 from app.tokens import issue
@@ -56,7 +64,8 @@ def _load_attempt(attempt_id: str) -> dict | None:
     with cursor() as cur:
         cur.execute(
             """
-            SELECT a.*, p.rubric, p.skill_domain, p.filename, p.file_path, p.rubric_version AS project_rubric_version
+            SELECT a.*, p.rubric, p.skill_domain, p.filename, p.file_path, p.title AS project_title,
+                   p.rubric_version AS project_rubric_version
             FROM attempts a JOIN projects p ON p.id = a.project_id
             WHERE a.id = %s
             """,
@@ -249,7 +258,9 @@ def _store_attempt_check(
               verified_score = CASE WHEN %s THEN %s ELSE verified_score END,
               pending_score = CASE WHEN %s THEN %s ELSE pending_score END,
               max_score = COALESCE(%s, max_score),
-              payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
+              payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb,
+              progress_pct = %s,
+              updated_at = now()
             WHERE id = %s AND (
               status = 'running'
               OR (status = 'submitted' AND COALESCE(pending_score, 0) > 0)
@@ -264,6 +275,7 @@ def _store_attempt_check(
                 payload.get("pending"),
                 payload.get("max_score") or 100,
                 json.dumps(summary, ensure_ascii=False),
+                progress_from_score(payload),
                 attempt_id,
             ),
         )
@@ -352,6 +364,40 @@ def _store_results(cur, submission_id: str, scored: dict) -> str:
             ),
         )
     return run_id
+
+
+def _notify_live(attempt: dict, row_user: dict, payload: dict | None, event: str) -> None:
+    from app.live import publish_class
+
+    score = None
+    progress = attempt.get("progress_pct") or 0
+    if payload:
+        score = payload.get("verified")
+        if score is None:
+            score = payload.get("score")
+        progress = progress_from_score(payload)
+    status = {
+        "submit": "SUBMITTED",
+        "start": "IN_PROGRESS",
+        "progress": "IN_PROGRESS",
+        "checkpoint": "IN_PROGRESS",
+    }.get(event, event.upper())
+    publish_class(
+        attempt.get("class_id"),
+        {
+            "type": event,
+            "session_id": attempt.get("id"),
+            "attempt_id": attempt.get("id"),
+            "student_id": attempt.get("user_id"),
+            "student": row_user.get("name") or row_user.get("username"),
+            "exam_id": attempt.get("project_id"),
+            "title": attempt.get("project_title") or attempt.get("project_id"),
+            "score": score,
+            "progress_pct": progress,
+            "status": status,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
 
 
 @router.post("/auth/login")
@@ -517,15 +563,24 @@ async def v1_start_attempt(request: Request):
         class_id = enr["class_id"] if enr else None
         cur.execute(
             """
-            INSERT INTO attempts (id, user_id, project_id, class_id, mode, status, project_version_id)
-            VALUES (%s, %s, %s, %s, %s, 'running', %s)
+            INSERT INTO attempts (
+              id, user_id, project_id, class_id, mode, status, project_version_id, updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, 'running', %s, now())
             """,
             (attempt_id, row["id"], project_id, class_id, mode, version["id"] if version else None),
         )
-    record_attempt_event(
-        {"id": attempt_id, "user_id": row["id"], "project_id": project_id, "class_id": class_id, "status": "running"},
-        event="start",
-    )
+    closed = abandon_other_running(row["id"], project_id, attempt_id)
+    started = {
+        "id": attempt_id,
+        "user_id": row["id"],
+        "project_id": project_id,
+        "class_id": class_id,
+        "status": "running",
+        "progress_pct": 0,
+    }
+    record_attempt_event(started, event="start")
+    _notify_live(started, row, None, "start")
     return {
         "ok": True,
         "attempt_id": attempt_id,
@@ -533,6 +588,7 @@ async def v1_start_attempt(request: Request):
         "project_id": project_id,
         "project_version_id": version["id"] if version else None,
         "rubric_version": version["rubric_version"] if version else None,
+        "abandoned": closed,
     }
 
 
@@ -644,8 +700,9 @@ def v1_attempts(request: Request):
             cur.execute(
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
-                       a.verified_score, a.pending_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
+                       a.verified_score, a.pending_score, a.progress_pct,
+                       a.started_at, a.submitted_at, a.updated_at, a.duration_sec,
+                       p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 ORDER BY a.started_at DESC
                 LIMIT 100
@@ -655,8 +712,9 @@ def v1_attempts(request: Request):
             cur.execute(
                 """
                 SELECT a.id, a.project_id, a.mode, a.status, a.score, a.max_score,
-                       a.verified_score, a.pending_score,
-                       a.started_at, a.submitted_at, a.duration_sec, p.title, p.program, p.filename
+                       a.verified_score, a.pending_score, a.progress_pct,
+                       a.started_at, a.submitted_at, a.updated_at, a.duration_sec,
+                       p.title, p.program, p.filename
                 FROM attempts a JOIN projects p ON p.id = a.project_id
                 WHERE a.user_id = %s
                 ORDER BY a.started_at DESC
@@ -759,6 +817,7 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     row_user = _require_user(user)
     attempt = _load_attempt(attempt_id)
     _assert_owner(attempt, row_user, write=True)
+    attempt = reactivate_if_abandoned(attempt)
     data, filename, evidence = await _read_upload(request)
     if not data:
         raise HTTPException(status_code=400, detail="file")
@@ -770,8 +829,13 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     scored = _score_saved(saved, attempt, events)
     payload = _grade_payload(scored)
     training = attempt.get("mode") != "testing"
+    clock = apply_client_clock(attempt_id, request.headers.get("x-mos-updated-at"))
+    if clock.get("stale"):
+        return {"ok": True, "checkpoint": False, "stale": True, "kept_at": clock.get("kept_at")}
     _store_attempt_check(attempt_id, payload, events, training=training, evidence_path=evidence_path)
+    store_q_matrix(attempt_id, scored)
     record_attempt_event(attempt, event="checkpoint", payload={**payload, "evidence_count": len(events)})
+    _notify_live(attempt, row_user, payload, "checkpoint")
     if not training:
         return {
             "ok": True,
@@ -796,6 +860,7 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
     row_user = _require_user(user)
     attempt = _load_attempt(attempt_id)
     _assert_owner(attempt, row_user, write=True)
+    attempt = reactivate_if_abandoned(attempt)
     if idempotency_key:
         with cursor() as cur:
             cur.execute(
@@ -807,6 +872,10 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
             stored = _as_dict(existing["payload"])
             return {"ok": True, "submission_id": existing["id"], "score": stored, "replayed": True}
     data, filename, evidence = await _read_upload(request)
+    try:
+        verify_artifact_sha256(data, request.headers.get("x-mos-artifact-sha256"))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="artifact_sha256") from exc
     saved = None
     digest = None
     submission_id = secrets.token_hex(12)
@@ -862,6 +931,8 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
               duration_sec = %s,
               result_path = %s,
               payload = %s::jsonb,
+              progress_pct = %s,
+              updated_at = now(),
               retries = retries + 1
             WHERE id = %s
             """,
@@ -873,6 +944,7 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
                 duration,
                 str(saved) if saved else None,
                 json.dumps(payload, ensure_ascii=False),
+                progress_from_score(payload),
                 attempt_id,
             ),
         )
@@ -892,7 +964,103 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         event="submit",
         payload=payload,
     )
+    store_q_matrix(attempt_id, scored)
+    _notify_live({**attempt, "status": "submitted"}, row_user, payload, "submit")
     return {"ok": True, "submission_id": submission_id, "score": payload, "duration_sec": duration}
+
+
+@router.post("/attempts/{attempt_id}/state")
+async def v1_push_state(request: Request, attempt_id: str):
+    """Offline-first: KulKul đẩy state/telemetry cục bộ. Điểm chính thức không lấy từ client."""
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=True)
+    attempt = reactivate_if_abandoned(attempt)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="state")
+    clock = apply_client_clock(
+        attempt_id,
+        request.headers.get("x-mos-updated-at") or body.get("updated_at"),
+    )
+    if clock.get("stale"):
+        return {"ok": True, "accepted": False, "stale": True, "kept_at": clock.get("kept_at")}
+    events = body.get("events") if isinstance(body.get("events"), list) else []
+    stored = _ingest_evidence(attempt_id, events)
+    raw_progress = body.get("progress_pct")
+    try:
+        progress = max(0, min(100, int(raw_progress)))
+    except (TypeError, ValueError):
+        local = body.get("local_grade") if isinstance(body.get("local_grade"), dict) else None
+        progress = progress_from_score(local) if local else int(attempt.get("progress_pct") or 0)
+    local_grade = body.get("local_grade") if isinstance(body.get("local_grade"), dict) else None
+    extra = {
+        "client_progress_pct": progress,
+        "offline_sync": True,
+        "last_state_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if local_grade is not None:
+        extra["local_grade"] = {
+            "verified": local_grade.get("verified"),
+            "pending": local_grade.get("pending"),
+            "score": local_grade.get("score"),
+            "max_score": local_grade.get("max_score") or 100,
+        }
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE attempts SET
+              progress_pct = %s,
+              payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb,
+              updated_at = now()
+            WHERE id = %s AND status = 'running'
+            """,
+            (progress, json.dumps(extra, ensure_ascii=False), attempt_id),
+        )
+    _notify_live({**attempt, "progress_pct": progress}, row_user, None, "progress")
+    return {
+        "ok": True,
+        "accepted": True,
+        "stale": False,
+        "stored_events": stored,
+        "progress_pct": progress,
+    }
+
+
+@router.get("/sessions")
+def v1_sessions(request: Request):
+    user = bearer_user(request)
+    row = _require_user(user)
+    with cursor() as cur:
+        if _staff(row):
+            cur.execute(
+                """
+                SELECT s.*, u.name AS student, u.student_code, p.title
+                FROM exam_sessions s
+                JOIN users u ON u.id = s.student_id
+                JOIN projects p ON p.id = s.exam_id
+                ORDER BY s.updated_at DESC NULLS LAST
+                LIMIT 100
+                """
+            )
+        else:
+            cur.execute(
+                """
+                SELECT s.*, p.title
+                FROM exam_sessions s
+                JOIN projects p ON p.id = s.exam_id
+                WHERE s.student_id = %s
+                ORDER BY s.updated_at DESC NULLS LAST
+                LIMIT 50
+                """,
+                (row["id"],),
+            )
+        rows = cur.fetchall()
+    return {"ok": True, "sessions": rows}
 
 
 @router.post("/attempts/{attempt_id}/submit")
