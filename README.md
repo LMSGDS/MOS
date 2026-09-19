@@ -241,8 +241,9 @@ nano data/git-sync.env   # dán MOS_GITHUB_TOKEN=github_pat_…
 chmod 600 data/git-sync.env
 set -a; source data/git-sync.env; set +a
 bash scripts/git-sync.sh
-sudo cp deploy/mos-git-sync.service deploy/mos-git-sync.timer /etc/systemd/system/
-sudo systemctl enable --now mos-git-sync.timer
+sudo cp deploy/mos.service deploy/mos-git-sync.service deploy/mos-git-sync.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now mos.service mos-git-sync.timer
 ```
 
 `git-sync.sh` dùng token để `git pull` HTTPS và tải bộ cài CI vào `data/installers/`. Không đưa token vào git, chat, hay issue.

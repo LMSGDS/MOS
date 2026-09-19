@@ -35,6 +35,9 @@ refuse_ssh_url "$REMOTE_URL"
 refuse_ssh_url "$(origin_url)"
 
 git "${GIT_ARGS[@]}" fetch --prune origin "$REF"
+if [[ "$(git rev-parse --abbrev-ref HEAD)" != "$REF" ]]; then
+  git checkout -f -B "$REF" "origin/${REF}"
+fi
 git merge --ff-only "origin/${REF}"
 
 if [[ "${MOS_SYNC_INSTALLERS:-1}" == "1" ]]; then

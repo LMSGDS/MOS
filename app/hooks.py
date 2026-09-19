@@ -14,8 +14,29 @@ ROOT = Path(__file__).resolve().parent.parent
 router = APIRouter()
 
 
+def _sync_env_file() -> dict[str, str]:
+    path = ROOT / "data" / "git-sync.env"
+    if not path.is_file():
+        return {}
+    out: dict[str, str] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return {}
+    for line in lines:
+        raw = line.strip()
+        if not raw or raw.startswith("#") or "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        out[key.strip()] = value.strip().strip("'\"")
+    return out
+
+
 def _secret() -> str:
-    return (os.environ.get("MOS_GITHUB_WEBHOOK_SECRET") or "").strip()
+    secret = (os.environ.get("MOS_GITHUB_WEBHOOK_SECRET") or "").strip()
+    if secret:
+        return secret
+    return (_sync_env_file().get("MOS_GITHUB_WEBHOOK_SECRET") or "").strip()
 
 
 def _valid_sig(secret: str, body: bytes, header: str | None) -> bool:
@@ -56,6 +77,9 @@ async def github_push(request: Request):
     if not script.is_file():
         raise HTTPException(status_code=500, detail="sync_script")
     env = os.environ.copy()
+    for key, value in _sync_env_file().items():
+        if key.startswith("MOS_"):
+            env.setdefault(key, value)
     env["MOS_ROOT"] = str(ROOT)
     env["MOS_RESTART"] = env.get("MOS_RESTART", "1")
     proc = subprocess.run(
