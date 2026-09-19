@@ -191,8 +191,16 @@ def test_windows_sources_include_action_demo():
     assert "RunNavigate" in demo
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
-    assert "Demo tất cả bài tập" in form
-    assert "1.16.12" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "Demo tất cả bài tập" not in form
+    assert "OnTeacherHotkeys" in form
+    assert "Keys.D" in form
+    assert "Lưu tạm và Về trang chủ" in form
+    assert "Chế độ gắn mép" in form
+    assert "Tháo cửa sổ nổi" in form
+    assert "Đặt lại kích thước thanh ghim" in form
+    assert "_resetNavItem.Enabled = _docking" in form
+    assert 'new ToolStripMenuItem("Trang chủ")' not in form
+    assert "1.16.13" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -356,7 +364,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.12"' in (
+    assert 'MyAppVersion "1.16.13"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

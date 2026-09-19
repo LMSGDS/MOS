@@ -29,11 +29,11 @@ sealed class MainForm : Form
     readonly Panel _navGrip = new();
     readonly FlowLayoutPanel _dockFlow = new();
     readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang trái, phải, trên hoặc dưới", Ui.DockQuiet);
-    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu bài và về Trang chủ — chưa nộp", Ui.DockQuiet);
+    readonly Button _dockHome = Ui.DockSquare(NavIcon.Home, "Lưu tạm và Về trang chủ", Ui.DockQuiet);
     readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Chấm bài đang làm và hiện danh sách nhiệm vụ", Ui.DockQuiet);
     readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Chấm lại tệp Word đang mở", Ui.DockQuiet);
     readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim MOS-KulKul luôn trên cùng", Ui.DockQuiet);
-    readonly Button _dockSettings = Ui.DockSquare(NavIcon.Settings, "Cài đặt giao diện: dock, kích thước, Trang chủ", Ui.DockQuiet);
+    readonly Button _dockSettings = Ui.DockSquare(NavIcon.Settings, "Cài đặt hiển thị: ghim, gắn mép, kích thước", Ui.DockQuiet);
     readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hiện hoặc ẩn hướng dẫn từng bước", Ui.DockHint);
     readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.DockQuiet);
     readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Về nhiệm vụ trước", Ui.DockQuiet);
@@ -41,6 +41,7 @@ sealed class MainForm : Form
     readonly Button _dockSubmit = Ui.DockSquare(NavIcon.Submit, "Nộp bài — hành động chốt, có hộp xác nhận", Ui.Success);
     readonly ContextMenuStrip _settingsMenu = new();
     readonly ToolStripMenuItem _pinItem = new("Ghim luôn trên cùng");
+    readonly ToolStripMenuItem _resetNavItem = new("Đặt lại kích thước thanh ghim");
     readonly Panel _helpPane = new();
     readonly Panel _promptCard = new();
     readonly Label _promptTitle = new();
@@ -125,6 +126,8 @@ sealed class MainForm : Form
         BackColor = Ui.PageBg;
         Font = Ui.BodyFont;
         Ui.ApplyWindowIcon(this);
+        KeyPreview = true;
+        KeyDown += OnTeacherHotkeys;
 
         BuildHeader();
         BuildHome();
@@ -236,7 +239,7 @@ sealed class MainForm : Form
     Button[] DockButtons() =>
     [
         _dockTasks, _dockCheck, _dockHint, _dockBack, _dockNext,
-        _dockSave, _dockSettings, _dockSubmit,
+        _dockHome, _dockSettings, _dockSubmit,
     ];
 
     void ApplyNavChrome(NavMetrics nav)
@@ -442,12 +445,12 @@ sealed class MainForm : Form
         _dockFlow.Padding = Padding.Empty;
         _dockFlow.Margin = Padding.Empty;
 
-        _dockSave.Click += (_, _) => SaveAndHome();
+        _dockHome.Click += (_, _) => SaveAndHome();
         _dockTasks.Click += async (_, _) => await CheckTasks();
         _dockCheck.Click += async (_, _) => await CheckTasks();
         _dockSettings.Click += (_, _) =>
         {
-            _pinItem.Checked = _pinned;
+            RefreshSettingsMenu();
             _settingsMenu.Show(_dockSettings, new Point(0, -4), ToolStripDropDownDirection.AboveRight);
         };
         _dockHint.Click += (_, _) => ToggleHelp();
@@ -478,34 +481,30 @@ sealed class MainForm : Form
             TopMost = _pinned;
             HighlightDockIcons();
         };
-        var dockSide = new ToolStripMenuItem("Vị trí thanh bài thi");
-        dockSide.DropDownItems.Add(DockMenuItem("Trái", "left"));
-        dockSide.DropDownItems.Add(DockMenuItem("Phải", "right"));
-        dockSide.DropDownItems.Add(DockMenuItem("Trên", "top"));
-        dockSide.DropDownItems.Add(DockMenuItem("Dưới", "bottom"));
-        var extraResetNav = new ToolStripMenuItem("Đặt lại kích thước thanh Navigation");
-        extraResetNav.Click += (_, _) =>
+        var dockMode = new ToolStripMenuItem("Chế độ gắn mép");
+        dockMode.DropDownItems.Add(DockMenuItem("Trái", "left"));
+        dockMode.DropDownItems.Add(DockMenuItem("Phải", "right"));
+        dockMode.DropDownItems.Add(DockMenuItem("Trên", "top"));
+        dockMode.DropDownItems.Add(DockMenuItem("Dưới", "bottom"));
+        var undock = new ToolStripMenuItem("Tháo cửa sổ nổi");
+        undock.Click += (_, _) => UnDock();
+        dockMode.DropDownItems.Add(new ToolStripSeparator());
+        dockMode.DropDownItems.Add(undock);
+        _resetNavItem.Click += (_, _) =>
         {
+            if (!_docking)
+            {
+                return;
+            }
+
             _navThickness = null;
             SaveNavThickness();
-            if (_docking)
-            {
-                ApplyDock(waitForWord: true);
-            }
+            ApplyDock(waitForWord: true);
         };
-        var extraUndock = new ToolStripMenuItem("Tháo dock");
-        extraUndock.Click += (_, _) => UnDock();
-        var extraHome = new ToolStripMenuItem("Trang chủ");
-        extraHome.Click += (_, _) => SaveAndHome();
-        var extraDemo = new ToolStripMenuItem("Demo tất cả bài tập");
-        extraDemo.Click += async (_, _) => await RunActionDemo();
         _settingsMenu.Items.Add(_pinItem);
-        _settingsMenu.Items.Add(dockSide);
-        _settingsMenu.Items.Add(extraResetNav);
-        _settingsMenu.Items.Add(extraUndock);
         _settingsMenu.Items.Add(new ToolStripSeparator());
-        _settingsMenu.Items.Add(extraDemo);
-        _settingsMenu.Items.Add(extraHome);
+        _settingsMenu.Items.Add(dockMode);
+        _settingsMenu.Items.Add(_resetNavItem);
 
         _examTitle.Dock = DockStyle.Top;
         _examTitle.Font = Ui.HeadFont;
@@ -1265,6 +1264,22 @@ sealed class MainForm : Form
         }
     }
 
+    void RefreshSettingsMenu()
+    {
+        _pinItem.Checked = _pinned;
+        _resetNavItem.Enabled = _docking;
+    }
+
+    void OnTeacherHotkeys(object? sender, KeyEventArgs e)
+    {
+        if (e.Control && e.Shift && e.Alt && e.KeyCode == Keys.D)
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            _ = RunActionDemo();
+        }
+    }
+
     ToolStripMenuItem DockMenuItem(string text, string state)
     {
         var item = new ToolStripMenuItem(text);
@@ -1330,14 +1345,14 @@ sealed class MainForm : Form
 
     void HighlightDockIcons()
     {
-        _pinItem.Checked = _pinned;
+        RefreshSettingsMenu();
         Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn — giữ đề bài và danh sách câu hỏi" : "Hiện hướng dẫn từng bước");
         Ui.DockTips.SetToolTip(_dockTasks, "Chấm bài đang làm và hiện danh sách nhiệm vụ");
         Ui.DockTips.SetToolTip(_dockCheck, "Chấm lại tệp Word đang mở");
-        Ui.DockTips.SetToolTip(_dockSave, "Lưu bài và về Trang chủ — chưa nộp");
+        Ui.DockTips.SetToolTip(_dockHome, "Lưu tạm và Về trang chủ");
         Ui.DockTips.SetToolTip(_dockBack, "Về nhiệm vụ trước");
         Ui.DockTips.SetToolTip(_dockNext, "Sang nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockSettings, "Cài đặt giao diện: dock, kích thước, Trang chủ");
+        Ui.DockTips.SetToolTip(_dockSettings, "Cài đặt hiển thị: ghim, gắn mép, kích thước");
         Ui.DockTips.SetToolTip(_dockSubmit, "Nộp bài — hành động chốt, có hộp xác nhận");
         Ui.DockTips.SetToolTip(_navGrip, "Kéo mép thanh để đổi kích thước Navigation");
     }
