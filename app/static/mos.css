@@ -716,15 +716,18 @@ body.ic-app .card.login { width: min(640px, 100%); }
   color: var(--ic-brand-primary);
 }
 .admin-wide {
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: 28px;
+  align-items: start;
   width: min(1200px, 100%) !important;
 }
-.admin-wide > .ic-course-nav { order: 0; }
+.admin-wide > .ic-course-nav {
+  grid-column: 1;
+  grid-row: 1 / span 80;
+}
 .admin-wide > :not(.ic-course-nav) {
-  flex: 1 1 280px;
-  min-width: 0;
+  grid-column: 2;
 }
 
 @media (max-width: 800px) {
@@ -756,13 +759,20 @@ body.ic-app .card.login { width: min(640px, 100%); }
     border-radius: 3px 3px 0 0;
   }
   .ic-app-header__logout { margin-top: 0; padding: 0; }
-  .ic-course-nav {
+  .admin-wide {
+    grid-template-columns: 1fr;
+  }
+  .admin-wide > .ic-course-nav {
+    grid-column: 1;
+    grid-row: auto;
     width: 100%;
-    flex-basis: 100%;
     flex-direction: row;
     flex-wrap: wrap;
     border-right: 0;
     border-bottom: 1px solid #e8eaec;
     margin: 0 0 16px;
+  }
+  .admin-wide > :not(.ic-course-nav) {
+    grid-column: 1;
   }
 }
