@@ -59,8 +59,11 @@ def test_install_page_lists_windows_and_macos():
     assert "/cai-dat/windows-full.zip" in r.text
     assert "/cai-dat/macos" in r.text
     assert "MOS-KulKul-Setup-macOS.zip" in r.text
+    assert "MOS-KulKul.app" in r.text
+    assert "MOS-KulKul-Setup-macOS.pkg" in r.text
     assert "Cai MOS-KulKul.command" in r.text
     assert "macos.sh" in r.text
+    assert "Sao chép lệnh Terminal" in r.text
     assert "bộ cài nhỏ" in r.text.lower() or "Bộ cài nhỏ" in r.text
     assert "Demo tất cả bài tập" in r.text
     assert "quét virus" in r.text.lower() or "SmartScreen" in r.text
@@ -98,6 +101,7 @@ def test_install_page_lists_windows_and_macos():
         for name in (
             "MOS-KulKul-Setup-macOS.zip",
             "MOS-Dock-Setup-macOS.zip",
+            "MOS-KulKul-Setup-macOS.pkg",
             "MOS-Dock-Setup-macOS.pkg",
         )
     )
@@ -119,6 +123,12 @@ def test_install_page_lists_windows_and_macos():
     src = c.get("/cai-dat/macos-files/mosdock_mac.py")
     assert src.status_code == 200
     assert "17331" in src.text
+    ver = c.get("/cai-dat/macos-files/VERSION")
+    assert ver.status_code == 200
+    assert app_version() in ver.text
+    plist = c.get("/cai-dat/macos-files/Info.plist")
+    assert plist.status_code == 200
+    assert "mos-kulkul" in plist.text
     assert c.get("/cai-dat/macos-files/secret").status_code == 404
     full = c.get("/cai-dat/windows-full")
     full_ready = (INSTALLER_DIR / "MOS-KulKul-Setup-Windows-Full.exe").is_file()
@@ -178,6 +188,12 @@ def test_windows_web_stub_iss_downloads_full_from_server():
     assert "{#Dist}" not in stub
     assert "OutputBaseFilename=MOS-KulKul-Setup-Windows-Full" in full
     assert "{#Dist}\\*" in full
+    csproj = (
+        Path(__file__).resolve().parent.parent / "desktop" / "MosDock" / "MosDock.csproj"
+    ).read_text(encoding="utf-8")
+    assert f'MyAppVersion "{app_version()}"' in stub
+    assert f'MyAppVersion "{app_version()}"' in full
+    assert f"<Version>{app_version()}</Version>" in csproj
 
 
 def test_windows_sources_include_action_demo():
@@ -368,7 +384,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.13"' in (
+    assert 'MyAppVersion "1.21.0"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

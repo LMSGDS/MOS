@@ -34,7 +34,13 @@ wanted = {
         "MOS-KulKul-Setup-Windows-Full.zip",
         "SHA256.txt",
     ),
+    "MOS-KulKul-Setup-macOS": (
+        "MOS-KulKul-Setup-macOS.zip",
+        "MOS-KulKul-Setup-macOS.pkg",
+        "SHA256-macOS.txt",
+    ),
     "MOS-KulKul-Setup-macOS-zip": ("MOS-KulKul-Setup-macOS.zip",),
+    "MOS-KulKul-Setup-macOS-src": ("MOS-KulKul-Setup-macOS.zip",),
 }
 
 

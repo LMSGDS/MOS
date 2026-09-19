@@ -18,6 +18,24 @@ BOTTOM_RATIO = 0.28
 SIDE_RATIO = 0.30
 MIN_WORD = 400
 
+
+def app_version() -> str:
+    here = os.path.dirname(os.path.abspath(__file__))
+    for candidate in (
+        os.path.join(here, "VERSION"),
+        os.path.join(here, "..", "Resources", "VERSION"),
+    ):
+        try:
+            text = open(candidate, encoding="utf-8").read().strip()
+            if text:
+                return text
+        except OSError:
+            continue
+    return os.environ.get("MOS_APP_VERSION") or "1.21.0"
+
+
+APP_VERSION = app_version()
+
 APPS = {
     "word": "Microsoft Word",
     "excel": "Microsoft Excel",
@@ -169,7 +187,7 @@ class Handler(BaseHTTPRequestHandler):
         q = parse_qs(u.query)
         path = u.path.rstrip("/") or "/"
         if path in ("/", "/health"):
-            self._json(200, {"ok": True, "service": "mos-dock", "os": "mac"})
+            self._json(200, {"ok": True, "service": "mos-kulkul", "os": "mac", "version": APP_VERSION})
             return
         if path == "/from-url":
             raw = (q.get("url") or q.get("u") or [""])[0]
@@ -219,7 +237,7 @@ def portal_login(username: str, password: str, app: str) -> tuple[bool, str]:
     req = urllib.request.Request(
         portal_origin() + "/api/v1/auth/login",
         data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "MOS-KulKul/1.2"},
+        headers={"Content-Type": "application/json", "User-Agent": f"MOS-KulKul/{APP_VERSION}"},
         method="POST",
     )
     try:
@@ -245,7 +263,7 @@ def _api(method: str, path: str, data: bytes | None = None, content_type: str | 
     import urllib.error
     import urllib.request
 
-    headers = {"User-Agent": "MOS-KulKul/1.2"}
+    headers = {"User-Agent": f"MOS-KulKul/{APP_VERSION}"}
     if State.token:
         headers["Authorization"] = "Bearer " + State.token
     if content_type:
@@ -468,7 +486,7 @@ def main():
     for i, a in enumerate(args):
         if a in ("--url", "-u") and i + 1 < len(args):
             url = args[i + 1]
-        elif a.startswith("mosdock:"):
+        elif a.startswith("mosdock:") or a.startswith("mos-kulkul:"):
             url = a
 
     if already_running():

@@ -151,6 +151,7 @@ def healthz():
             "MOS-KulKul-Setup-Windows-Full.zip",
             "MOS-KulKul-Setup-Windows.zip",
             "MOS-KulKul-Setup-macOS.zip",
+            "MOS-KulKul-Setup-macOS.pkg",
         ):
             path = installer_dir / name
             if path.is_file() and path.stat().st_size > 0:
@@ -425,6 +426,7 @@ def _installer_meta() -> list[dict]:
         "MOS-KulKul-Setup-Windows-Full.zip",
         "MOS-KulKul-Setup-Windows-Full.exe",
         "MOS-KulKul-Setup-macOS.zip",
+        "MOS-KulKul-Setup-macOS.pkg",
     )
     rows = []
     for name in names:
@@ -512,6 +514,7 @@ def install_macos():
     return _send_installer(
         "MOS-KulKul-Setup-macOS.zip",
         "MOS-Dock-Setup-macOS.zip",
+        "MOS-KulKul-Setup-macOS.pkg",
         "MOS-Dock-Setup-macOS.pkg",
         media="application/zip",
     )
@@ -520,6 +523,7 @@ def install_macos():
 @app.get("/cai-dat/macos-pkg")
 def install_macos_pkg():
     return _send_installer(
+        "MOS-KulKul-Setup-macOS.pkg",
         "MOS-Dock-Setup-macOS.pkg",
         media="application/octet-stream",
     )
@@ -544,12 +548,14 @@ def install_windows_ps1():
 _MACOS_FILES = {
     "mosdock_mac.py": ROOT / "desktop" / "MosDockMac" / "mosdock_mac.py",
     "handler.applescript": ROOT / "desktop" / "MosDockMac" / "handler.applescript",
-    "Info.plist": ROOT / "desktop" / "MosDockMac" / "Info.plist.url.fragment",
+    "Info.plist": ROOT / "desktop" / "MosDockMac" / "Info.plist",
 }
 
 
 @app.get("/cai-dat/macos-files/{name}")
 def install_macos_file(name: str):
+    if name == "VERSION":
+        return PlainTextResponse(app_version() + "\n", media_type="text/plain; charset=utf-8")
     path = _MACOS_FILES.get(name)
     if path is None or not path.is_file():
         return HTMLResponse("Not found", status_code=404)

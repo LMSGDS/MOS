@@ -51,7 +51,7 @@ $ErrorActionPreference='Stop'; [Net.ServicePointManager]::SecurityProtocol=[Net.
 | --- | --- |
 | Trình duyệt | `/` mô phỏng layout; `/cai-dat` tải bộ cài |
 | Windows | MOS-KulKul.exe — đăng nhập + dock + `SetWindowPos` |
-| macOS | .zip → `Cai MOS-KulKul.command` hoặc `curl …/cai-dat/macos.sh \| bash` |
+| macOS | .zip → kéo `MOS-KulKul.app` vào Applications, hoặc `Cai MOS-KulKul.command`, hoặc `curl …/cai-dat/macos.sh \| bash` |
 
 Không dùng Office Online. Chi tiết: [`desktop/README.md`](desktop/README.md).
 

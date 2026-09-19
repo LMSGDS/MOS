@@ -163,6 +163,7 @@ def test_github_sync_downloads_installers_over_https():
     assert "dependabot/" in sync
     assert "https://api.github.com/repos/" in sync
     assert "MOS-KulKul-Setup-Windows-Full.exe" in sync
+    assert "MOS-KulKul-Setup-macOS.pkg" in sync
     assert "ssh://" not in sync.lower()
     assert "scp " not in sync.lower()
     assert "sshpass" not in sync.lower()

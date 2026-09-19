@@ -10,8 +10,8 @@ CI (Actions → **Build MOS-KulKul**) tạo:
 | --- | --- |
 | Windows | `MOS-KulKul-Setup-Windows.exe` — bộ cài nhỏ (lấy liên kết, khi Cài sẽ tải bản đầy đủ từ máy chủ) |
 | Windows (offline) | `MOS-KulKul-Setup-Windows-Full.exe` — bản đầy đủ ~50MB |
-| macOS | `MOS-KulKul-Setup-macOS.zip` — giải nén, chuột phải `Cai MOS-KulKul.command` → Mở |
-| macOS (pkg) | Bị Gatekeeper chặn nếu chưa notarize Apple |
+| macOS | `MOS-KulKul-Setup-macOS.zip` — kéo `MOS-KulKul.app` vào Applications (bản CI Mac) hoặc chuột phải `Cai MOS-KulKul.command` → Mở |
+| macOS (pkg) | `MOS-KulKul-Setup-macOS.pkg` — Gatekeeper chặn nếu chưa notarize Apple |
 
 Copy vào `data/installers/` trên server, hoặc để `scripts/git-sync.sh` tự tải artifact CI (cần `MOS_GITHUB_TOKEN`). Học sinh **không nên bấm Tải trên Chrome** (trình duyệt quét virus file chưa ký). Trên `/cai-dat` dán lệnh PowerShell:
 
@@ -29,7 +29,8 @@ dotnet publish desktop/MosDock/MosDock.csproj -c Release -o dist-win
 ### macOS
 
 ```bash
-bash desktop/installer/macos/make-zip.sh
+bash desktop/installer/macos/make-zip.sh          # zip nguồn (Linux/Mac)
+bash desktop/installer/macos/build-pkg.sh         # .app + .zip + .pkg (chỉ macOS)
 ```
 
 Sau khi cài Mac: **System Settings → Privacy & Security → Accessibility** → bật MOS-KulKul.
