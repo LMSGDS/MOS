@@ -70,6 +70,26 @@ def test_readme_and_ci_have_no_gpu_ssh_secrets():
         assert "SSH via OpenVPN" not in text
 
 
+def test_webhook_secret_reads_git_sync_env(tmp_path, monkeypatch):
+    from app import hooks
+
+    monkeypatch.setattr(hooks, "ROOT", tmp_path)
+    monkeypatch.delenv("MOS_GITHUB_WEBHOOK_SECRET", raising=False)
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "git-sync.env").write_text(
+        "MOS_GITHUB_WEBHOOK_SECRET=from-file\nMOS_GITHUB_TOKEN=not-a-secret-for-test\n",
+        encoding="utf-8",
+    )
+    assert hooks._secret() == "from-file"
+
+
+def test_mos_service_loads_git_sync_env():
+    unit = (ROOT / "deploy" / "mos.service").read_text(encoding="utf-8")
+    timer = (ROOT / "deploy" / "mos-git-sync.timer").read_text(encoding="utf-8")
+    assert "EnvironmentFile=-/home/plhien/MOS/data/git-sync.env" in unit
+    assert "OnUnitActiveSec=5min" in timer
+
+
 def test_github_webhook_disabled_without_secret(monkeypatch):
     monkeypatch.delenv("MOS_GITHUB_WEBHOOK_SECRET", raising=False)
     client = TestClient(app)
@@ -149,6 +169,8 @@ def test_github_sync_downloads_installers_over_https():
     assert "sync-installers.sh" in git_sync
     assert "x-access-token:" in git_sync
     assert "AUTHORIZATION: basic" in git_sync
+    assert "reset --hard" in git_sync
+    assert "merge --ff-only" not in git_sync
     assert "AUTHORIZATION: bearer" not in git_sync.lower()
     assert "-GDS.exe" not in main
     hooks = (root / "app" / "hooks.py").read_text(encoding="utf-8")
