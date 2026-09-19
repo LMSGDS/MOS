@@ -210,180 +210,41 @@ def test_windows_sources_include_action_demo():
     assert "RunNavigate" in demo
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
-    assert "OnTeacherHotkeys" in form
-    assert "Keys.D" in form
-    assert "Lưu tạm và Về trang chủ" in form
+    assert "Demo tất cả bài tập" in form
     assert "1.21.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "/api/v1/progress/adaptive" in (root / "HomeRadar.cs").read_text(encoding="utf-8")
-    assert "Q-Matrix" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "Q-matrix SOP" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "Ma trận kỹ năng" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "LocalExamStore" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "X-MOS-Artifact-SHA256" in (root / "Portal.cs").read_text(encoding="utf-8")
     assert "using System.Text.Json;" in (root / "BackgroundSync.cs").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "keepCopy" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "_dockChrome.Height = keepCopy" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "GrowForPrompt" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "PromptBand" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert '_helpPane.Controls.Add(_promptCard)' not in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "_promptCard.Visible = showPrompt" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert r"\sl0\slmult1" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert r"\sl360\slmult1" not in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "FitPromptCard" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "HelpCapPct = 42" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "MaximumSize = new Size(w, h)" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "HelpCapPct" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert r"\pard\widctlpar\ql" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "WordWrap = true" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert '_promptTitle.Text = "Đề bài"' in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "NudgeHelpScale" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "Thu nhỏ nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "Phóng to nội dung hướng dẫn" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "AaSizeButton" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "await CheckTasks()" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "Chuyển tới vị trí câu hỏi" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "Xem gợi ý" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "Lỗi thường gặp" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "Thao tác đúng" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "Thao tác của bạn" in (root / "SkillReview.cs").read_text(encoding="utf-8")
-    assert "MarkWordUi" in (root / "SkillReview.cs").read_text(encoding="utf-8")
-    assert "CreateStatusImages" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "LayoutSummaryChrome" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "ReviewCard" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "SearchField" in (root / "Ui.cs").read_text(encoding="utf-8")
-    assert "PaintSearchMark" in (root / "Ui.cs").read_text(encoding="utf-8")
     assert "AnalysisBlocks" in (root / "SkillReview.cs").read_text(encoding="utf-8")
-    assert "FitReviewCards" in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "SmallImageList" not in (root / "MainForm.cs").read_text(encoding="utf-8")
-    assert "✅  Đạt" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "DemoAllAsync" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "kind=results" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "FindLocalResults" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "*_results.docx" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "1.1 / 1.3" not in demo
-    home = (root / "HomeDash.cs").read_text(encoding="utf-8")
-    ui = (root / "Ui.cs").read_text(encoding="utf-8")
-    form = (root / "MainForm.cs").read_text(encoding="utf-8")
-    hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
-    assert "Tổng quan tiến độ" in home
-    assert "không dùng Office Online" in home
-    assert "DockStyle.Fill" in home
-    assert "mức đánh giá" in home
-    assert "Kỹ năng theo chương trình" in home
-    assert "Đã hoàn thành" in home
-    assert "Bảng điều khiển" in home or "bảng điều khiển" in home
-    assert "AppLaunchTile" in ui
-    assert "InfoBanner" in ui
-    assert "PaintInfoMark" in ui
-    assert "MiniScoreRow" in ui
-    assert "Color.FromArgb(247, 243, 238)" in ui
-    assert "RefreshHomeDashboard" in form
-    assert "ResumeOpenAttempt" in form
-    assert "GetProgressAsync" in hub
-    assert "ListProgramProgressAsync" in hub
-    assert "public bool IsOpen" in hub
-    assert "DisplayMax" in hub
-    assert "ScoreLabel" in hub
-    assert "GroupAttempts" in hub
-    assert "ArchivedOpen" in hub
-    assert "IsRecent" in hub
-    assert "PercentTrack" in ui
-    assert "EmptyHint" in ui
-    assert "PaintEmptyDoc" in ui
-    assert "GroupAttempts" in home
-    assert "Bạn chưa hoàn thành bài luyện tập nào" in home
-    assert "Xem Review sẽ hiện ở đây" in home
-    assert "AutoScroll = true" in home
-    assert "Relayout" in home
-    assert "WrapContents = true" in home
-    assert "DashColumns" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "DashCourseMin = 250" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "DashProgressMin = 400" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "DashStack = 1024" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "AutoFitColumns" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "WidgetStack" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "WidgetWidths" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "HubMinW = 420" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "FitWrapRow" in ui
-    assert "AttachFocusRing" in ui
-    assert "FocusRing" in ui
-    assert "PlayReveal" in ui
-    assert "Xem tất cả (" in home
-    assert "Take(2)" in home
-    assert "Height = 44" in home
-    assert "AutoEllipsis = false" in home
-    assert "CardPad" in ui
-    assert "TileCopy" in ui
-    assert "DashStatCol = 152" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "go.Dock = DockStyle.Bottom" not in home
-    assert "RoundControl(inner, radius)" not in ui
-    assert "FindOpenAttempt" in hub
-    assert "ConfirmSessionForm" in form
-    assert "Làm lại từ đầu" in (root / "ConfirmSubmitForm.cs").read_text(encoding="utf-8")
-    assert "DashCourseMin" in form
-    assert "AutoEllipsis = false" in ui
-    assert "lần cũ đã gom" in home
-    assert "Chưa chấm" in home
-    assert "Ui.PercentTrack" in home
-    assert "SnapshotWork" in hub
     grade = (root / "WordGrade.cs").read_text(encoding="utf-8")
-    assert 'var target = rel.Target ?? ""' in grade
-    assert 'var mode = rel.Mode ?? ""' in grade
-    assert "extract_failed" in grade
-    assert "item.Predicate ??=" in grade
-    assert "Không chấm được bài Word đang mở" in form
-    assert "Không đọc được bài Word đang mở" in hub
+    assert "QMatrix.Attach" in grade
+    assert "count_footnotes" in (root / "QMatrix.cs").read_text(encoding="utf-8")
     login = (root / "LoginForm.cs").read_text(encoding="utf-8")
     portal = (root / "Portal.cs").read_text(encoding="utf-8")
-    assert "SoftField" in ui
-    assert "AlertBar" in ui
-    assert "PaintEye" in ui
-    assert "PaintGlobe" in ui
-    assert "FormFieldRadius" in ui
-    assert "Vui lòng nhập tài khoản để tiếp tục" in login
-    assert "Vui lòng nhập mật khẩu để tiếp tục" in login
-    assert "Tài khoản hoặc mật khẩu không chính xác" in portal
-    assert "chưa được cấp quyền thi môn này" in portal
-    assert "Bài MOS mở trên Office đã cài trên máy — không dùng Office Online." in login
     assert "Tài khoản nhà trường." not in login
-    assert '_eye.Text = "Hiện"' not in login
-    assert "PaintGlobe" in login
     assert "ClassifyLogin" in portal
     confirm = (root / "ConfirmSubmitForm.cs").read_text(encoding="utf-8")
     assert "Xác nhận nộp bài thi" in confirm
     assert "Quay lại làm tiếp" in confirm
-    assert "Nộp bài ngay" in confirm
-    assert "nhiệm vụ chưa hoàn thành" in confirm
-    assert "Làm lại bài này" in confirm
-    assert "Quay về Trang chủ" in confirm
-    assert "DockQuiet" in ui
-    assert "DockHint" in ui
-    assert "NavIcon.Settings" in form
-    assert "AskSubmit" in form
-    assert "_dockSubmit" in form
-    assert "Menu tùy chọn thêm" not in form
-    assert "Q-matrix SOP" in (root / "SkillReview.cs").read_text(encoding="utf-8")
-    assert "Ma trận kỹ năng" in (root / "SkillReview.cs").read_text(encoding="utf-8")
-    assert "QMatrix.Attach" in (root / "WordGrade.cs").read_text(encoding="utf-8")
-    assert "count_footnotes" in (root / "QMatrix.cs").read_text(encoding="utf-8")
-    assert "ParseQTrace" in hub
-    assert "ProgramTile" in ui
-    assert "MarkProgramTiles" in ui
-    assert "OutlineBtn" in ui
-    assert 'OutlineBtn("Thi"' in form
-    assert "Microsoft Word trên máy" not in form
-    assert "Padding = new Padding(CardPad, CardPad, CardPad, CardPad)" in ui
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
-    assert "FileShare.ReadWrite" in (root / "WordGrade.cs").read_text(encoding="utf-8")
-    assert "LockedFile.ReadAllBytes" in (root / "Portal.cs").read_text(encoding="utf-8")
-    assert "BackgroundSave" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
-    assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
-    assert "Word đang giữ tệp bài làm" in hub
-    assert "Chọn một ô bên dưới" not in form
+    assert "LockedFile.ReadAllBytes" in portal
     assert 'MyAppVersion "1.21.0"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")

@@ -474,26 +474,30 @@ def test_login_writes_last_seen_to_postgres(client):
 
 
 def test_teacher_creates_student_in_postgres(client):
+    from uuid import uuid4
+
     from app.db import cursor
 
     teacher = _token(client, "giaovien")
     headers = {"Authorization": f"Bearer {teacher}"}
+    suffix = uuid4().hex[:8]
+    username = f"hs-dongbo-{suffix}"
     created = client.post(
         "/api/v1/users",
         headers=headers,
         json={
-            "username": "hs-dongbo",
+            "username": username,
             "name": "Học sinh đồng bộ",
             "password": "Mos@Gds2026",
-            "student_code": "HS-SYNC",
+            "student_code": f"HS-SYNC-{suffix}",
             "class_id": 1,
             "role": "student",
         },
     )
     assert created.status_code == 200, created.text
     assert created.json()["store"] == "postgresql"
-    assert created.json()["user"]["username"] == "hs-dongbo"
-    token = _token(client, "hs-dongbo")
+    assert created.json()["user"]["username"] == username
+    token = _token(client, username)
     me = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
     assert me.json()["user"]["name"] == "Học sinh đồng bộ"
     with cursor() as cur:
@@ -504,7 +508,7 @@ def test_teacher_creates_student_in_postgres(client):
             LEFT JOIN enrollments e ON e.user_id = u.id
             WHERE u.username = %s
             """,
-            ("hs-dongbo",),
+            (username,),
         )
         row = cur.fetchone()
     assert row["class_id"] == 1
