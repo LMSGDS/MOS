@@ -169,6 +169,8 @@ def test_github_sync_downloads_installers_over_https():
     assert "sync-installers.sh" in git_sync
     assert "x-access-token:" in git_sync
     assert "AUTHORIZATION: basic" in git_sync
+    assert "reset --hard" in git_sync
+    assert "merge --ff-only" not in git_sync
     assert "AUTHORIZATION: bearer" not in git_sync.lower()
     assert "-GDS.exe" not in main
     hooks = (root / "app" / "hooks.py").read_text(encoding="utf-8")
