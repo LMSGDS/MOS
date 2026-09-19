@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from app.main import INSTALLER_DIR, app
+from app.main import INSTALLER_DIR, app, app_version
 
 def test_login_page():
     c = TestClient(app)
@@ -67,6 +67,9 @@ def test_install_page_lists_windows_and_macos():
     assert "Giữ lại" in r.text
     assert "Unblock-File" in r.text
     assert "/cai-dat/checksums" in r.text
+    assert app_version() in r.text
+    assert "bung hết chiều ngang" in r.text
+    assert "kéo mép" in r.text
     missing = c.get("/cai-dat/windows")
     win_ready = any(
         (INSTALLER_DIR / name).is_file()

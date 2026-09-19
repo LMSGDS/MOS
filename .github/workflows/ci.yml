@@ -53,6 +53,7 @@ jobs:
           test -f desktop/installer/macos/build-pkg.sh
           test -f app/schema.sql
           test -f scripts/git-sync.sh
+          test -f scripts/sync-installers.sh
           test -f deploy/mos-git-sync.timer
           test -f desktop/MosDock/ExamHub.cs
           test -f desktop/MosDock/WordGrade.cs

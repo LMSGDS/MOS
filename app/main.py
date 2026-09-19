@@ -44,6 +44,17 @@ def _session_secret() -> str:
 ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul9")
 SESSION_SECRET = _session_secret()
 
+
+def app_version() -> str:
+    text = (ROOT / "desktop" / "MosDock" / "MosDock.csproj").read_text(encoding="utf-8")
+    marker = "<Version>"
+    start = text.find(marker)
+    if start < 0:
+        return "0"
+    start += len(marker)
+    end = text.find("</Version>", start)
+    return text[start:end].strip() if end > start else "0"
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:
@@ -100,6 +111,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "program": current_program(request),
         "programs": MENU,
         "asset_v": ASSET_V,
+        "app_version": app_version(),
     }
     if extra:
         data.update(extra)
@@ -256,7 +268,7 @@ def install_page(request: Request):
     return TEMPLATES.TemplateResponse(
         request,
         "install.html",
-        _ctx(request, {"installers": _installer_meta()}),
+        _ctx(request, {"installers": _installer_meta(), "app_version": app_version()}),
     )
 
 
@@ -352,10 +364,6 @@ def _send_installer(*names: str, media: str | None = None, as_zip: bool = False)
     elif path.suffix == ".pkg":
         chosen = "application/octet-stream"
     download_name = path.name
-    if path.suffix.lower() == ".exe":
-        download_name = path.stem + "-GDS.exe"
-    elif path.suffix.lower() == ".zip" and "Windows" in path.name:
-        download_name = path.stem + "-GDS.zip"
     return FileResponse(
         path,
         media_type=chosen or "application/octet-stream",

@@ -1,4 +1,5 @@
-# Place CI artifacts here so /cai-dat can serve them:
+# Server tự tải artifact CI khi chạy scripts/git-sync.sh (HTTPS, MOS_GITHUB_TOKEN).
+# Hoặc copy tay vào đây:
 #   MOS-KulKul-Setup-Windows.zip       — nên dùng (trình duyệt ít chặn hơn .exe)
 #   MOS-KulKul-Setup-Windows.exe       — bộ cài nhỏ (web stub)
 #   MOS-KulKul-Setup-Windows-Full.zip

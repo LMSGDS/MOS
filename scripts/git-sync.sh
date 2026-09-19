@@ -35,6 +35,10 @@ refuse_ssh_url "$(origin_url)"
 git "${GIT_ARGS[@]}" fetch --prune origin "$REF"
 git merge --ff-only "origin/${REF}"
 
+if [[ "${MOS_SYNC_INSTALLERS:-1}" == "1" ]]; then
+  bash "$ROOT/scripts/sync-installers.sh" || echo "sync-installers: bo qua (khong chan git pull)" >&2
+fi
+
 if [[ "${MOS_RESTART:-0}" == "1" ]]; then
   if command -v systemctl >/dev/null 2>&1; then
     systemctl restart mos.service 2>/dev/null || sudo -n systemctl restart mos.service 2>/dev/null || true

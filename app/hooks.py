@@ -64,7 +64,7 @@ async def github_push(request: Request):
         env=env,
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=300,
         check=False,
     )
     if proc.returncode != 0:
