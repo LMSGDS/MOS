@@ -39,7 +39,7 @@ public static class LayoutMath
     public const int ClusterMargin = 0;
     public const int HelpW = 346;
     public const int HelpH = 229;
-    public const int HelpCapPct = 36;
+    public const int HelpCapPct = 42;
     public const int SummaryW = 1020;
     public const int SummaryH = 680;
     public const int ExpandedSideW = 340;
@@ -61,7 +61,7 @@ public static class LayoutMath
     public const int RefChromePad = 4;
     public const int OverlayCapPct = 16;
     /// <summary>Đề bài stays on the dock when hướng dẫn is closed.</summary>
-    public const int PromptBand = 132;
+    public const int PromptBand = 96;
     /// <summary>Task list peek when hướng dẫn is closed.</summary>
     public const int TaskPeek = 168;
 
@@ -274,7 +274,7 @@ public static class LayoutMath
     public static Rect GrowForHelp(Rect dock, Rect work, string state, float scale = 1f)
     {
         var nav = Measure(ScaleWork(work, scale));
-        return GrowForCopy(dock, work, state, nav.HelpW, nav.HelpH);
+        return GrowForCopy(dock, work, state, nav.HelpW + PromptBand, nav.HelpH + PromptBand);
     }
 
     /// <summary>Keep đề bài + câu hỏi on the dock without opening hướng dẫn.</summary>

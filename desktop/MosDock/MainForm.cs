@@ -1191,11 +1191,11 @@ sealed class MainForm : Form
 
     void ApplyHelpFonts()
     {
-        var promptPt = _helpScale switch { 2 => 16f, 1 => 14f, _ => 12.5f };
-        var bodyPt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
-        var titlePt = _helpScale switch { 2 => 14f, 1 => 12.5f, _ => 11.5f };
+        var promptPt = _helpScale switch { 2 => 12.5f, 1 => 11f, _ => 10f };
+        var bodyPt = _helpScale switch { 2 => 13f, 1 => 11.5f, _ => 10.5f };
+        var titlePt = _helpScale switch { 2 => 12f, 1 => 11f, _ => 10f };
         _promptTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Bold);
-        _promptBody.Font = new Font("Segoe UI", promptPt, FontStyle.Bold);
+        _promptBody.Font = new Font("Segoe UI", promptPt);
         _helpTitle.Font = new Font("Segoe UI", titlePt, FontStyle.Bold);
         _helpBody.Font = new Font("Segoe UI", bodyPt);
         _aaSmaller.Enabled = _helpScale > 0;
@@ -1234,6 +1234,21 @@ sealed class MainForm : Form
         {
             SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
         }
+
+        FitPromptCard();
+    }
+
+    void FitPromptCard()
+    {
+        var inner = Math.Max(80, _promptCard.ClientSize.Width - 28);
+        if (inner < 80)
+        {
+            inner = Math.Max(80, _exam.ClientSize.Width - 36);
+        }
+
+        var textH = Ui.MeasureH(_promptBody.Text, _promptBody.Font, inner);
+        var lineH = Math.Max(18, Ui.MeasureH("Ag", _promptBody.Font, 200));
+        _promptCard.Height = 26 + Math.Clamp(Math.Max(lineH + 8, textH + 8), lineH + 8, lineH * 4 + 8) + 12;
     }
 
     void SetHelpBody(IReadOnlyList<string> steps, float bodyPt)
@@ -1343,7 +1358,7 @@ sealed class MainForm : Form
         }
         _promptCard.Visible = showPrompt;
         _promptCard.Dock = DockStyle.Top;
-        _promptCard.Height = LayoutMath.PromptBand;
+        FitPromptCard();
         _helpPane.Visible = showHelp;
         if (showHelp && _compact && _docking)
         {
