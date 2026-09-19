@@ -37,35 +37,44 @@
   <p class="hint">Bảng hash hiện khi server có file trong <code>data/installers/</code>. JSON: <a href="/cai-dat/checksums">/cai-dat/checksums</a>.</p>
   {% endif %}
 
-  <h2 style="margin-top:20px;font-size:18px">macOS</h2>
-  <p class="notice">macOS chặn gói <code>.pkg</code> chưa ký Apple. Tải <strong>.zip</strong> hoặc dán lệnh Terminal.</p>
+  <h2 style="margin-top:20px;font-size:18px">macOS {{ app_version }}</h2>
+  <p class="notice">Bộ cài Mac <strong>{{ app_version }}</strong> — kéo <code>MOS-KulKul.app</code> vào Applications. Gatekeeper chặn <code>.pkg</code> chưa notarize; ưu tiên <strong>.zip</strong> hoặc lệnh Terminal.</p>
   <ol class="lead">
     <li>Tải <strong>MOS-KulKul-Setup-macOS.zip</strong>, giải nén.</li>
-    <li><strong>Chuột phải</strong> <strong>Cai MOS-KulKul.command</strong> → <strong>Mở</strong> → <strong>Mở</strong>.</li>
+    <li>Nếu thấy <strong>MOS-KulKul.app</strong>: kéo vào <strong>Applications</strong>, rồi chuột phải → <strong>Mở</strong> → <strong>Mở</strong>.</li>
+    <li>Nếu chỉ thấy <strong>Cai MOS-KulKul.command</strong>: chuột phải → <strong>Mở</strong> → <strong>Mở</strong>.</li>
     <li>Cho phép MOS-KulKul trong <strong>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → Accessibility</strong>.</li>
     <li>Mở MOS-KulKul, chọn Word/Excel/PowerPoint rồi đăng nhập.</li>
   </ol>
+  <div class="actions" style="flex-direction:row;flex-wrap:wrap;gap:12px">
+    <a class="secondary" href="/cai-dat/macos" style="text-align:center;text-decoration:none">Tải MOS-KulKul-Setup-macOS.zip</a>
+    <button type="button" class="secondary" id="copy-mac">Sao chép lệnh Terminal</button>
+  </div>
   <p class="lead">Hoặc mở <strong>Terminal</strong> rồi dán:</p>
-  <pre class="codebox">curl -fsSL https://mos.gds.edu.vn/cai-dat/macos.sh | bash</pre>
-  <p class="hint">Gói .pkg chỉ dùng khi đã notarize. <a href="/cai-dat/macos-pkg">Tải .pkg</a>.</p>
+  <pre class="codebox" id="mac-cmd">curl -fsSL https://mos.gds.edu.vn/cai-dat/macos.sh | bash</pre>
+  <p class="hint">Gói .pkg cùng phiên bản chỉ dùng khi đã notarize. <a href="/cai-dat/macos-pkg">Tải MOS-KulKul-Setup-macOS.pkg</a>.</p>
   <p><a class="linkish" href="/dang-nhap">← Về đăng nhập trên web</a></p>
 </section>
 <script>
 (function () {
-  var btn = document.getElementById("copy-win");
-  var box = document.getElementById("win-cmd");
-  if (!btn || !box) return;
-  btn.addEventListener("click", function () {
-    var text = (box.innerText || box.textContent || "").trim();
-    function done() { btn.textContent = "Đã sao chép"; }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(function () {
+  function bind(btnId, boxId) {
+    var btn = document.getElementById(btnId);
+    var box = document.getElementById(boxId);
+    if (!btn || !box) return;
+    btn.addEventListener("click", function () {
+      var text = (box.innerText || box.textContent || "").trim();
+      function done() { btn.textContent = "Đã sao chép"; }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          window.getSelection().selectAllChildren(box);
+        });
+      } else {
         window.getSelection().selectAllChildren(box);
-      });
-    } else {
-      window.getSelection().selectAllChildren(box);
-    }
-  });
+      }
+    });
+  }
+  bind("copy-win", "win-cmd");
+  bind("copy-mac", "mac-cmd");
 })();
 </script>
 {% endblock %}

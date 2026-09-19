@@ -33,7 +33,13 @@ else
   curl -fsSL "$BASE/cai-dat/macos-files/mosdock_mac.py" -o "$TMP/Files/mosdock_mac.py"
   curl -fsSL "$BASE/cai-dat/macos-files/handler.applescript" -o "$TMP/Files/handler.applescript"
   curl -fsSL "$BASE/cai-dat/macos-files/Info.plist" -o "$TMP/Files/Info.plist"
+  curl -fsSL "$BASE/cai-dat/macos-files/VERSION" -o "$TMP/Files/VERSION" || true
   SRC="$TMP/Files"
+fi
+
+VERSION="1.21.0"
+if [[ -f "$SRC/VERSION" ]]; then
+  VERSION="$(tr -d '[:space:]' < "$SRC/VERSION")"
 fi
 
 if [[ -n "$DIR" ]]; then
@@ -43,7 +49,11 @@ rm -rf "/Applications/MOS Dock.app" "$APP"
 osacompile -o "$APP" "$SRC/handler.applescript"
 mkdir -p "$APP/Contents/Resources"
 cp "$SRC/mosdock_mac.py" "$APP/Contents/Resources/mosdock_mac.py"
+printf '%s\n' "$VERSION" > "$APP/Contents/Resources/VERSION"
 chmod 755 "$APP/Contents/Resources/mosdock_mac.py"
+if [[ -f "$SRC/kulkul.png" ]]; then
+  cp "$SRC/kulkul.png" "$APP/Contents/Resources/kulkul.png"
+fi
 xattr -cr "$APP" >/dev/null 2>&1 || true
 
 PLIST="$APP/Contents/Info.plist"
@@ -60,7 +70,10 @@ plist_set() {
   fi
 }
 plist_set CFBundleName string "MOS-KulKul"
+plist_set CFBundleDisplayName string "MOS-KulKul"
 plist_set CFBundleIdentifier string vn.edu.gds.mosdock
+plist_set CFBundleVersion string "$VERSION"
+plist_set CFBundleShortVersionString string "$VERSION"
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes" "$PLIST" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" "$PLIST"
 fi
@@ -76,8 +89,13 @@ if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes:0"
 else
   /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 mosdock" "$PLIST"
 fi
+if ! /usr/libexec/PlistBuddy -c "Print :CFBundleURLTypes:0:CFBundleURLSchemes:1" "$PLIST" >/dev/null 2>&1; then
+  /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:1 string mos-kulkul" "$PLIST"
+else
+  /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:1 mos-kulkul" "$PLIST"
+fi
 
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" || true
 open -a "MOS-KulKul" || true
-osascript -e 'display dialog "Đã cài MOS-KulKul vào Applications. Cho phép Accessibility, rồi mở MOS-KulKul để đăng nhập." buttons {"OK"} default button 1' >/dev/null 2>&1 || true
-echo "Installed $APP"
+osascript -e "display dialog \"Đã cài MOS-KulKul ${VERSION} vào Applications. Cho phép Accessibility, rồi mở MOS-KulKul để đăng nhập.\" buttons {\"OK\"} default button 1" >/dev/null 2>&1 || true
+echo "Installed $APP ($VERSION)"

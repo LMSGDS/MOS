@@ -51,6 +51,8 @@ jobs:
           test -f desktop/installer/windows/install.ps1
           test -f desktop/installer/windows/bootstrap.ps1
           test -f desktop/installer/macos/build-pkg.sh
+          test -f desktop/installer/macos/make-zip.sh
+          test -f desktop/MosDockMac/Info.plist
           test -f app/schema.sql
           test -f scripts/git-sync.sh
           test -f scripts/sync-installers.sh

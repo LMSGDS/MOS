@@ -4,7 +4,8 @@
 #   MOS-KulKul-Setup-Windows.exe       — bộ cài nhỏ (web stub)
 #   MOS-KulKul-Setup-Windows-Full.zip
 #   MOS-KulKul-Setup-Windows-Full.exe  — bản đầy đủ (~50MB)
-#   MOS-KulKul-Setup-macOS.zip
+#   MOS-KulKul-Setup-macOS.zip  — kéo MOS-KulKul.app vào Applications
 #   MOS-KulKul-Setup-macOS.pkg  (optional; Gatekeeper blocks unsigned pkg)
+#   SHA256-macOS.txt
 #
 # Server có thể tự bọc .exe thành .zip khi thiếu file zip.

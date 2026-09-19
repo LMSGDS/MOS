@@ -1,6 +1,7 @@
 name: Build MOS-KulKul
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - "desktop/**"
@@ -64,7 +65,7 @@ jobs:
             dist-win/install.ps1
 
   macos-zip:
-    name: macOS Setup.zip
+    name: macOS Setup.zip (source)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -72,17 +73,37 @@ jobs:
         run: bash desktop/installer/macos/make-zip.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: MOS-KulKul-Setup-macOS-zip
+          name: MOS-KulKul-Setup-macOS-src
           path: dist-installer/MOS-KulKul-Setup-macOS.zip
 
   macos:
-    name: macOS Setup.pkg
+    name: macOS Setup.app + .pkg
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Build app and pkg
+      - name: Build app, zip, and pkg
         run: bash desktop/installer/macos/build-pkg.sh
+      - name: Check Mac installer names and hashes
+        run: |
+          test -f dist-installer/MOS-KulKul-Setup-macOS.zip
+          test -f dist-installer/MOS-KulKul-Setup-macOS.pkg
+          test -f dist-installer/SHA256-macOS.txt
+          test ! -e dist-installer/MOS-Dock*
+          python3 - <<'PY'
+          from pathlib import Path
+          z = Path("dist-installer/MOS-KulKul-Setup-macOS.zip")
+          p = Path("dist-installer/MOS-KulKul-Setup-macOS.pkg")
+          if z.stat().st_size < 4000:
+              raise SystemExit(f"zip too small: {z.stat().st_size}")
+          if p.stat().st_size < 8000:
+              raise SystemExit(f"pkg too small: {p.stat().st_size}")
+          print(z.stat().st_size, p.stat().st_size)
+          print(Path("dist-installer/SHA256-macOS.txt").read_text())
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: MOS-Dock-Setup-macOS
-          path: dist-installer/MOS-Dock-Setup-macOS.pkg
+          name: MOS-KulKul-Setup-macOS
+          path: |
+            dist-installer/MOS-KulKul-Setup-macOS.zip
+            dist-installer/MOS-KulKul-Setup-macOS.pkg
+            dist-installer/SHA256-macOS.txt
