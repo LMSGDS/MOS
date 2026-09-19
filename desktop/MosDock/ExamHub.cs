@@ -12,6 +12,14 @@ readonly record struct MosProject(
     string[] Steps,
     string RubricVersion);
 
+readonly record struct MosProgress(
+    string Program,
+    string Level,
+    int Assigned,
+    int Started,
+    int Completed,
+    double? OverallScore);
+
 readonly record struct MosAttempt(
     string Id,
     string ProjectId,

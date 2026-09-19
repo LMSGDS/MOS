@@ -265,6 +265,7 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "GroupByObjective" in form
     assert "GroupByObjective" in hub
     assert "OverviewText" in hub
+    assert "readonly record struct MosProgress" in hub
     assert "GrowForPrompt" in form
     assert "PromptBand" in layout
     assert "Un-dock" in form
