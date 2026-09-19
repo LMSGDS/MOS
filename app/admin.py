@@ -399,6 +399,63 @@ def admin_pedagogy(request: Request):
     )
 
 
+@router.get("/quan-tri/lti", response_class=HTMLResponse)
+def admin_lti(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    from app.lti import list_platforms
+
+    host = request.headers.get("host", "mos.gds.edu.vn")
+    scheme = "https" if "edu.vn" in host else request.url.scheme
+    base = f"{scheme}://{host}"
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_lti.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "lti",
+                "platforms": list_platforms(),
+                "login_url": f"{base}/lti/login",
+                "launch_url": f"{base}/lti/launch",
+                "jwks_url": f"{base}/lti/jwks",
+            },
+        ),
+    )
+
+
+@router.post("/quan-tri/lti")
+def admin_lti_save(
+    request: Request,
+    name: str = Form(""),
+    issuer: str = Form(...),
+    client_id: str = Form(...),
+    auth_login_url: str = Form(...),
+    auth_token_url: str = Form(""),
+    jwks_url: str = Form(""),
+):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    from app.lti import register_platform
+
+    register_platform(
+        name=name,
+        issuer=issuer,
+        client_id=client_id,
+        auth_login_url=auth_login_url,
+        auth_token_url=auth_token_url,
+        jwks_url=jwks_url,
+    )
+    return RedirectResponse("/quan-tri/lti", status_code=303)
+
+
 @router.get("/quan-tri/bai-tap", response_class=HTMLResponse)
 def admin_exercises(request: Request):
     user = _session_user(request)
@@ -428,6 +485,8 @@ def my_progress(request: Request):
     if evaluation:
         evaluation["weak_skills"] = _jsonish(evaluation.get("weak_skills"))
         evaluation["strong_skills"] = _jsonish(evaluation.get("strong_skills"))
+    from app.adaptive import adaptive_cards
+
     return TEMPLATES.TemplateResponse(
         request,
         "progress.html",
@@ -437,6 +496,7 @@ def my_progress(request: Request):
             {
                 "nav": "mine",
                 "evaluation": evaluation,
+                "adaptive": adaptive_cards(user_id),
                 "exercises": list_student_exercises(user_id, "word"),
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),
