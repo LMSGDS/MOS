@@ -196,6 +196,9 @@ async def api_login(request: Request):
     user = authenticate(username, password)
     if not user:
         return JSONResponse({"ok": False, "error": "sai"}, status_code=401)
+    from app.accounts import record_login
+
+    record_login(user["username"], "web")
     request.session["user"] = user
     return {"ok": True, "user": user, "program": resolve(chuong)}
 
@@ -279,6 +282,9 @@ def login(
     user = authenticate(username, password)
     if not user:
         return RedirectResponse("/dang-nhap?loi=sai", status_code=303)
+    from app.accounts import record_login
+
+    record_login(user["username"], "web")
     request.session["user"] = user
     dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
     dest += f"{'&' if '?' in dest else '?'}chuong-trinh={normalize(chuong_trinh)}"

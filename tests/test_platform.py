@@ -451,3 +451,70 @@ def test_late_evidence_regrades_submitted_attempt(client):
         payload = json.loads(payload)
     assert payload["verified"] == 100
     assert payload["pending"] == 0
+
+
+def test_login_writes_last_seen_to_postgres(client):
+    from app.db import cursor
+
+    token = _token(client, "hocsinh")
+    me = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    body = me.json()
+    assert body["store"] == "postgresql"
+    assert body["user"]["last_client"] == "kulkul"
+    assert body["user"]["last_seen_at"]
+    with cursor() as cur:
+        cur.execute(
+            "SELECT last_client, last_seen_at FROM users WHERE username = %s",
+            ("hocsinh",),
+        )
+        row = cur.fetchone()
+    assert row["last_client"] == "kulkul"
+    assert row["last_seen_at"]
+
+
+def test_teacher_creates_student_in_postgres(client):
+    from app.db import cursor
+
+    teacher = _token(client, "giaovien")
+    headers = {"Authorization": f"Bearer {teacher}"}
+    created = client.post(
+        "/api/v1/users",
+        headers=headers,
+        json={
+            "username": "hs-dongbo",
+            "name": "Học sinh đồng bộ",
+            "password": "Mos@Gds2026",
+            "student_code": "HS-SYNC",
+            "class_id": 1,
+            "role": "student",
+        },
+    )
+    assert created.status_code == 200, created.text
+    assert created.json()["store"] == "postgresql"
+    assert created.json()["user"]["username"] == "hs-dongbo"
+    token = _token(client, "hs-dongbo")
+    me = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.json()["user"]["name"] == "Học sinh đồng bộ"
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.username, e.class_id
+            FROM users u
+            LEFT JOIN enrollments e ON e.user_id = u.id
+            WHERE u.username = %s
+            """,
+            ("hs-dongbo",),
+        )
+        row = cur.fetchone()
+    assert row["class_id"] == 1
+
+
+def test_web_login_records_web_client(client):
+    from app.db import cursor
+
+    r = client.post("/api/dang-nhap", json={"username": "giaovien", "password": "Mos@Gds2026"})
+    assert r.status_code == 200
+    with cursor() as cur:
+        cur.execute("SELECT last_client FROM users WHERE username = %s", ("giaovien",))
+        assert cur.fetchone()["last_client"] == "web"

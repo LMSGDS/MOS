@@ -161,6 +161,8 @@ CREATE INDEX IF NOT EXISTS idx_criterion_run ON criterion_results(grading_run_id
 
 -- Học sinh, bài tập, tiến độ, tiến bộ, đánh giá
 ALTER TABLE users ADD COLUMN IF NOT EXISTS student_code TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_client TEXT;
 ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;

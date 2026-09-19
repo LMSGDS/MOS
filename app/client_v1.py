@@ -10,6 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
+from app.accounts import record_login
 from app.auth import authenticate
 from app.db import cursor
 from app.demo_all import results_file
@@ -362,6 +363,7 @@ async def v1_login(request: Request):
     user = authenticate(username, password)
     if not user:
         raise HTTPException(status_code=401, detail="sai")
+    record_login(user["username"], "kulkul")
     row = _user_row(user["username"])
     if row:
         user = {
@@ -389,7 +391,10 @@ def v1_me(request: Request):
         user["id"] = row["id"]
         user["role"] = row["role"]
         user["name"] = row["name"]
-    return {"ok": True, "user": user}
+        user["student_code"] = row.get("student_code")
+        user["last_seen_at"] = str(row["last_seen_at"]) if row.get("last_seen_at") else None
+        user["last_client"] = row.get("last_client")
+    return {"ok": True, "user": user, "store": "postgresql"}
 
 
 @router.get("/projects")

@@ -5,9 +5,20 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 from pathlib import Path
 
 USERS_PATH = Path(__file__).resolve().parent.parent / "data" / "users.json"
+
+
+def hash_password(password: str, rounds: int = 200000) -> str:
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, rounds)
+    return "pbkdf2_sha256${}${}${}".format(
+        rounds,
+        base64.b64encode(salt).decode(),
+        base64.b64encode(digest).decode(),
+    )
 
 
 def verify_password(password: str, stored: str) -> bool:

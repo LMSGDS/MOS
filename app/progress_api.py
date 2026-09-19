@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
+from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
 from app.progress import (
@@ -51,6 +52,30 @@ def v1_progress(request: Request, user_id: int | None = None, program: str = "wo
         "levels": LEVELS,
         "status_labels": STATUS_LABELS,
     }
+
+
+@router.post("/users")
+async def v1_create_user(request: Request):
+    user = bearer_user(request)
+    row = _require_user(user)
+    if not _staff(row):
+        raise HTTPException(status_code=403, detail="forbidden")
+    body = await request.json()
+    role = str(body.get("role") or "student").strip().lower()
+    if row["role"] == "teacher" and role not in ("student",):
+        raise HTTPException(status_code=403, detail="role")
+    try:
+        created = create_account(
+            username=str(body.get("username") or ""),
+            name=str(body.get("name") or ""),
+            password=str(body.get("password") or ""),
+            role=role,
+            student_code=str(body.get("student_code") or "") or None,
+            class_id=int(body["class_id"]) if body.get("class_id") else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "user": created, "store": "postgresql"}
 
 
 @router.get("/students")

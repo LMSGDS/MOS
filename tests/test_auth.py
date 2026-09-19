@@ -1,4 +1,4 @@
-from app.auth import authenticate, verify_password, find_user
+from app.auth import authenticate, find_user, hash_password, verify_password
 
 def test_known_users_exist():
     assert find_user("admin")
@@ -14,3 +14,9 @@ def test_login_bad_password():
 
 def test_login_unknown():
     assert authenticate("khongco", "Mos@Gds2026") is None
+
+
+def test_hash_password_roundtrip():
+    stored = hash_password("Mos@Gds2026")
+    assert verify_password("Mos@Gds2026", stored)
+    assert not verify_password("sai", stored)
