@@ -762,7 +762,11 @@ static class WordXml
     }
 }
 
-readonly record struct LocalCriterion(string Id, string Status, double Earned, double Possible, string Message);
+readonly record struct LocalCriterion(string Id, string Status, double Earned, double Possible, string Message)
+{
+    public IReadOnlyList<QNodeHit> QTrace { get; init; } = [];
+    public string BreakSkill { get; init; } = "";
+}
 
 static class WordGrade
 {
@@ -789,23 +793,26 @@ static class WordGrade
             var weight = item.Weight;
             try
             {
+                LocalCriterion hit;
                 if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
                 {
-                    results.Add(ActionEvidence.Grade(item, evidence));
-                    continue;
+                    hit = ActionEvidence.Grade(item, evidence);
                 }
-
-                if (!facts.Ok)
+                else if (!facts.Ok)
                 {
-                    results.Add(new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp."));
-                    continue;
+                    hit = new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp.");
+                }
+                else
+                {
+                    hit = GradeArtifact(facts, item);
                 }
 
-                results.Add(GradeArtifact(facts, item));
+                results.Add(QMatrix.Attach(facts, item, evidence, hit));
             }
             catch (Exception ex)
             {
-                results.Add(new LocalCriterion(item.Id, "error", 0, weight, "Không chấm được mục này: " + ex.Message));
+                var hit = new LocalCriterion(item.Id, "error", 0, weight, "Không chấm được mục này: " + ex.Message);
+                results.Add(QMatrix.Attach(facts, item, evidence, hit));
             }
         }
 
@@ -1125,6 +1132,7 @@ sealed class JsonCriterion
     public double Weight { get; set; }
     public string Prompt { get; set; } = "";
     public List<string> HelpSteps { get; set; } = [];
+    public List<JsonQNode> QMatrixNodes { get; set; } = [];
     public JsonSelector Selector { get; set; } = new();
     public JsonPredicate Predicate { get; set; } = new();
     public JsonFeedback Feedback { get; set; } = new();
@@ -1175,4 +1183,13 @@ sealed class JsonFeedback
     public string? Fail { get; set; }
     public string? Unverified { get; set; }
     public string? Error { get; set; }
+}
+
+sealed class JsonQNode
+{
+    public string StepId { get; set; } = "";
+    public string SkillType { get; set; } = "";
+    public string ValidationRule { get; set; } = "";
+    public string SuccessMessage { get; set; } = "";
+    public string ErrorFeedback { get; set; } = "";
 }

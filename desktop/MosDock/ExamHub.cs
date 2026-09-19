@@ -715,10 +715,45 @@ static class ExamHub
                 c.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "",
                 GetDouble(c, "earned", 0),
                 GetDouble(c, "possible", 0),
-                c.TryGetProperty("message", out var m) ? m.GetString() ?? "" : ""));
+                c.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "")
+            {
+                QTrace = ParseQTrace(c),
+                BreakSkill = c.TryGetProperty("break_skill", out var br) ? br.GetString() ?? "" : "",
+            });
         }
 
         return list;
+    }
+
+    static IReadOnlyList<QNodeHit> ParseQTrace(JsonElement c)
+    {
+        if (!c.TryGetProperty("q_matrix", out var arr) || arr.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var nodes = new List<QNodeHit>();
+        foreach (var n in arr.EnumerateArray())
+        {
+            var skill = n.TryGetProperty("skill_type", out var sk) ? sk.GetString() ?? "" : "";
+            var status = n.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "";
+            var detail = n.TryGetProperty("detail", out var d) ? d.GetString() ?? "" : "";
+            if (string.IsNullOrWhiteSpace(detail))
+            {
+                detail = status == "pass"
+                    ? (n.TryGetProperty("success_message", out var ok) ? ok.GetString() ?? "" : "")
+                    : (n.TryGetProperty("error_feedback", out var bad) ? bad.GetString() ?? "" : "");
+            }
+
+            nodes.Add(new QNodeHit(
+                n.TryGetProperty("step_id", out var id) ? id.GetString() ?? "" : "",
+                skill,
+                status,
+                n.TryGetProperty("label", out var lb) ? lb.GetString() ?? QMatrix.SkillLabel(skill) : QMatrix.SkillLabel(skill),
+                detail));
+        }
+
+        return nodes;
     }
 
     static double GetDouble(JsonElement el, string name, double fallback)

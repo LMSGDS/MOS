@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.9" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -310,6 +310,10 @@ def test_windows_sources_include_action_demo():
     assert "_dockSubmit" in form
     assert "Menu tùy chọn thêm" not in form
     assert "Q-matrix SOP" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "Ma trận kỹ năng" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "QMatrix.Attach" in (root / "WordGrade.cs").read_text(encoding="utf-8")
+    assert "count_footnotes" in (root / "QMatrix.cs").read_text(encoding="utf-8")
+    assert "ParseQTrace" in hub
     assert "ProgramTile" in ui
     assert "MarkProgramTiles" in ui
     assert "OutlineBtn" in ui
@@ -324,7 +328,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.8"' in (
+    assert 'MyAppVersion "1.16.9"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 

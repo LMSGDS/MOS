@@ -108,6 +108,7 @@ static class SkillReview
             "pass" =>
             [
                 new ReviewBlock("Kết quả chấm", "Học sinh đã làm đúng yêu cầu này.\n\n" + msg + ScoreLine(hit), "correct"),
+                new ReviewBlock("Ma trận kỹ năng", MatrixBody(hit), "correct"),
             ],
             "fail" => FailBlocks(msg, item, hit),
             "unverified" =>
@@ -163,28 +164,43 @@ static class SkillReview
     }
 
     /// <summary>
-    /// Q-matrix SOP: help_steps are atomic skills in order (locate → tool → configure).
-    /// The first unmet step is the fail log shown under Thao tác đúng.
+    /// Q-matrix SOP: engine walks q1 locate → q2 tool → q3 configure.
+    /// The first failed node is the skill gap shown under Thao tác của bạn / Thao tác đúng.
     /// </summary>
     static ReviewBlock[] FailBlocks(string msg, JsonCriterion? item, LocalCriterion hit)
     {
         var correct = HintSteps(item);
-        var yours = "Bằng chứng trong tệp đang mở chưa đủ / chưa đúng. So sánh với thao tác chuẩn bên dưới.";
+        var broken = hit.QTrace.FirstOrDefault(n => n.Status == "fail");
+        var yours = string.IsNullOrWhiteSpace(broken.Detail)
+            ? "Bằng chứng trong tệp đang mở chưa đủ / chưa đúng. So sánh với thao tác chuẩn bên dưới."
+            : broken.Detail;
         var right = new System.Text.StringBuilder();
-        if (correct.Count == 0)
+        if (!string.IsNullOrWhiteSpace(broken.SkillType))
         {
-            right.Append(MarkWordUi(item?.Prompt ?? "Làm đúng yêu cầu trên Ribbon của Word."));
-        }
-        else
-        {
-            for (var i = 0; i < correct.Count; i++)
+            var idx = broken.StepId is "q2" ? 1 : broken.StepId is "q3" ? 2 : 0;
+            if (idx < correct.Count)
             {
-                if (i > 0)
-                {
-                    right.AppendLine();
-                }
+                right.Append(MarkWordUi(correct[idx]));
+            }
+        }
 
-                right.Append(i + 1).Append(". ").Append(MarkWordUi(correct[i]));
+        if (right.Length == 0)
+        {
+            if (correct.Count == 0)
+            {
+                right.Append(MarkWordUi(item?.Prompt ?? "Làm đúng yêu cầu trên Ribbon của Word."));
+            }
+            else
+            {
+                for (var i = 0; i < correct.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        right.AppendLine();
+                    }
+
+                    right.Append(i + 1).Append(". ").Append(MarkWordUi(correct[i]));
+                }
             }
         }
 
@@ -200,10 +216,43 @@ static class SkillReview
         return
         [
             new ReviewBlock("Kết quả chấm", result, "result"),
+            new ReviewBlock("Ma trận kỹ năng", MatrixBody(hit), "result"),
             new ReviewBlock("Thao tác của bạn", yours, "yours"),
             new ReviewBlock("Thao tác đúng", right.ToString(), "correct"),
             new ReviewBlock("Lỗi thường gặp", pit.ToString().TrimEnd(), "pitfall"),
         ];
+    }
+
+    static string MatrixBody(LocalCriterion hit)
+    {
+        if (hit.QTrace.Count == 0)
+        {
+            return "Chưa có dấu vết Q-matrix. Bấm **Chấm lại** để phân rã định vị → công cụ → tham số.";
+        }
+
+        var lines = new System.Text.StringBuilder();
+        foreach (var node in hit.QTrace)
+        {
+            var mark = node.Status switch
+            {
+                "pass" => "✅",
+                "fail" => "❌",
+                "unverified" => "⚠",
+                _ => "—",
+            };
+            if (lines.Length > 0)
+            {
+                lines.AppendLine();
+            }
+
+            lines.Append(mark).Append(' ').Append(node.StepId).Append(" · ").Append(node.Label);
+            if (!string.IsNullOrWhiteSpace(node.Detail))
+            {
+                lines.Append(" — ").Append(MarkWordUi(node.Detail));
+            }
+        }
+
+        return lines.ToString();
     }
 
     static string FeedbackText(LocalCriterion hit, JsonCriterion? item)
