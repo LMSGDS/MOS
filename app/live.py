@@ -76,8 +76,10 @@ def list_class_sessions(class_id: int) -> list[dict]:
 
 @router.get("/classes/{class_id}/sessions")
 def class_sessions(request: Request, class_id: int):
+    from app.insights import annotate_sessions
+
     staff_from_request(request)
-    return {"ok": True, "class_id": class_id, "sessions": list_class_sessions(class_id)}
+    return {"ok": True, "class_id": class_id, "sessions": annotate_sessions(list_class_sessions(class_id))}
 
 
 @router.get("/classes/{class_id}/live")

@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.accounts import create_account, list_classes
 from app.db import cursor
+from app.insights import annotate_sessions, bank_reliability, skill_gaps
 from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
@@ -311,9 +312,48 @@ def admin_live(request: Request):
                 "nav": "live",
                 "classes": classes,
                 "class_id": class_id,
-                "sessions": list_class_sessions(class_id),
+                "sessions": annotate_sessions(list_class_sessions(class_id)),
             },
         ),
+    )
+
+
+@router.get("/quan-tri/lo-hong", response_class=HTMLResponse)
+def admin_gaps(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    raw = request.query_params.get("lop") or "0"
+    class_id = int(raw) if str(raw).isdigit() else 0
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_gaps.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "gaps",
+                "classes": list_classes(),
+                "class_id": class_id,
+                "gaps": skill_gaps(class_id),
+            },
+        ),
+    )
+
+
+@router.get("/quan-tri/ngan-hang", response_class=HTMLResponse)
+def admin_bank(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_bank.html",
+        _ctx(request, user, {"nav": "bank", "bank": bank_reliability()}),
     )
 
 

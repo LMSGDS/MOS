@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Độ tin cậy ngân hàng đề{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Độ tin cậy ngân hàng đề</h1>
+  <p class="lead">Nếu một Objective sai ~90% ở mọi lớp, Tổ Tin học rà soát đề (quá sức hoặc diễn đạt) trước khi giữ trong kiểm tra.</p>
+  {% include "admin_nav.html" %}
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Mã</th>
+        <th>Đề</th>
+        <th>Chuyên đề</th>
+        <th>Số nộp</th>
+        <th>Số lớp</th>
+        <th>Điểm TB</th>
+        <th>&lt; 50</th>
+        <th>&lt; 70</th>
+        <th>Kết luận</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in bank %}
+      <tr class="{% if b.review %}heat-red{% endif %}">
+        <td>{{ b.exam_id }}</td>
+        <td>{{ b.title }}</td>
+        <td>{{ b.skill }}</td>
+        <td>{{ b.submits }}</td>
+        <td>{{ b.classes }}</td>
+        <td>{{ b.avg_score if b.avg_score is not none else "—" }}</td>
+        <td>{{ "%.0f"|format(b.low_pct) }}%</td>
+        <td>{{ "%.0f"|format(b.below70_pct) }}%</td>
+        <td>{% if b.review %}<strong>{{ b.verdict }}</strong>{% else %}{{ b.verdict }}{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">Chưa có bài nộp để đánh giá đề.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

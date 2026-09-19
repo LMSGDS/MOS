@@ -520,3 +520,24 @@ body.exam-running .word-sim-page {
   100% { background: transparent; }
 }
 tr.just-submitted td { animation: live-flash 1.8s ease; }
+.heat-red td, .heat-red { background: #fee2e2; }
+.heat-amber td { background: #fef3c7; }
+.heat-green td { background: #ecfdf5; }
+.proctor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.proctor-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.proctor-card h3 { margin: 0 0 4px; font-size: 16px; }
+.proctor-card.has-alert { border-color: #dc2626; box-shadow: 0 0 0 2px #fecaca; }
+.proctor-card.is-done { border-color: #16a34a; }
+.proctor-exam, .proctor-flags { margin: 4px 0; font-size: 13px; color: var(--muted); }
+.badge-alert { background: #fee2e2; color: #991b1b; margin: 2px 4px 0 0; }
+.alert-stack .live-alert { margin: 6px 0; }

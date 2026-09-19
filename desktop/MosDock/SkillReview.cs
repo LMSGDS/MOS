@@ -89,7 +89,7 @@ static class SkillReview
         return hit.Status switch
         {
             "pass" => "Học sinh đã làm đúng yêu cầu này.\n\n" + msg + ScoreLine(hit),
-            "fail" => "Học sinh chưa đạt mục này. Lỗi / thiếu sót:\n\n" + msg + ScoreLine(hit),
+            "fail" => "Học sinh chưa đạt mục này. Lỗi / thiếu sót:\n\n" + msg + QAxis(msg) + ScoreLine(hit),
             "unverified" => "MOS-KulKul chưa ghi nhận được thao tác (Find, Go To, Navigation pane…). Không kết luận học sinh làm sai.\n\n" + msg,
             "error" => "Không đọc được bằng chứng trong tệp:\n\n" + msg,
             _ => msg,
@@ -124,6 +124,22 @@ static class SkillReview
         }
 
         return default;
+    }
+
+    static string QAxis(string msg)
+    {
+        var text = msg.ToLowerInvariant();
+        if (text.Contains("không thấy") || text.Contains("missing") || text.Contains("chưa tìm"))
+        {
+            return "\n\nQ-Matrix: sai bước Định vị — chưa tìm đúng đối tượng trên trang.";
+        }
+
+        if (text.Contains("công cụ") || text.Contains("tab") || text.Contains("ribbon") || text.Contains("tool"))
+        {
+            return "\n\nQ-Matrix: sai bước Chọn công cụ — vào đúng tab/lệnh rồi hãy chỉnh.";
+        }
+
+        return "\n\nQ-Matrix: sai bước Cấu hình — đã vào đúng chỗ nhưng tham số chưa khớp đề.";
     }
 
     static string ScoreLine(LocalCriterion hit)

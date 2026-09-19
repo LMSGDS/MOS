@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
+from app.insights import bank_reliability, program_radar, skill_gaps
 from app.progress import (
     LEVELS,
     STATUS_LABELS,
@@ -118,6 +119,33 @@ async def v1_assign(request: Request, class_id: int):
             raise HTTPException(status_code=404, detail="class")
     count = assign_class_projects(class_id, [str(i) for i in ids], assigned_by=row["id"])
     return {"ok": True, "assigned": count, "class_id": class_id}
+
+
+@router.get("/insights/gaps")
+def v1_skill_gaps(request: Request, class_id: int = 0):
+    user = bearer_user(request)
+    row = _require_user(user)
+    if not _staff(row):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return {"ok": True, "gaps": skill_gaps(class_id)}
+
+
+@router.get("/insights/bank")
+def v1_bank(request: Request):
+    user = bearer_user(request)
+    row = _require_user(user)
+    if not _staff(row):
+        raise HTTPException(status_code=403, detail="forbidden")
+    return {"ok": True, "bank": bank_reliability()}
+
+
+@router.get("/progress/radar")
+def v1_radar(request: Request, user_id: int | None = None):
+    user = bearer_user(request)
+    row = _require_user(user)
+    target = user_id or row["id"]
+    _as_staff_or_self(row, target)
+    return {"ok": True, "axes": program_radar(target)}
 
 
 @router.get("/classes/{class_id}/roster")

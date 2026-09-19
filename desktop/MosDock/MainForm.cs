@@ -12,6 +12,7 @@ sealed class MainForm : Form
     readonly Button _signOut = new();
     readonly Panel _body = new();
     readonly Panel _home = new();
+    readonly HomeRadar _radar = new();
     readonly Panel _catalog = new();
     readonly FlowLayoutPanel _products = new();
     readonly FlowLayoutPanel _tests = new();
@@ -372,10 +373,15 @@ sealed class MainForm : Form
             "Xem điểm đã xác minh và bài đã gửi lên máy chủ.",
             Ui.Warning,
             () => _ = ShowCompleted()));
+        var homeBody = new Panel { Dock = DockStyle.Fill, BackColor = Ui.PageBg };
+        tiles.Dock = DockStyle.Fill;
+        _radar.Dock = DockStyle.Top;
+        homeBody.Controls.Add(tiles);
+        homeBody.Controls.Add(_radar);
         _home.Controls.Add(Ui.StackPage(
             "Trang chủ",
-            "Chọn một ô bên dưới. Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.",
-            tiles));
+            "Radar năng lực (Word · Excel · PowerPoint) để tự đánh giá. Bài mới tách Luyện tập (trợ giảng Q-Matrix) và Thi (khóa gợi ý, đếm giờ).",
+            homeBody));
     }
 
     void BuildCatalog()
@@ -1234,6 +1240,7 @@ sealed class MainForm : Form
     void ShowHome()
     {
         ShowPage(HubPage.Home, "MOS-KulKul");
+        _ = _radar.LoadAsync();
     }
 
     void ShowCatalog()
