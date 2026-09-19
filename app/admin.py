@@ -11,6 +11,13 @@ from fastapi.templating import Jinja2Templates
 from app.accounts import create_account, list_classes
 from app.db import cursor
 from app.insights import annotate_sessions, bank_reliability, skill_gaps
+from app.pedagogy import (
+    class_first_attempt_fail,
+    class_hint_dependency,
+    class_unresolved_stuck,
+    pedagogy_alerts,
+    teacher_footprint,
+)
 from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
@@ -35,6 +42,10 @@ def _session_user(request: Request) -> dict | None:
 
 def _staff(user: dict | None) -> bool:
     return bool(user and user.get("role") in ("admin", "teacher", "leadership"))
+
+
+def _leaders(user: dict | None) -> bool:
+    return bool(user and user.get("role") in ("admin", "leadership"))
 
 
 def _jsonish(value):
@@ -354,6 +365,35 @@ def admin_bank(request: Request):
         request,
         "admin_bank.html",
         _ctx(request, user, {"nav": "bank", "bank": bank_reliability()}),
+    )
+
+
+@router.get("/quan-tri/su-pham", response_class=HTMLResponse)
+def admin_pedagogy(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    hours = request.query_params.get("gio") or "24"
+    hours_n = int(hours) if str(hours).isdigit() else 24
+    hours_n = max(1, min(hours_n, 168))
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_pedagogy.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "pedagogy",
+                "hours": hours_n,
+                "hints": class_hint_dependency(hours_n),
+                "first_fail": class_first_attempt_fail(hours_n),
+                "stuck": class_unresolved_stuck(hours_n),
+                "teachers": teacher_footprint(hours_n),
+                "alerts": pedagogy_alerts(hours_n),
+            },
+        ),
     )
 
 

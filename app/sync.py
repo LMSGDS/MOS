@@ -154,4 +154,23 @@ def store_q_matrix(attempt_id: str, scored: dict | None) -> int:
                 ),
             )
             written += 1
+        if written:
+            cur.execute(
+                """
+                INSERT INTO first_attempt_q (
+                  attempt_id, locate_fail, tool_fail, configure_fail, fail_count, item_count
+                )
+                SELECT
+                  %s,
+                  COUNT(*) FILTER (WHERE locate = 'fail'),
+                  COUNT(*) FILTER (WHERE tool = 'fail'),
+                  COUNT(*) FILTER (WHERE configure = 'fail'),
+                  COUNT(*) FILTER (WHERE status = 'fail'),
+                  COUNT(*)
+                FROM q_matrix_results
+                WHERE attempt_id = %s
+                ON CONFLICT (attempt_id) DO NOTHING
+                """,
+                (attempt_id, attempt_id),
+            )
     return written

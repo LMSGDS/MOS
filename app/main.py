@@ -92,6 +92,14 @@ async def frame_same_origin(request, call_next):
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+    path = request.url.path
+    if request.method == "GET" and path.startswith("/quan-tri"):
+        user = request.session.get("user")
+        if isinstance(user, dict) and user.get("username"):
+            from app.stafflog import touch_from_username
+
+            event = "live_open" if "giam-sat" in path else "page"
+            touch_from_username(user["username"], event, path)
     return response
 
 
@@ -200,8 +208,14 @@ async def api_login(request: Request):
         return JSONResponse({"ok": False, "error": "sai"}, status_code=401)
     from app.accounts import record_login
 
-    record_login(user["username"], "web")
+    row = record_login(user["username"], "web")
     request.session["user"] = user
+    if row and row.get("role") in ("admin", "teacher", "leadership") and row.get("id"):
+        from app.stafflog import open_staff_session
+
+        sid = open_staff_session(int(row["id"]))
+        if sid:
+            request.session["staff_session_id"] = sid
     return {"ok": True, "user": user, "program": resolve(chuong)}
 
 
@@ -286,8 +300,14 @@ def login(
         return RedirectResponse("/dang-nhap?loi=sai", status_code=303)
     from app.accounts import record_login
 
-    record_login(user["username"], "web")
+    row = record_login(user["username"], "web")
     request.session["user"] = user
+    if row and row.get("role") in ("admin", "teacher", "leadership") and row.get("id"):
+        from app.stafflog import open_staff_session
+
+        sid = open_staff_session(int(row["id"]))
+        if sid:
+            request.session["staff_session_id"] = sid
     dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
     dest += f"{'&' if '?' in dest else '?'}chuong-trinh={normalize(chuong_trinh)}"
     return RedirectResponse(dest, status_code=303)

@@ -7,6 +7,14 @@ from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
 from app.insights import bank_reliability, program_radar, skill_gaps
+from app.pedagogy import (
+    class_first_attempt_fail,
+    class_hint_dependency,
+    class_unresolved_stuck,
+    pedagogy_alerts,
+    teacher_footprint,
+)
+from app.stafflog import record_staff_event
 from app.progress import (
     LEVELS,
     STATUS_LABELS,
@@ -119,6 +127,49 @@ async def v1_assign(request: Request, class_id: int):
             raise HTTPException(status_code=404, detail="class")
     count = assign_class_projects(class_id, [str(i) for i in ids], assigned_by=row["id"])
     return {"ok": True, "assigned": count, "class_id": class_id}
+
+
+@router.post("/staff/heartbeat")
+async def v1_staff_heartbeat(request: Request):
+    user = bearer_user(request) if request.headers.get("authorization") else None
+    if user is None:
+        sess = request.session.get("user")
+        user = sess if isinstance(sess, dict) else None
+    if not user or not user.get("username"):
+        raise HTTPException(status_code=401, detail="token")
+    row = _require_user(user)
+    if not _staff(row):
+        raise HTTPException(status_code=403, detail="forbidden")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    path = str((body or {}).get("path") or "/quan-tri/giam-sat")
+    event = "heartbeat"
+    if (body or {}).get("live"):
+        event = "heartbeat"
+        if "giam-sat" not in path:
+            path = "/quan-tri/giam-sat"
+    record_staff_event(row["id"], event, path, request.session.get("staff_session_id"))
+    return {"ok": True}
+
+
+@router.get("/insights/pedagogy")
+def v1_pedagogy(request: Request, hours: int = 24):
+    user = bearer_user(request)
+    row = _require_user(user)
+    if row.get("role") not in ("admin", "leadership"):
+        raise HTTPException(status_code=403, detail="forbidden")
+    hours = max(1, min(int(hours or 24), 168))
+    return {
+        "ok": True,
+        "hours": hours,
+        "hints": class_hint_dependency(hours),
+        "first_fail": class_first_attempt_fail(hours),
+        "stuck": class_unresolved_stuck(hours),
+        "teachers": teacher_footprint(hours),
+        "alerts": pedagogy_alerts(hours),
+    }
 
 
 @router.get("/insights/gaps")

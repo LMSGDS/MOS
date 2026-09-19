@@ -313,3 +313,35 @@ CREATE INDEX IF NOT EXISTS idx_progress_status ON exercise_progress(status);
 CREATE INDEX IF NOT EXISTS idx_progress_events_user ON progress_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skill_progress_user ON skill_progress(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_evaluations_level ON student_evaluations(level);
+
+CREATE TABLE IF NOT EXISTS first_attempt_q (
+  attempt_id      TEXT PRIMARY KEY REFERENCES attempts(id) ON DELETE CASCADE,
+  locate_fail     INTEGER NOT NULL DEFAULT 0,
+  tool_fail       INTEGER NOT NULL DEFAULT 0,
+  configure_fail  INTEGER NOT NULL DEFAULT 0,
+  fail_count      INTEGER NOT NULL DEFAULT 0,
+  item_count      INTEGER NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS staff_sessions (
+  id            TEXT PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at      TIMESTAMPTZ,
+  client        TEXT NOT NULL DEFAULT 'web'
+);
+
+CREATE TABLE IF NOT EXISTS staff_events (
+  id            BIGSERIAL PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  session_id    TEXT,
+  event         TEXT NOT NULL,
+  path          TEXT NOT NULL DEFAULT '',
+  detail        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_events_user ON staff_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_user ON staff_sessions(user_id, last_seen_at DESC);

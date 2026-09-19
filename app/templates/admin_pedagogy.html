@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Chỉ số sư phạm lớp{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Chỉ số sư phạm — không phải camera</h1>
+  <p class="lead">Telemetry hành vi cả lớp: gợi ý sớm, sai lần đầu, kẹt không được cứu, và dấu vết số của giáo viên trên web quản trị (phiên + tab Giám sát, không ghi phím).</p>
+  {% include "admin_nav.html" %}
+  <form method="get" action="/quan-tri/su-pham" class="live-filter">
+    <label>Cửa sổ
+      <select name="gio" onchange="this.form.submit()">
+        <option value="8" {% if hours == 8 %}selected{% endif %}>8 giờ</option>
+        <option value="24" {% if hours == 24 %}selected{% endif %}>24 giờ</option>
+        <option value="168" {% if hours == 168 %}selected{% endif %}>7 ngày</option>
+      </select>
+    </label>
+  </form>
+
+  <h2 style="margin-top:20px;font-size:18px">Cảnh báo tự động</h2>
+  {% for a in alerts %}
+  <p class="alert {% if a.risk == 'cao' %}heat-red{% endif %}">
+    <strong>{{ a.class_name }}</strong> · {{ a.teacher or "—" }} · mức {{ a.risk }} — {{ a.summary }}
+  </p>
+  {% else %}
+  <p class="hint">Chưa có lớp vượt ngưỡng kết hợp (gợi ý ≥80%, sai lần 1 ≥70%, kẹt ≥40%, hoặc giáo viên 0 heartbeat giám sát).</p>
+  {% endfor %}
+
+  <h2 style="margin-top:24px;font-size:18px">1. Lạm dụng Gợi ý (≤ 30 giây)</h2>
+  <table class="grid">
+    <thead><tr><th>Lớp</th><th>Giáo viên</th><th>HS</th><th>Bấm gợi ý sớm</th><th>Tỷ lệ</th><th>Đọc</th></tr></thead>
+    <tbody>
+      {% for r in hints %}
+      <tr class="{% if r.alert %}heat-red{% endif %}">
+        <td>{{ r.class_name }}</td><td>{{ r.teacher or "—" }}</td>
+        <td>{{ r.students }}</td><td>{{ r.early_hint }}</td>
+        <td>{{ "%.0f"|format(r.rate) }}%</td><td>{{ r.reading }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Chưa có phiên làm bài.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:24px;font-size:18px">2. Thất bại lần thử đầu (Q-Matrix q1)</h2>
+  <table class="grid">
+    <thead><tr><th>Lớp</th><th>Giáo viên</th><th>HS</th><th>Sai định vị/công cụ lần 1</th><th>Tỷ lệ</th><th>Đọc</th></tr></thead>
+    <tbody>
+      {% for r in first_fail %}
+      <tr class="{% if r.alert %}heat-red{% endif %}">
+        <td>{{ r.class_name }}</td><td>{{ r.teacher or "—" }}</td>
+        <td>{{ r.students }}</td><td>{{ r.first_fail }}</td>
+        <td>{{ "%.0f"|format(r.rate) }}%</td><td>{{ r.reading }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Chưa có lần chấm đầu.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:24px;font-size:18px">3. Bế tắc không được giải quyết (≥ 10 phút im lặng rồi nộp điểm thấp)</h2>
+  <table class="grid">
+    <thead><tr><th>Lớp</th><th>Giáo viên</th><th>Bài nộp</th><th>Kẹt không cứu</th><th>Tỷ lệ</th><th>Đọc</th></tr></thead>
+    <tbody>
+      {% for r in stuck %}
+      <tr class="{% if r.alert %}heat-red{% endif %}">
+        <td>{{ r.class_name }}</td><td>{{ r.teacher or "—" }}</td>
+        <td>{{ r.submits }}</td><td>{{ r.unresolved }}</td>
+        <td>{{ "%.0f"|format(r.rate) }}%</td><td>{{ r.reading }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Chưa có bài nộp.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:24px;font-size:18px">4. Dấu vết số giáo viên (web, không keylogger)</h2>
+  <table class="grid">
+    <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Phút phiên</th><th>Mở giám sát</th><th>Heartbeat</th><th>Đọc</th></tr></thead>
+    <tbody>
+      {% for t in teachers %}
+      <tr class="{% if t.alert %}heat-red{% endif %}">
+        <td>{{ t.teacher }}</td><td>{{ t.role }}</td>
+        <td>{{ t.session_min }}</td>
+        <td>{% if t.live_open %}Có{% else %}Không{% endif %}</td>
+        <td>{{ t.heartbeats }}</td><td>{{ t.reading }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Chưa có giáo viên.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

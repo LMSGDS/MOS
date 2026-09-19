@@ -334,6 +334,7 @@ static class ExamHub
         ExamSession.LocalPath = local;
         ExamSession.RubricVersion = chosen.RubricVersion;
         ExamSession.Program = chosen.Program;
+        ExamSession.OpenedUtc = DateTime.UtcNow;
     }
 
     static async Task LoadRubricAsync(string projectId, string dir)

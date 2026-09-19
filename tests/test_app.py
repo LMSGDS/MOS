@@ -195,7 +195,8 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.18.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.19.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "Q-Matrix" in (root / "SkillReview.cs").read_text(encoding="utf-8")
     assert "LocalExamStore" in (root / "ExamHub.cs").read_text(encoding="utf-8")
