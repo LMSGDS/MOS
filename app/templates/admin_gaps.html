@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Lỗ hổng kiến thức{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Bản đồ lỗ hổng kiến thức</h1>
+  <p class="lead">Telemetry Q-Matrix từ MOS-KulKul — Tổ chuyên môn điều chỉnh giáo án theo dữ liệu, không dạy dàn trải.</p>
+  {% include "admin_nav.html" %}
+  <form method="get" action="/quan-tri/lo-hong" class="live-filter">
+    <label>Lớp
+      <select name="lop" onchange="this.form.submit()">
+        <option value="0" {% if class_id == 0 %}selected{% endif %}>Tất cả lớp</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Lớp</th>
+        <th>Chuyên đề</th>
+        <th>Bài</th>
+        <th>Sai / mẫu</th>
+        <th>Tỷ lệ sai</th>
+        <th>Định vị</th>
+        <th>Công cụ</th>
+        <th>Cấu hình</th>
+        <th>Gợi ý giảng dạy</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in gaps %}
+      <tr class="heat-{{ g.heat }}">
+        <td>{{ g.class_name }}</td>
+        <td>{{ g.skill }}</td>
+        <td>{{ g.title }}</td>
+        <td>{{ g.fails }}/{{ g.n }}</td>
+        <td><strong>{{ "%.0f"|format(g.fail_pct) }}%</strong></td>
+        <td>{{ g.locate_fail }}</td>
+        <td>{{ g.tool_fail }}</td>
+        <td>{{ g.configure_fail }}</td>
+        <td>{{ g.action or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">Chưa đủ bài nộp để vẽ bản đồ.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

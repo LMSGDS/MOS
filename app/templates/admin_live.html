@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Giám sát phòng thi{% endblock %}
+{% block title %}Giám sát phòng thực hành{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
-  <h1>Giám sát phòng thi</h1>
-  <p class="lead">Phiên MOS-KulKul đồng bộ lên PostgreSQL. Nộp bài làm hàng giáo viên chớp sáng, không cần tải lại trang.</p>
+  <h1>Giám sát phòng thực hành</h1>
+  <p class="lead">Lưới thời gian thực: tiến độ cả lớp, cảnh báo khi học sinh kẹt quá lâu hoặc liên tục chọn sai công cụ.</p>
   {% include "admin_nav.html" %}
   <form method="get" action="/quan-tri/giam-sat" class="live-filter">
     <label>Lớp
@@ -15,72 +15,80 @@
       </select>
     </label>
   </form>
-  <p class="hint" id="live-status">Đang chờ sự kiện nộp bài…</p>
-  <table class="grid" id="live-table">
-    <thead>
-      <tr>
-        <th>Học sinh</th>
-        <th>Bài</th>
-        <th>Trạng thái</th>
-        <th>Tiến trình</th>
-        <th>Điểm</th>
-        <th>Cập nhật</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in sessions %}
-      <tr data-session="{{ s.session_id }}">
-        <td>{{ s.student }}{% if s.student_code %} <span class="hint">{{ s.student_code }}</span>{% endif %}</td>
-        <td>{{ s.title }}</td>
-        <td class="live-status">{{ s.status }}</td>
-        <td>
-          <span class="bar"><span style="width: {{ s.progress_pct or 0 }}%"></span></span>
-          <span class="live-progress">{{ s.progress_pct or 0 }}%</span>
-        </td>
-        <td class="live-score">{% if s.verified_score is not none %}{{ s.verified_score }}{% elif s.score is not none %}{{ s.score }}{% else %}—{% endif %}</td>
-        <td class="live-updated">{% if s.updated_at.strftime is defined %}{{ s.updated_at.strftime('%d/%m %H:%M') }}{% else %}{{ s.updated_at }}{% endif %}</td>
-      </tr>
-      {% else %}
-      <tr class="empty-row"><td colspan="6">Chưa có phiên đang mở.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <p class="hint" id="live-status">Đang chờ sự kiện…</p>
+  <div id="live-alerts" class="alert-stack">
+    {% for s in sessions if s.alert %}
+    <p class="alert live-alert" data-alert="{{ s.session_id }}">{{ s.student }} — {% for a in s.alerts %}{{ a.label }}{% if not loop.last %}; {% endif %}{% endfor %}</p>
+    {% endfor %}
+  </div>
+  <div class="proctor-grid" id="live-grid">
+    {% for s in sessions %}
+    <article class="proctor-card{% if s.alert %} has-alert{% endif %}{% if s.status == 'SUBMITTED' %} is-done{% endif %}" data-session="{{ s.session_id }}">
+      <h3>{{ s.student }}{% if s.student_code %} <span class="hint">{{ s.student_code }}</span>{% endif %}</h3>
+      <p class="proctor-exam">{{ s.title }}</p>
+      <p class="live-status">{{ s.status }}{% if s.mode == 'testing' %} · Thi{% else %} · Luyện tập{% endif %}</p>
+      <p><span class="bar"><span style="width: {{ s.progress_pct or 0 }}%"></span></span> <span class="live-progress">{{ s.progress_pct or 0 }}%</span></p>
+      <p class="live-score">Điểm: {% if s.verified_score is not none %}{{ s.verified_score }}{% elif s.score is not none %}{{ s.score }}{% else %}—{% endif %}</p>
+      <p class="live-updated">{% if s.updated_at.strftime is defined %}{{ s.updated_at.strftime('%d/%m %H:%M') }}{% else %}{{ s.updated_at }}{% endif %}</p>
+      <p class="proctor-flags">{% for a in s.alerts %}<span class="badge badge-alert">{{ a.label }}</span>{% endfor %}</p>
+    </article>
+    {% else %}
+    <p class="empty-row">Chưa có phiên đang mở.</p>
+    {% endfor %}
+  </div>
 </section>
 <script>
 (function () {
   var classId = {{ class_id|int }};
-  var table = document.getElementById("live-table").tBodies[0];
+  var grid = document.getElementById("live-grid");
   var statusEl = document.getElementById("live-status");
-  function rowFor(id) {
-    return table.querySelector('tr[data-session="' + id + '"]');
+  var alerts = document.getElementById("live-alerts");
+  function cardFor(id) { return grid.querySelector('[data-session="' + id + '"]'); }
+  function setAlerts(card, list) {
+    var box = card.querySelector(".proctor-flags");
+    box.innerHTML = "";
+    (list || []).forEach(function (a) {
+      var span = document.createElement("span");
+      span.className = "badge badge-alert";
+      span.textContent = a.label || a.code;
+      box.appendChild(span);
+    });
+    card.classList.toggle("has-alert", !!(list && list.length));
   }
   function upsert(ev) {
     if (!ev || !ev.session_id) return;
-    var empty = table.querySelector(".empty-row");
+    var empty = grid.querySelector(".empty-row");
     if (empty) empty.remove();
-    var row = rowFor(ev.session_id);
-    if (!row) {
-      row = table.insertRow(0);
-      row.setAttribute("data-session", ev.session_id);
-      row.innerHTML = "<td></td><td></td><td class='live-status'></td><td><span class='bar'><span></span></span> <span class='live-progress'></span></td><td class='live-score'></td><td class='live-updated'></td>";
-      row.cells[0].textContent = ev.student || ev.student_id || "";
-      row.cells[1].textContent = ev.title || ev.exam_id || "";
+    var card = cardFor(ev.session_id);
+    if (!card) {
+      card = document.createElement("article");
+      card.className = "proctor-card";
+      card.setAttribute("data-session", ev.session_id);
+      card.innerHTML = "<h3></h3><p class='proctor-exam'></p><p class='live-status'></p><p><span class='bar'><span></span></span> <span class='live-progress'></span></p><p class='live-score'></p><p class='live-updated'></p><p class='proctor-flags'></p>";
+      grid.prepend(card);
     }
-    row.querySelector(".live-status").textContent = ev.status || "";
+    card.querySelector("h3").textContent = ev.student || ev.student_id || "";
+    card.querySelector(".proctor-exam").textContent = ev.title || ev.exam_id || "";
+    card.querySelector(".live-status").textContent = (ev.status || "") + (ev.mode === "testing" ? " · Thi" : " · Luyện tập");
     var pct = ev.progress_pct == null ? 0 : ev.progress_pct;
-    row.querySelector(".bar span").style.width = pct + "%";
-    row.querySelector(".live-progress").textContent = pct + "%";
-    row.querySelector(".live-score").textContent = ev.score == null || ev.score === "" ? "—" : ev.score;
-    row.querySelector(".live-updated").textContent = ev.updated_at || "";
-    if (ev.type === "submit") {
-      row.classList.remove("just-submitted");
-      void row.offsetWidth;
-      row.classList.add("just-submitted");
-      statusEl.textContent = "Đã nộp: " + (ev.student || "") + " — " + (ev.title || ev.exam_id || "");
+    card.querySelector(".bar span").style.width = pct + "%";
+    card.querySelector(".live-progress").textContent = pct + "%";
+    card.querySelector(".live-score").textContent = "Điểm: " + (ev.score == null || ev.score === "" ? "—" : ev.score);
+    card.querySelector(".live-updated").textContent = ev.updated_at || "";
+    setAlerts(card, ev.alerts);
+    if (ev.status === "SUBMITTED") {
+      card.classList.add("is-done", "just-submitted");
+      statusEl.textContent = "Đã nộp: " + (ev.student || "");
+    }
+    if (ev.alerts && ev.alerts.length) {
+      var line = document.createElement("p");
+      line.className = "alert live-alert";
+      line.textContent = (ev.student || "") + " — " + ev.alerts.map(function (a) { return a.label || a.code; }).join("; ");
+      alerts.prepend(line);
     }
   }
   var src = new EventSource("/api/v1/classes/" + classId + "/live");
-  src.onopen = function () { statusEl.textContent = "Trực tuyến — chờ học sinh nộp bài."; };
+  src.onopen = function () { statusEl.textContent = "Trực tuyến — lưới lớp đang cập nhật."; };
   src.onerror = function () { statusEl.textContent = "Mất kết nối trực tuyến, đang thử lại…"; };
   src.onmessage = function (msg) {
     try { upsert(JSON.parse(msg.data)); } catch (e) {}
