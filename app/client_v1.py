@@ -556,7 +556,7 @@ async def v1_start_attempt(request: Request):
 
     if row.get("role") == "student":
         allowed = student_project_ids(row["id"])
-        if allowed and project_id not in allowed:
+        if project_id not in allowed:
             raise HTTPException(status_code=403, detail="not_assigned")
     cfg = assignment_for(row["id"], project_id)
     if cfg:

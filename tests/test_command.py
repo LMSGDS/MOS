@@ -61,6 +61,21 @@ def test_csv_import_join_and_bulk_reset(client):
     engine = admin.get("/quan-tri/bai-tap")
     assert "Cỗ máy giao bài" in engine.text
     assert "Chỉ mạng LAN" in engine.text
+    token = _token(client, "hocsinh")
+    catalog = client.get(
+        "/api/v1/projects",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"program": "word"},
+    ).json()
+    ids = [p["id"] for p in catalog["projects"]]
+    assert "word-objective-1-1" in ids
+    assert "word-mail-merge" not in ids
+    blocked = client.post(
+        "/api/v1/attempts",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "word-mail-merge", "mode": "training"},
+    )
+    assert blocked.status_code == 403
 
 
 def test_lan_lock_and_adaptive_rule(client):

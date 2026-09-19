@@ -77,7 +77,7 @@ def test_projects_download_attempt_telemetry_submit(client):
     projects = client.get("/api/v1/projects", headers=headers, params={"program": "word"}).json()
     assert projects["ok"] is True
     ids = [p["id"] for p in projects["projects"]]
-    assert "word-mail-merge" in ids
+    assert "word-mail-merge" not in ids
     assert "word-objective-1-1" in ids
     assert "word-objective-1-2" in ids
     assert "word-objective-1-3" in ids
@@ -87,13 +87,13 @@ def test_projects_download_attempt_telemetry_submit(client):
     assert "word-objective-4-2a" in ids
     assert "word-objective-5-1" in ids
     assert "word-objective-6-2" in ids
-    blob = client.get("/api/v1/projects/word-mail-merge/file", headers=headers)
+    blob = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers)
     assert blob.status_code == 200
     assert blob.content[:2] == b"PK"
     started = client.post(
         "/api/v1/attempts",
         headers=headers,
-        json={"project_id": "word-mail-merge", "mode": "testing"},
+        json={"project_id": "word-objective-1-1", "mode": "testing"},
     )
     assert started.status_code == 200
     attempt_id = started.json()["attempt_id"]
@@ -128,7 +128,7 @@ def test_admin_dashboard_staff_only(client):
     teacher.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"})
     page = teacher.get("/quan-tri")
     assert page.status_code == 200
-    assert "Bảng điều khiển MOS-KulKul" in page.text
+    assert "Trung tâm chỉ huy MOS" in page.text
     assert "10A1" in page.text
     assert "Học sinh" in page.text
     assert "Bằng chứng thao tác" in page.text
