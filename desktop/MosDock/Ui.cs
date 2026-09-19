@@ -564,10 +564,11 @@ static class Ui
     {
         var bar = new Panel
         {
-            Height = 40,
+            Height = 44,
+            MinimumSize = new Size(0, 40),
             BackColor = BannerBg,
-            Margin = new Padding(0, 0, 0, 0),
-            Padding = new Padding(10, 6, 12, 6),
+            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(10, 8, 12, 8),
         };
         RoundControl(bar, 10);
         var icon = new Panel
@@ -582,11 +583,23 @@ static class Ui
             Text = text,
             Font = SmallFont,
             ForeColor = Text,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             TextAlign = ContentAlignment.MiddleLeft,
-            AutoEllipsis = true,
+            AutoEllipsis = false,
             UseMnemonic = false,
         };
+        BindWrap(msg, 4);
+        void FitBar(object? _, EventArgs e)
+        {
+            var h = Math.Max(40, msg.Height + bar.Padding.Vertical);
+            if (bar.Height != h)
+            {
+                bar.Height = h;
+            }
+        }
+
+        bar.Resize += FitBar;
+        msg.SizeChanged += FitBar;
         bar.Controls.Add(msg);
         bar.Controls.Add(icon);
         return bar;
@@ -690,10 +703,11 @@ static class Ui
             Font = SmallFont,
             ForeColor = Muted,
             AutoSize = false,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             UseMnemonic = false,
             Cursor = Cursors.Hand,
         };
+        BindWrap(p, 4);
         inner.Controls.Add(p);
         inner.Controls.Add(h);
         inner.Controls.Add(glyphBox);
@@ -1026,7 +1040,7 @@ static class Ui
 
     public static void FitCards(FlowLayoutPanel list)
     {
-        var w = Math.Max(360, list.ClientSize.Width - 28);
+        var w = Math.Max(LayoutMath.DashCardMin, list.ClientSize.Width - 28);
         foreach (Control child in list.Controls)
         {
             if (Equals(child.Tag, "card"))
@@ -1034,6 +1048,26 @@ static class Ui
                 child.Width = w;
             }
         }
+    }
+
+    /// <summary>flex-wrap analog: tiles keep min width and drop to the next row.</summary>
+    public static void FitWrapRow(FlowLayoutPanel row, int minW, int height)
+    {
+        var inner = Math.Max(minW, row.ClientSize.Width);
+        var cols = LayoutMath.DashColumns(inner);
+        var cardW = LayoutMath.DashCardWidth(inner);
+        var gap = LayoutMath.DashGap;
+        foreach (Control child in row.Controls)
+        {
+            child.Dock = DockStyle.None;
+            child.Width = Math.Max(minW, cardW);
+            child.Height = height;
+            child.Margin = new Padding(0, 0, gap, gap);
+        }
+
+        var n = row.Controls.Count;
+        var lines = Math.Max(1, (n + cols - 1) / cols);
+        row.Height = lines * (height + gap);
     }
 
     public static string AppName(string id) => id switch
@@ -1355,7 +1389,13 @@ static class Ui
 
     public static Panel EmptyHint(string title, string lead)
     {
-        var box = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var box = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Card,
+            MinimumSize = new Size(160, 150),
+            Padding = new Padding(8, 12, 8, 8),
+        };
         var icon = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Card };
         icon.Paint += (_, e) => PaintEmptyDoc(e.Graphics, icon.ClientRectangle);
         var head = new Label
@@ -1364,7 +1404,7 @@ static class Ui
             Font = HeadFont,
             ForeColor = Text,
             Dock = DockStyle.Top,
-            Height = 24,
+            Height = 28,
             TextAlign = ContentAlignment.TopCenter,
             UseMnemonic = false,
         };
@@ -1377,6 +1417,7 @@ static class Ui
             TextAlign = ContentAlignment.TopCenter,
             UseMnemonic = false,
         };
+        BindWrap(body, 4);
         box.Controls.Add(body);
         box.Controls.Add(head);
         box.Controls.Add(icon);

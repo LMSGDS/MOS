@@ -3,8 +3,7 @@ using System.Drawing.Drawing2D;
 namespace MosDock;
 
 /// <summary>
-/// Bảng điều khiển Trang chủ: tiến độ, Word/Excel/PowerPoint, bài dở và 3 bài gần nhất.
-/// Dock Fill — lấp cửa sổ 1080×700, không để khoảng trống kiểu empty-state.
+/// Trang chủ: wrap cards at 1200 / 900 / 1-col, never clip titles or overlap the radar.
 /// </summary>
 sealed class HomeDash : Panel
 {
@@ -17,6 +16,11 @@ sealed class HomeDash : Panel
         ["xuat_sac"] = "Xuất sắc",
     };
 
+    readonly FlowLayoutPanel _page = new();
+    readonly FlowLayoutPanel _apps = new();
+    readonly FlowLayoutPanel _widgets = new();
+    readonly Panel _head;
+    readonly Label _title = new();
     readonly Label _hello = new();
     readonly Label _bestValue = new();
     readonly Label _bestHint = new();
@@ -24,6 +28,8 @@ sealed class HomeDash : Panel
     readonly Label _doneHint = new();
     readonly Label _openValue = new();
     readonly Label _openHint = new();
+    readonly FlowLayoutPanel _stats = new();
+    readonly Panel _radarHost = new();
     readonly RadarView _radar = new();
     readonly Label _resumeTitle = new();
     readonly Label _resumeLead = new();
@@ -32,6 +38,7 @@ sealed class HomeDash : Panel
     readonly Panel _recentHost = new();
     readonly FlowLayoutPanel _recent = new();
     MosAttempt? _resume;
+    bool _fitting;
 
     public Action<string>? OpenProgram { get; set; }
     public Action? OpenResumeList { get; set; }
@@ -42,6 +49,7 @@ sealed class HomeDash : Panel
     {
         Dock = DockStyle.Fill;
         BackColor = Ui.PageBg;
+        AutoScroll = true;
         Padding = Padding.Empty;
 
         _resumeGo = Ui.PrimaryBtn("Tiếp tục", 120);
@@ -58,24 +66,49 @@ sealed class HomeDash : Panel
             }
         };
 
+        _page.FlowDirection = FlowDirection.TopDown;
+        _page.WrapContents = false;
+        _page.AutoSize = false;
+        _page.BackColor = Ui.PageBg;
+        _page.Margin = Padding.Empty;
+
+        _apps.FlowDirection = FlowDirection.LeftToRight;
+        _apps.WrapContents = true;
+        _apps.AutoSize = false;
+        _apps.BackColor = Ui.PageBg;
+        _apps.Margin = Padding.Empty;
+
+        _widgets.FlowDirection = FlowDirection.LeftToRight;
+        _widgets.WrapContents = true;
+        _widgets.AutoSize = false;
+        _widgets.BackColor = Ui.PageBg;
+        _widgets.Margin = Padding.Empty;
+
         var banner = Ui.InfoBanner(
             "Đề MOS mở trên Microsoft Office đã cài trên máy — không dùng Office Online.");
-        banner.Dock = DockStyle.Top;
-        banner.Margin = Padding.Empty;
-
-        var head = Header();
+        banner.Margin = new Padding(0, 0, 0, 8);
+        _head = Header();
         var section = Ui.SectionLabel("Bài mới");
-        section.Dock = DockStyle.Top;
-        section.Margin = Padding.Empty;
-        var apps = AppRow();
-        var main = MainRow();
+        section.Margin = new Padding(0, 4, 0, 6);
 
-        Controls.Add(main);
-        Controls.Add(apps);
-        Controls.Add(section);
-        Controls.Add(head);
-        Controls.Add(banner);
-        Resize += (_, _) => FitRecent();
+        var word = Ui.AppLaunchTile("Word", "Soạn thảo văn bản MOS — Luyện tập hoặc Thi.", Ui.Word, "W", () => OpenProgram?.Invoke("word"));
+        var excel = Ui.AppLaunchTile("Excel", "Bảng tính MOS — Luyện tập hoặc Thi.", Ui.Excel, "X", () => OpenProgram?.Invoke("excel"));
+        var ppt = Ui.AppLaunchTile("PowerPoint", "Trình bày MOS — Luyện tập hoặc Thi.", Ui.Ppt, "P", () => OpenProgram?.Invoke("powerpoint"));
+        _apps.Controls.Add(word);
+        _apps.Controls.Add(excel);
+        _apps.Controls.Add(ppt);
+
+        _widgets.Controls.Add(ProgressCard());
+        _widgets.Controls.Add(ResumeCard());
+        _widgets.Controls.Add(RecentCard());
+
+        _page.Controls.Add(banner);
+        _page.Controls.Add(_head);
+        _page.Controls.Add(section);
+        _page.Controls.Add(_apps);
+        _page.Controls.Add(_widgets);
+        Controls.Add(_page);
+        Resize += (_, _) => Relayout();
         ShowLoading();
     }
 
@@ -83,81 +116,45 @@ sealed class HomeDash : Panel
     {
         var box = new Panel
         {
-            Dock = DockStyle.Top,
-            Height = 62,
+            Height = 72,
             BackColor = Ui.PageBg,
-            Padding = new Padding(0, 4, 0, 4),
+            Margin = new Padding(0, 0, 0, 4),
+            Padding = new Padding(0, 6, 0, 4),
         };
-        var title = new Label
-        {
-            Text = "Trang chủ",
-            Font = Ui.TitleFont,
-            ForeColor = Ui.Text,
-            Dock = DockStyle.Top,
-            Height = 34,
-            UseMnemonic = false,
-        };
+        _title.Text = "Trang chủ";
+        _title.Font = Ui.TitleFont;
+        _title.ForeColor = Ui.Text;
+        _title.Dock = DockStyle.Top;
+        _title.UseMnemonic = false;
+        Ui.BindWrap(_title, 6);
         _hello.Font = Ui.BodyFont;
         _hello.ForeColor = Ui.Muted;
-        _hello.Dock = DockStyle.Fill;
+        _hello.Dock = DockStyle.Top;
         _hello.UseMnemonic = false;
+        Ui.BindWrap(_hello, 4);
         box.Controls.Add(_hello);
-        box.Controls.Add(title);
+        box.Controls.Add(_title);
+        void FitHead(object? _, EventArgs e)
+        {
+            var h = box.Padding.Vertical + _title.Height + _hello.Height + 4;
+            if (box.Height != h)
+            {
+                box.Height = Math.Max(64, h);
+            }
+        }
+
+        box.Resize += FitHead;
+        _title.SizeChanged += FitHead;
+        _hello.SizeChanged += FitHead;
         return box;
-    }
-
-    TableLayoutPanel AppRow()
-    {
-        var apps = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            Height = 138,
-            Margin = new Padding(0, 0, 0, 8),
-            ColumnCount = 3,
-            RowCount = 1,
-            BackColor = Ui.PageBg,
-        };
-        apps.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
-        apps.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
-        apps.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.4f));
-        var word = Ui.AppLaunchTile("Word", "Soạn thảo văn bản MOS — Luyện tập hoặc Thi.", Ui.Word, "W", () => OpenProgram?.Invoke("word"));
-        var excel = Ui.AppLaunchTile("Excel", "Bảng tính MOS — Luyện tập hoặc Thi.", Ui.Excel, "X", () => OpenProgram?.Invoke("excel"));
-        var ppt = Ui.AppLaunchTile("PowerPoint", "Trình bày MOS — Luyện tập hoặc Thi.", Ui.Ppt, "P", () => OpenProgram?.Invoke("powerpoint"));
-        word.Margin = new Padding(0, 0, 8, 8);
-        excel.Margin = new Padding(4, 0, 8, 8);
-        ppt.Margin = new Padding(4, 0, 0, 8);
-        word.Dock = excel.Dock = ppt.Dock = DockStyle.Fill;
-        apps.Controls.Add(word, 0, 0);
-        apps.Controls.Add(excel, 1, 0);
-        apps.Controls.Add(ppt, 2, 0);
-        return apps;
-    }
-
-    TableLayoutPanel MainRow()
-    {
-        var main = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 1,
-            BackColor = Ui.PageBg,
-            Padding = new Padding(0, 4, 0, 0),
-        };
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 31));
-        main.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 31));
-        main.Controls.Add(ProgressCard(), 0, 0);
-        main.Controls.Add(ResumeCard(), 1, 0);
-        main.Controls.Add(RecentCard(), 2, 0);
-        return main;
     }
 
     Control ProgressCard()
     {
         var shell = Ui.SoftCard(out var inner);
-        shell.Dock = DockStyle.Fill;
-        shell.Margin = new Padding(0, 0, 8, 0);
+        shell.Margin = new Padding(0, 0, LayoutMath.DashGap, LayoutMath.DashGap);
         inner.Padding = new Padding(14, 12, 12, 12);
+        inner.AutoScroll = false;
 
         var head = new Label
         {
@@ -165,69 +162,64 @@ sealed class HomeDash : Panel
             Font = Ui.HeadFont,
             ForeColor = Ui.Text,
             Dock = DockStyle.Top,
-            Height = 26,
+            Height = 28,
             UseMnemonic = false,
         };
 
-        var body = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 1,
-            RowCount = 2,
-            BackColor = Ui.Card,
-        };
-        body.RowStyles.Add(new RowStyle(SizeType.Percent, 48));
-        body.RowStyles.Add(new RowStyle(SizeType.Percent, 52));
+        _stats.FlowDirection = FlowDirection.LeftToRight;
+        _stats.WrapContents = true;
+        _stats.Dock = DockStyle.Top;
+        _stats.Height = 100;
+        _stats.BackColor = Ui.Card;
+        _stats.Margin = Padding.Empty;
+        _stats.Controls.Add(StatBlock("Điểm cao nhất", _bestValue, _bestHint, Ui.Primary));
+        _stats.Controls.Add(StatBlock("Hoàn thành", _doneValue, _doneHint, Ui.Success));
+        _stats.Controls.Add(StatBlock("Đang làm dở", _openValue, _openHint, Ui.Warning));
 
-        var stats = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            ColumnCount = 3,
-            RowCount = 1,
-            BackColor = Ui.Card,
-        };
-        stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 34));
-        stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
-        stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33));
-        stats.Controls.Add(StatBlock("Điểm cao nhất", _bestValue, _bestHint, Ui.Primary), 0, 0);
-        stats.Controls.Add(StatBlock("Hoàn thành", _doneValue, _doneHint, Ui.Success), 1, 0);
-        stats.Controls.Add(StatBlock("Đang làm dở", _openValue, _openHint, Ui.Warning), 2, 0);
-
-        var radarHost = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Card };
+        _radarHost.Dock = DockStyle.Fill;
+        _radarHost.BackColor = Ui.Card;
+        _radarHost.MinimumSize = new Size(120, 180);
         var radarTitle = new Label
         {
             Text = "Kỹ năng theo chương trình",
             Font = Ui.SmallFont,
             ForeColor = Ui.Muted,
             Dock = DockStyle.Top,
-            Height = 18,
+            Height = 20,
             TextAlign = ContentAlignment.MiddleCenter,
             UseMnemonic = false,
         };
         _radar.Dock = DockStyle.Fill;
-        radarHost.Controls.Add(_radar);
-        radarHost.Controls.Add(radarTitle);
+        _radarHost.Controls.Add(_radar);
+        _radarHost.Controls.Add(radarTitle);
 
-        body.Controls.Add(stats, 0, 0);
-        body.Controls.Add(radarHost, 0, 1);
-        inner.Controls.Add(body);
+        inner.Controls.Add(_radarHost);
+        inner.Controls.Add(_stats);
         inner.Controls.Add(head);
         return shell;
     }
 
     static Panel StatBlock(string label, Label value, Label hint, Color accent)
     {
-        var row = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Card, Padding = new Padding(6, 4, 6, 4) };
+        var row = new Panel
+        {
+            Size = new Size(110, 92),
+            MinimumSize = new Size(90, 84),
+            BackColor = Ui.Card,
+            Padding = new Padding(6, 4, 6, 4),
+            Margin = new Padding(0, 0, 8, 8),
+        };
         var bar = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = accent };
         value.Font = new Font("Segoe UI", 15f, FontStyle.Bold);
         value.ForeColor = Ui.Text;
         value.Dock = DockStyle.Top;
-        value.Height = 24;
+        value.Height = 26;
+        value.AutoEllipsis = true;
         value.UseMnemonic = false;
         hint.Font = Ui.SmallFont;
         hint.ForeColor = Ui.Muted;
         hint.Dock = DockStyle.Fill;
-        hint.AutoEllipsis = true;
+        hint.AutoEllipsis = false;
         hint.UseMnemonic = false;
         var caption = new Label
         {
@@ -235,7 +227,7 @@ sealed class HomeDash : Panel
             Font = Ui.SmallFont,
             ForeColor = Ui.Muted,
             Dock = DockStyle.Top,
-            Height = 16,
+            Height = 18,
             UseMnemonic = false,
         };
         var copy = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Card, Padding = new Padding(8, 0, 0, 0) };
@@ -250,8 +242,7 @@ sealed class HomeDash : Panel
     Control ResumeCard()
     {
         var shell = Ui.SoftCard(out var inner);
-        shell.Dock = DockStyle.Fill;
-        shell.Margin = new Padding(4, 0, 8, 0);
+        shell.Margin = new Padding(0, 0, LayoutMath.DashGap, LayoutMath.DashGap);
         inner.Padding = new Padding(14, 12, 14, 12);
 
         var head = CardHead("Tiếp tục bài", () => OpenResumeList?.Invoke());
@@ -286,8 +277,7 @@ sealed class HomeDash : Panel
     Control RecentCard()
     {
         var shell = Ui.SoftCard(out var inner);
-        shell.Dock = DockStyle.Fill;
-        shell.Margin = new Padding(4, 0, 0, 0);
+        shell.Margin = new Padding(0, 0, 0, LayoutMath.DashGap);
         inner.Padding = new Padding(14, 12, 14, 12);
         _recentHost.Dock = DockStyle.Fill;
         _recentHost.BackColor = Ui.Card;
@@ -324,6 +314,76 @@ sealed class HomeDash : Panel
         return head;
     }
 
+    void Relayout()
+    {
+        if (_fitting)
+        {
+            return;
+        }
+
+        _fitting = true;
+        try
+        {
+            var gutter = VScroll ? SystemInformation.VerticalScrollBarWidth : 0;
+            var inner = Math.Max(LayoutMath.DashCardMin, ClientSize.Width - gutter);
+            var cols = LayoutMath.DashColumns(inner);
+            var cardW = LayoutMath.DashCardWidth(inner);
+            var gap = LayoutMath.DashGap;
+
+            _page.Width = inner;
+            _apps.Width = inner;
+            _widgets.Width = inner;
+            foreach (Control child in _page.Controls)
+            {
+                if (child != _apps && child != _widgets)
+                {
+                    child.Width = inner;
+                }
+            }
+
+            _page.PerformLayout();
+            Ui.FitWrapRow(_apps, LayoutMath.DashCardMin, LayoutMath.DashAppH);
+
+            var statInner = Math.Max(90, cardW - 40);
+            var statWide = statInner >= 340;
+            var statW = statWide ? Math.Max(90, (statInner - 16) / 3) : statInner;
+            foreach (Control stat in _stats.Controls)
+            {
+                stat.Width = statW;
+                stat.Height = 92;
+            }
+
+            _stats.Height = statWide ? 100 : 92 * 3 + 16;
+            var radarH = Math.Max(180, statWide ? 200 : 220);
+            var widgetH = 28 + 16 + _stats.Height + 20 + radarH + 24;
+
+            foreach (Control card in _widgets.Controls)
+            {
+                card.Width = cardW;
+                card.Height = widgetH;
+                card.Margin = new Padding(0, 0, gap, gap);
+            }
+
+            var widgetRows = Math.Max(1, (_widgets.Controls.Count + cols - 1) / cols);
+            _widgets.Height = widgetRows * (widgetH + gap);
+
+            var y = 0;
+            foreach (Control child in _page.Controls)
+            {
+                y += child.Margin.Top + child.Height + child.Margin.Bottom;
+            }
+
+            _page.Height = y;
+            _page.Location = new Point(0, 0);
+            AutoScrollMinSize = new Size(LayoutMath.DashCardMin, y);
+            FitRecent();
+        }
+        finally
+        {
+            _fitting = false;
+        }
+    }
+
     void FitRecent()
     {
         var w = Math.Max(120, _recent.ClientSize.Width);
@@ -350,6 +410,7 @@ sealed class HomeDash : Panel
         _resumeGo.Text = "Tiếp tục";
         _recent.Controls.Clear();
         _recentHost.Controls.Clear();
+        Relayout();
     }
 
     public void ShowError(string message)
@@ -358,6 +419,7 @@ sealed class HomeDash : Panel
         _resumeTitle.Text = "Chưa có dữ liệu";
         _resumeLead.Text = message;
         _resumeGo.Text = "Thử Word";
+        Relayout();
     }
 
     public void Bind(
@@ -413,7 +475,7 @@ sealed class HomeDash : Panel
 
         BindResume(open);
         BindRecent(done);
-        FitRecent();
+        Relayout();
     }
 
     static string OpenHint(int open, int archived)
@@ -467,8 +529,8 @@ sealed class HomeDash : Panel
         if (rows.Count == 0)
         {
             _recentHost.Controls.Add(Ui.EmptyHint(
-                "Bạn chưa hoàn thành bài thi nào",
-                "Các bài thi đã nộp sẽ hiển thị ở đây."));
+                "Bạn chưa hoàn thành bài luyện tập nào.",
+                "Nộp bài xong, điểm và nút Xem Review sẽ hiện ở đây."));
             return;
         }
 

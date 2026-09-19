@@ -14,7 +14,7 @@ sealed class MainForm : Form
     readonly Panel _home = new();
     readonly HomeDash _dash = new();
     readonly Panel _catalog = new();
-    readonly TableLayoutPanel _products = new();
+    readonly FlowLayoutPanel _products = new();
     readonly FlowLayoutPanel _tests = new();
     readonly Panel _resume = new();
     readonly FlowLayoutPanel _resumeList = new();
@@ -120,7 +120,7 @@ sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
         AutoScaleDimensions = new SizeF(96f, 96f);
-        ClientSize = new Size(1080, 700);
+        ClientSize = new Size(1280, 760);
         MinimumSize = new Size(LayoutMath.HubMinW, LayoutMath.HubMinH);
         BackColor = Ui.PageBg;
         Font = Ui.BodyFont;
@@ -383,24 +383,19 @@ sealed class MainForm : Form
         _catalog.Dock = DockStyle.Fill;
         _catalog.BackColor = Ui.PageBg;
         _products.Dock = DockStyle.Top;
-        _products.Height = 108;
-        _products.ColumnCount = 3;
-        _products.RowCount = 1;
+        _products.WrapContents = true;
+        _products.FlowDirection = FlowDirection.LeftToRight;
         _products.BackColor = Ui.PageBg;
         _products.Margin = new Padding(0, 0, 0, 8);
-        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
-        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
-        _products.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.4f));
         var word = Ui.ProgramTile("word", "Word", Ui.Word, "W", () => _ = LoadCatalog("word"));
         var excel = Ui.ProgramTile("excel", "Excel", Ui.Excel, "X", () => _ = LoadCatalog("excel"));
         var ppt = Ui.ProgramTile("powerpoint", "PowerPoint", Ui.Ppt, "P", () => _ = LoadCatalog("powerpoint"));
-        word.Margin = new Padding(0, 0, 8, 8);
-        excel.Margin = new Padding(4, 0, 8, 8);
-        ppt.Margin = new Padding(4, 0, 0, 8);
-        word.Dock = excel.Dock = ppt.Dock = DockStyle.Fill;
-        _products.Controls.Add(word, 0, 0);
-        _products.Controls.Add(excel, 1, 0);
-        _products.Controls.Add(ppt, 2, 0);
+        word.Dock = excel.Dock = ppt.Dock = DockStyle.None;
+        _products.Controls.Add(word);
+        _products.Controls.Add(excel);
+        _products.Controls.Add(ppt);
+        _products.Resize += (_, _) => Ui.FitWrapRow(_products, LayoutMath.DashCardMin, 88);
+        Ui.FitWrapRow(_products, LayoutMath.DashCardMin, 88);
         _tests.Dock = DockStyle.Fill;
         _tests.AutoScroll = true;
         _tests.WrapContents = true;
@@ -2003,8 +1998,8 @@ sealed class MainForm : Form
         }
 
         var wa = Screen.PrimaryScreen?.WorkingArea ?? new Rectangle(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH);
-        var w = Math.Min(980, wa.Width - 40);
-        var h = Math.Min(640, wa.Height - 40);
+        var w = Math.Min(1280, wa.Width - 40);
+        var h = Math.Min(760, wa.Height - 40);
         Bounds = new Rectangle(wa.X + (wa.Width - w) / 2, wa.Y + (wa.Height - h) / 2, w, h);
     }
 

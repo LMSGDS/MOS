@@ -44,14 +44,49 @@ public static class LayoutMath
     public const int SummaryH = 680;
     public const int ExpandedSideW = 340;
     public const int MinWord = 400;
-    public const int HubMinW = 960;
-    public const int HubMinH = 600;
+    /// <summary>Hub window floor for split-screen with Word. Cards wrap before this clips text.</summary>
+    public const int HubMinW = 420;
+    public const int HubMinH = 480;
+    /// <summary>Three dashboard columns when the inner canvas is at least this wide.</summary>
+    public const int DashWide = 1200;
+    /// <summary>Below this, Bài mới / widgets stack to one column (split-screen).</summary>
+    public const int DashStack = 900;
+    public const int DashCardMin = 300;
+    public const int DashGap = 12;
+    public const int DashAppH = 156;
     public const int OverlayMinW = 48;
     public const int OverlayMinH = 48;
     public const int RefIcon = 32;
     public const int RefIconGap = 2;
     public const int RefChromePad = 4;
     public const int OverlayCapPct = 16;
+
+    public static int DashColumns(int innerW)
+    {
+        if (innerW >= DashWide)
+        {
+            return 3;
+        }
+
+        if (innerW >= DashStack)
+        {
+            return 2;
+        }
+
+        return 1;
+    }
+
+    public static int DashCardWidth(int innerW)
+    {
+        var cols = DashColumns(innerW);
+        var span = Math.Max(DashCardMin, innerW);
+        if (cols <= 1)
+        {
+            return span;
+        }
+
+        return Math.Max(DashCardMin, (span - DashGap * (cols - 1)) / cols);
+    }
 
     public static Rect FromScreen(System.Drawing.Rectangle wa) =>
         new(wa.X, wa.Y, wa.Width, wa.Height);

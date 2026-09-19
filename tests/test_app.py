@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.7" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.8" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -258,8 +258,17 @@ def test_windows_sources_include_action_demo():
     assert "EmptyHint" in ui
     assert "PaintEmptyDoc" in ui
     assert "GroupAttempts" in home
-    assert "Bạn chưa hoàn thành bài thi nào" in home
-    assert "Các bài thi đã nộp sẽ hiển thị ở đây" in home
+    assert "Bạn chưa hoàn thành bài luyện tập nào" in home
+    assert "Xem Review sẽ hiện ở đây" in home
+    assert "AutoScroll = true" in home
+    assert "Relayout" in home
+    assert "WrapContents = true" in home
+    assert "DashColumns" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DashWide = 1200" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DashStack = 900" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "HubMinW = 420" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "FitWrapRow" in ui
+    assert "AutoEllipsis = false" in ui
     assert "lần cũ đã gom" in home
     assert "Chưa chấm" in home
     assert "Ui.PercentTrack" in home
@@ -315,7 +324,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.7"' in (
+    assert 'MyAppVersion "1.16.8"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
