@@ -345,3 +345,56 @@ CREATE TABLE IF NOT EXISTS staff_events (
 
 CREATE INDEX IF NOT EXISTS idx_staff_events_user ON staff_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_staff_sessions_user ON staff_sessions(user_id, last_seen_at DESC);
+
+-- Dual-role Micro-LMS: LIS roster + LTI 1.3 Tool Provider (không forum / quiz / luận)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lis_sourced_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lti_sub TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lti_issuer TEXT;
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS lti_context_id TEXT;
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS lti_deployment_id TEXT;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS lti_launch_id TEXT;
+
+CREATE TABLE IF NOT EXISTS lti_platforms (
+  id              SERIAL PRIMARY KEY,
+  name            TEXT NOT NULL DEFAULT '',
+  issuer          TEXT NOT NULL UNIQUE,
+  client_id       TEXT NOT NULL,
+  auth_login_url  TEXT NOT NULL,
+  auth_token_url  TEXT NOT NULL DEFAULT '',
+  jwks_url        TEXT NOT NULL DEFAULT '',
+  jwks_json       JSONB,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lti_deployments (
+  platform_id     INTEGER NOT NULL REFERENCES lti_platforms(id) ON DELETE CASCADE,
+  deployment_id   TEXT NOT NULL,
+  PRIMARY KEY (platform_id, deployment_id)
+);
+
+CREATE TABLE IF NOT EXISTS lti_nonces (
+  state           TEXT PRIMARY KEY,
+  nonce           TEXT NOT NULL,
+  target_link_uri TEXT NOT NULL DEFAULT '',
+  login_hint      TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lti_launches (
+  id              TEXT PRIMARY KEY,
+  user_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  platform_id     INTEGER REFERENCES lti_platforms(id) ON DELETE SET NULL,
+  deployment_id   TEXT NOT NULL DEFAULT '',
+  context_id      TEXT NOT NULL DEFAULT '',
+  resource_link_id TEXT NOT NULL DEFAULT '',
+  project_id      TEXT,
+  lineitem        TEXT NOT NULL DEFAULT '',
+  ags_scopes      JSONB NOT NULL DEFAULT '[]'::jsonb,
+  lti_sub         TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_lti_sub
+  ON users (lti_issuer, lti_sub)
+  WHERE lti_issuer IS NOT NULL AND lti_sub IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_lti_launches_user ON lti_launches(user_id, created_at DESC);

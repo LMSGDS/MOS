@@ -21,6 +21,7 @@ from app.client_v1 import router as client_v1_router
 from app.gitinfo import git_revision
 from app.hooks import router as hooks_router
 from app.live import router as live_router
+from app.lti import router as lti_router
 from app.kulkul_layout import Rect, compute, grow_for_help, measure
 from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
@@ -75,6 +76,7 @@ app.include_router(client_v1_router)
 app.include_router(progress_router)
 app.include_router(live_router)
 app.include_router(hooks_router)
+app.include_router(lti_router)
 app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,
@@ -258,7 +260,24 @@ def home(request: Request):
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
     template = "dock_content.html" if _is_dock(request) else "portal.html"
-    return TEMPLATES.TemplateResponse(request, template, _ctx(request))
+    cards = []
+    if user.get("role") == "student" and user.get("id"):
+        from app.adaptive import adaptive_cards
+
+        cards = adaptive_cards(int(user["id"]))
+    elif user.get("username"):
+        try:
+            from app.adaptive import adaptive_cards
+            from app.db import cursor
+
+            with cursor() as cur:
+                cur.execute("SELECT id, role FROM users WHERE username = %s", (user["username"],))
+                row = cur.fetchone()
+            if row and row.get("role") == "student":
+                cards = adaptive_cards(int(row["id"]))
+        except Exception:
+            cards = []
+    return TEMPLATES.TemplateResponse(request, template, _ctx(request, {"adaptive": cards}))
 
 
 @app.get("/khung/word", response_class=HTMLResponse)

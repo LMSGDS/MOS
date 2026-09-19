@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
+from app.adaptive import adaptive_cards
 from app.insights import bank_reliability, program_radar, skill_gaps
 from app.pedagogy import (
     class_first_attempt_fail,
@@ -197,6 +198,15 @@ def v1_radar(request: Request, user_id: int | None = None):
     target = user_id or row["id"]
     _as_staff_or_self(row, target)
     return {"ok": True, "axes": program_radar(target)}
+
+
+@router.get("/progress/adaptive")
+def v1_adaptive(request: Request, user_id: int | None = None):
+    user = bearer_user(request)
+    row = _require_user(user)
+    target = user_id or row["id"]
+    _as_staff_or_self(row, target)
+    return {"ok": True, "cards": adaptive_cards(target)}
 
 
 @router.get("/classes/{class_id}/roster")

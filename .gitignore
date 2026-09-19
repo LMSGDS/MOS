@@ -11,6 +11,7 @@ id_ecdsa
 .venv/
 __pycache__/
 *.pyc
+data/lti_tool.pem
 data/session.secret
 data/mos.env
 data/git-sync.env

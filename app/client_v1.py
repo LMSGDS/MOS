@@ -966,6 +966,12 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
     )
     store_q_matrix(attempt_id, scored)
     _notify_live({**attempt, "status": "submitted"}, row_user, payload, "submit")
+    try:
+        from app.lti import passback_if_launch
+
+        passback_if_launch(row_user["id"], payload.get("score"), payload.get("max_score") or 100)
+    except Exception:
+        pass
     return {"ok": True, "submission_id": submission_id, "score": payload, "duration_sec": duration}
 
 
