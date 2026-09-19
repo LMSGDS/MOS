@@ -1,5 +1,5 @@
 [Unit]
-Description=Pull MOS from GitHub HTTPS every 10 minutes
+Description=Pull MOS from GitHub HTTPS every 5 minutes
 
 [Timer]
 OnBootSec=1min
