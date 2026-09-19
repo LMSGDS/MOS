@@ -512,3 +512,35 @@ body.exam-running .word-sim-page {
 }
 .skill-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
 .grid a { color: var(--gds-dark); font-weight: 700; text-decoration: none; }
+.live-filter { margin: 12px 0; }
+.q-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 720px) { .q-wrap { grid-template-columns: 1fr; } }
+@keyframes live-flash {
+  0% { background: #bbf7d0; }
+  100% { background: transparent; }
+}
+tr.just-submitted td { animation: live-flash 1.8s ease; }
+.heat-red td, .heat-red { background: #fee2e2; }
+.heat-amber td { background: #fef3c7; }
+.heat-green td { background: #ecfdf5; }
+.proctor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.proctor-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.proctor-card h3 { margin: 0 0 4px; font-size: 16px; }
+.proctor-card.has-alert { border-color: #dc2626; box-shadow: 0 0 0 2px #fecaca; }
+.proctor-card.is-done { border-color: #16a34a; }
+.proctor-card.tone-green { border-color: #16a34a; background: #f0fdf4; }
+.proctor-card.tone-yellow { border-color: #ca8a04; background: #fefce8; box-shadow: 0 0 0 2px #fde68a; }
+.proctor-card.tone-red { border-color: #dc2626; background: #fef2f2; box-shadow: 0 0 0 2px #fecaca; }
+.proctor-exam, .proctor-flags { margin: 4px 0; font-size: 13px; color: var(--muted); }
+.badge-alert { background: #fee2e2; color: #991b1b; margin: 2px 4px 0 0; }
+.alert-stack .live-alert { margin: 6px 0; }

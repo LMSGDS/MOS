@@ -6,6 +6,19 @@
   {% if user.role in ['admin', 'teacher', 'leadership'] %}
   {% include "admin_nav.html" %}
   {% endif %}
+  <form method="post" action="/vao-lop" class="live-filter">
+    <label>Mã vào lớp <input name="ma" required placeholder="A1B2C3" /></label>
+    <button type="submit">Tham gia</button>
+  </form>
+  {% if join_error %}
+  <p class="alert" role="alert">Mã lớp không đúng.</p>
+  {% endif %}
+  {% if adaptive %}
+  <h2 style="margin-top:8px;font-size:18px">Lộ trình thích ứng</h2>
+  {% for c in adaptive %}
+  <p class="alert heat-red"><strong>{{ c.title }}</strong> — {{ c.reason }}</p>
+  {% endfor %}
+  {% endif %}
   {% if not evaluation %}
   <p class="lead">Chưa có dữ liệu bài làm.</p>
   {% else %}

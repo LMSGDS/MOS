@@ -24,78 +24,7 @@ readonly record struct MosAttempt(
     double? Pending,
     double MaxScore,
     string StartedAt,
-    string? SubmittedAt,
-    DateTimeOffset? Started = null)
-{
-    public bool IsOpen => Status is "running" or "in_progress";
-
-    public bool IsRecent(int days = 21) =>
-        Started is null || Started.Value >= DateTimeOffset.Now.AddDays(-days);
-
-    /// <summary>
-    /// Điểm MOS là thang 100. Nếu máy chủ trả điểm 100 nhưng max_score = 10 thì hiện 100/100.
-    /// </summary>
-    public double DisplayMax
-    {
-        get
-        {
-            var max = MaxScore <= 0 ? 100 : MaxScore;
-            if (Score is { } s && s > max && s <= 100.05)
-            {
-                return 100;
-            }
-
-            return max;
-        }
-    }
-
-    public int? ProgressPct
-    {
-        get
-        {
-            var raw = Score ?? Pending;
-            if (raw is null)
-            {
-                return null;
-            }
-
-            var max = DisplayMax;
-            if (max <= 0)
-            {
-                return null;
-            }
-
-            var pct = raw.Value <= 100 && Math.Abs(max - 100) < 0.05
-                ? raw.Value
-                : raw.Value / max * 100;
-            return (int)Math.Clamp(Math.Round(pct), 0, 100);
-        }
-    }
-
-    public string DisplayTitle => string.IsNullOrWhiteSpace(Title) ? Ui.AppName(Program) : Title;
-
-    public string ScoreLabel => Score is { } s
-        ? $"{FormatScore(Math.Min(s, DisplayMax))}/{FormatScore(DisplayMax)}"
-        : "chưa có điểm";
-
-    static string FormatScore(double n) =>
-        Math.Abs(n - Math.Round(n)) < 0.05 ? ((int)Math.Round(n)).ToString() : n.ToString("0.#");
-}
-
-readonly record struct AttemptSets(
-    IReadOnlyList<MosAttempt> Open,
-    int ArchivedOpen,
-    IReadOnlyList<MosAttempt> Submitted);
-
-readonly record struct MosProgress(
-    string Program,
-    double CompletionPct,
-    double? OverallScore,
-    int Assigned,
-    int Started,
-    int Completed,
-    string Level,
-    string Summary);
+    string? SubmittedAt);
 
 /// <summary>
 /// Tải đề MOS từ PostgreSQL API, mở trên Office máy, nộp bài + telemetry.
@@ -170,96 +99,10 @@ static class ExamHub
                 FormatTime(a, "started_at"),
                 a.TryGetProperty("submitted_at", out var sub) && sub.ValueKind is JsonValueKind.String
                     ? sub.GetString()
-                    : null,
-                ReadTime(a, "started_at")));
+                    : null));
         }
 
         return items;
-    }
-
-    public static AttemptSets GroupAttempts(IReadOnlyList<MosAttempt> rows)
-    {
-        static DateTimeOffset When(MosAttempt a) => a.Started ?? DateTimeOffset.MinValue;
-
-        var openAll = rows.Where(a => a.IsOpen).ToList();
-        var latest = openAll
-            .GroupBy(a => string.IsNullOrWhiteSpace(a.ProjectId) ? a.Id : a.ProjectId, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.OrderByDescending(When).First())
-            .OrderByDescending(When)
-            .ToList();
-        var recent = latest.Where(a => a.IsRecent(21)).ToList();
-        if (recent.Count == 0 && latest.Count > 0)
-        {
-            recent = [latest[0]];
-        }
-
-        return new AttemptSets(
-            recent,
-            Math.Max(0, openAll.Count - recent.Count),
-            rows.Where(a => !a.IsOpen).OrderByDescending(When).ToList());
-    }
-
-    public static MosAttempt? FindOpenAttempt(IReadOnlyList<MosAttempt> rows, string projectId)
-    {
-        if (string.IsNullOrWhiteSpace(projectId))
-        {
-            return null;
-        }
-
-        foreach (var attempt in GroupAttempts(rows).Open)
-        {
-            if (string.Equals(attempt.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
-            {
-                return attempt;
-            }
-        }
-
-        return null;
-    }
-
-    public static async Task<MosProgress?> GetProgressAsync(string program)
-    {
-        using var doc = await Portal.GetJsonAsync("/api/v1/progress?program=" + Uri.EscapeDataString(program));
-        if (!doc.RootElement.TryGetProperty("evaluation", out var ev) || ev.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-
-        return new MosProgress(
-            program,
-            GetDoubleOrNull(ev, "completion_pct") ?? 0,
-            GetDoubleOrNull(ev, "overall_score") ?? GetDoubleOrNull(ev, "avg_verified"),
-            (int)(GetDoubleOrNull(ev, "exercises_assigned") ?? 0),
-            (int)(GetDoubleOrNull(ev, "exercises_started") ?? 0),
-            (int)(GetDoubleOrNull(ev, "exercises_completed") ?? 0),
-            ev.TryGetProperty("level", out var lv) ? lv.GetString() ?? "" : "",
-            ev.TryGetProperty("summary", out var sm) ? sm.GetString() ?? "" : "");
-    }
-
-    public static async Task<IReadOnlyDictionary<string, MosProgress>> ListProgramProgressAsync()
-    {
-        var map = new Dictionary<string, MosProgress>(StringComparer.OrdinalIgnoreCase);
-        var ids = new[] { "word", "excel", "powerpoint" };
-        var tasks = ids.Select(async id =>
-        {
-            try
-            {
-                return (id, await GetProgressAsync(id));
-            }
-            catch
-            {
-                return (id, (MosProgress?)null);
-            }
-        });
-        foreach (var (id, row) in await Task.WhenAll(tasks))
-        {
-            if (row is { } progress)
-            {
-                map[id] = progress;
-            }
-        }
-
-        return map;
     }
 
     public static async Task<(bool Ok, string Message)> StartProjectAsync(string program, string projectId, string mode, bool launchWord = true)
@@ -275,6 +118,12 @@ static class ExamHub
 
             ExamSession.Mode = mode is "testing" ? "testing" : "training";
             ExamSession.Program = program;
+            var localRunning = LocalExamStore.FindRunning(chosen.Id);
+            if (localRunning is not null && !string.IsNullOrWhiteSpace(localRunning.AttemptId))
+            {
+                return await ResumeFromLocalAsync(localRunning, chosen, launchWord);
+            }
+
             using var started = await Portal.PostJsonAsync("/api/v1/attempts", new
             {
                 project_id = chosen.Id,
@@ -289,6 +138,7 @@ static class ExamHub
             await LoadRubricAsync(chosen.Id, dir);
             BindSession(chosen, attemptId, local);
             WriteMeta(dir);
+            LocalExamStore.SaveCurrent();
             await TrackAsync("open", new { file = chosen.Filename, program });
             if (launchWord)
             {
@@ -300,6 +150,33 @@ static class ExamHub
         {
             return (false, ex.Message);
         }
+    }
+
+    static async Task<(bool Ok, string Message)> ResumeFromLocalAsync(LocalExamState local, MosProject chosen, bool launchWord)
+    {
+        var dir = Path.Combine(ExamSession.DataDir, "attempts", local.AttemptId);
+        Directory.CreateDirectory(dir);
+        var filename = string.IsNullOrWhiteSpace(chosen.Filename) ? chosen.Id + ".bin" : chosen.Filename;
+        var path = string.IsNullOrWhiteSpace(local.LocalPath) ? Path.Combine(dir, filename) : local.LocalPath;
+        if (!File.Exists(path))
+        {
+            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
+            path = Path.Combine(dir, filename);
+            await File.WriteAllBytesAsync(path, bytes);
+        }
+
+        await LoadRubricAsync(chosen.Id, dir);
+        ExamSession.Mode = local.Mode is "testing" ? "testing" : "training";
+        ExamSession.Program = chosen.Program;
+        BindSession(chosen, local.AttemptId, path);
+        WriteMeta(dir);
+        LocalExamStore.SaveCurrent(local.ProgressPct);
+        if (launchWord)
+        {
+            WordWindow.Launch(chosen.Program, path);
+        }
+
+        return (true, chosen.Title + " (tiếp tục bài đã lưu trên máy)");
     }
 
     public static async Task<string> DemoAllAsync(Action<string>? status = null)
@@ -438,6 +315,7 @@ static class ExamHub
                 attempt.Id,
                 local);
             WriteMeta(dir);
+            LocalExamStore.SaveCurrent();
             WordWindow.Launch(attempt.Program, local);
             return (true, attempt.Title);
         }
@@ -456,6 +334,7 @@ static class ExamHub
         ExamSession.LocalPath = local;
         ExamSession.RubricVersion = chosen.RubricVersion;
         ExamSession.Program = chosen.Program;
+        ExamSession.OpenedUtc = DateTime.UtcNow;
     }
 
     static async Task LoadRubricAsync(string projectId, string dir)
@@ -510,13 +389,15 @@ static class ExamHub
 
         try
         {
-            var snap = SnapshotWork(path);
             await FlushActionsAsync();
             await FlushOrQueueAsync();
+            LocalExamStore.SaveCurrent(pendingSubmit: path);
             using var submitted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/submit",
-                snap,
-                EvidenceFields());
+                path,
+                EvidenceFields(),
+                Portal.SyncHeaders(path));
+            LocalExamStore.MarkSubmitted(ExamSession.AttemptId!);
             var scoreEl = submitted.RootElement.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
                 ? v
@@ -527,13 +408,12 @@ static class ExamHub
         }
         catch (Exception ex)
         {
+            LocalExamStore.SaveCurrent(pendingSubmit: path);
             OfflineQueue.Enqueue(ExamSession.AttemptId!, new
             {
                 events = new object[] { new { skill = "", action = "submit-offline", detail = new { error = ex.Message } } },
             });
-            return (false, LockedFile.IsSharing(ex)
-                ? "Word đang giữ tệp bài làm. MOS đã lưu bản sao và xếp hàng đợi — bấm Nộp bài lại sau 1–2 giây."
-                : "Chưa gửi được, đã xếp hàng đợi: " + ex.Message);
+            return (false, "Chưa gửi được, đã lưu cục bộ và xếp hàng đợi: " + ex.Message);
         }
     }
 
@@ -658,47 +538,25 @@ static class ExamHub
         var snapDir = Path.Combine(Path.GetDirectoryName(ExamSession.LocalPath)!, "snapshots");
         Directory.CreateDirectory(snapDir);
         var snap = Path.Combine(snapDir, DateTime.UtcNow.ToString("yyyyMMddHHmmss") + Path.GetExtension(path));
-        try
-        {
-            OfficeCapture.SaveCopy(program, snap);
-        }
-        catch
-        {
-            // fall through to shared copy
-        }
+        File.Copy(path, snap, overwrite: true);
 
-        if (!File.Exists(snap) || new FileInfo(snap).Length == 0)
-        {
-            try
-            {
-                LockedFile.Copy(path, snap);
-            }
-            catch (Exception ex)
-            {
-                return (false, LockedFile.IsSharing(ex)
-                    ? "Word đang giữ tệp bài làm. Đợi 1–2 giây rồi chấm lại — không cần đóng Word."
-                    : "Không sao chép được bài đang mở: " + ex.Message, []);
-            }
-        }
-
-        (double Verified, double Pending, IReadOnlyList<LocalCriterion> Criteria) local;
-        try
-        {
-            local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
-        }
-        catch (Exception ex)
-        {
-            return (false, "Không đọc được bài Word đang mở: " + ex.Message, []);
-        }
-
+        var local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
         try
         {
             await FlushActionsAsync();
+            LocalExamStore.SaveCurrent(progressPct: (int)Math.Round(local.Verified), pendingCheckpoint: snap, verified: local.Verified, pending: local.Pending);
             using var posted = await Portal.PostFileAsync(
                 $"/api/v1/attempts/{ExamSession.AttemptId}/checkpoints",
                 snap,
-                EvidenceFields());
+                EvidenceFields(),
+                Portal.SyncHeaders(snap));
             var root = posted.RootElement;
+            if (root.TryGetProperty("stale", out var stale) && stale.ValueKind == JsonValueKind.True)
+            {
+                return (true, "Máy chủ giữ bản mới hơn (Last-Write-Wins).", local.Criteria);
+            }
+
+            LocalExamStore.ClearPending(ExamSession.AttemptId!, checkpoint: true, submit: false);
             if (root.TryGetProperty("score", out var scoreEl))
             {
                 var criteria = ParseCriteria(scoreEl);
@@ -713,7 +571,8 @@ static class ExamHub
         }
         catch (Exception ex)
         {
-            var summary = $"{local.Verified}/100 đã xác minh trên máy · {local.Pending} chưa xác minh. {ex.Message}";
+            LocalExamStore.SaveCurrent(progressPct: (int)Math.Round(local.Verified), pendingCheckpoint: snap);
+            var summary = $"{local.Verified}/100 đã xác minh trên máy · {local.Pending} chưa xác minh. Đã lưu cục bộ. {ex.Message}";
             return (true, summary, local.Criteria);
         }
     }
@@ -733,45 +592,10 @@ static class ExamHub
                 c.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "",
                 GetDouble(c, "earned", 0),
                 GetDouble(c, "possible", 0),
-                c.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "")
-            {
-                QTrace = ParseQTrace(c),
-                BreakSkill = c.TryGetProperty("break_skill", out var br) ? br.GetString() ?? "" : "",
-            });
+                c.TryGetProperty("message", out var m) ? m.GetString() ?? "" : ""));
         }
 
         return list;
-    }
-
-    static IReadOnlyList<QNodeHit> ParseQTrace(JsonElement c)
-    {
-        if (!c.TryGetProperty("q_matrix", out var arr) || arr.ValueKind != JsonValueKind.Array)
-        {
-            return [];
-        }
-
-        var nodes = new List<QNodeHit>();
-        foreach (var n in arr.EnumerateArray())
-        {
-            var skill = n.TryGetProperty("skill_type", out var sk) ? sk.GetString() ?? "" : "";
-            var status = n.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "";
-            var detail = n.TryGetProperty("detail", out var d) ? d.GetString() ?? "" : "";
-            if (string.IsNullOrWhiteSpace(detail))
-            {
-                detail = status == "pass"
-                    ? (n.TryGetProperty("success_message", out var ok) ? ok.GetString() ?? "" : "")
-                    : (n.TryGetProperty("error_feedback", out var bad) ? bad.GetString() ?? "" : "");
-            }
-
-            nodes.Add(new QNodeHit(
-                n.TryGetProperty("step_id", out var id) ? id.GetString() ?? "" : "",
-                skill,
-                status,
-                n.TryGetProperty("label", out var lb) ? lb.GetString() ?? QMatrix.SkillLabel(skill) : QMatrix.SkillLabel(skill),
-                detail));
-        }
-
-        return nodes;
     }
 
     static double GetDouble(JsonElement el, string name, double fallback)
@@ -786,20 +610,9 @@ static class ExamHub
 
     static double? GetDoubleOrNull(JsonElement el, string name)
     {
-        if (!el.TryGetProperty(name, out var p))
-        {
-            return null;
-        }
-
-        if (p.ValueKind is JsonValueKind.Number && p.TryGetDouble(out var v))
+        if (el.TryGetProperty(name, out var p) && p.ValueKind is JsonValueKind.Number && p.TryGetDouble(out var v))
         {
             return v;
-        }
-
-        if (p.ValueKind is JsonValueKind.String &&
-            double.TryParse(p.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-        {
-            return parsed;
         }
 
         return null;
@@ -814,39 +627,6 @@ static class ExamHub
 
         var raw = p.GetString() ?? "";
         return DateTimeOffset.TryParse(raw, out var dt) ? dt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : raw;
-    }
-
-    static DateTimeOffset? ReadTime(JsonElement el, string name)
-    {
-        if (!el.TryGetProperty(name, out var p) || p.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        return DateTimeOffset.TryParse(p.GetString(), out var dt) ? dt : null;
-    }
-
-    static string SnapshotWork(string path)
-    {
-        var root = Path.GetDirectoryName(ExamSession.LocalPath ?? path) ?? Path.GetTempPath();
-        var dir = Path.Combine(root, "snapshots");
-        Directory.CreateDirectory(dir);
-        var dest = Path.Combine(dir, DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + Path.GetExtension(path));
-        try
-        {
-            OfficeCapture.SaveCopy(ExamSession.Program, dest);
-        }
-        catch
-        {
-            // Word không có SaveCopyAs — đọc khi tệp đang mở
-        }
-
-        if (!File.Exists(dest) || new FileInfo(dest).Length == 0)
-        {
-            LockedFile.Copy(path, dest);
-        }
-
-        return dest;
     }
 
     static async Task FlushOrQueueAsync()

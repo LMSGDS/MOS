@@ -1,5 +1,5 @@
 -- MOS-KulKul PostgreSQL schema
--- Hệ thống -> BGH/Tổ bộ môn -> Giáo viên -> Lớp -> Học sinh -> Lịch sử bài làm
+-- Hệ thống -> admin -> Giáo viên -> Lớp -> Học sinh -> Lịch sử bài làm
 
 CREATE TABLE IF NOT EXISTS orgs (
   id            SERIAL PRIMARY KEY,
@@ -140,7 +140,7 @@ ALTER TABLE attempts ADD COLUMN IF NOT EXISTS verified_score DOUBLE PRECISION;
 ALTER TABLE attempts ADD COLUMN IF NOT EXISTS pending_score DOUBLE PRECISION;
 ALTER TABLE attempts DROP CONSTRAINT IF EXISTS attempts_status_check;
 ALTER TABLE attempts ADD CONSTRAINT attempts_status_check
-  CHECK (status IN ('running', 'submitted', 'graded', 'technical_error'));
+  CHECK (status IN ('running', 'submitted', 'graded', 'abandoned', 'technical_error'));
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS event_id TEXT;
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS sequence INTEGER;
 ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS document_id TEXT;
@@ -163,6 +163,47 @@ CREATE INDEX IF NOT EXISTS idx_criterion_run ON criterion_results(grading_run_id
 ALTER TABLE users ADD COLUMN IF NOT EXISTS student_code TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_client TEXT;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS progress_pct INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS q_matrix_results (
+  id            BIGSERIAL PRIMARY KEY,
+  attempt_id    TEXT NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+  criterion_id  TEXT NOT NULL,
+  locate        TEXT NOT NULL DEFAULT '',
+  tool          TEXT NOT NULL DEFAULT '',
+  configure     TEXT NOT NULL DEFAULT '',
+  status        TEXT NOT NULL DEFAULT '',
+  earned        DOUBLE PRECISION NOT NULL DEFAULT 0,
+  possible      DOUBLE PRECISION NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_qmatrix_attempt ON q_matrix_results(attempt_id);
+
+CREATE OR REPLACE VIEW exam_sessions AS
+SELECT
+  a.id AS session_id,
+  a.user_id AS student_id,
+  a.project_id AS exam_id,
+  a.class_id,
+  CASE a.status
+    WHEN 'running' THEN 'IN_PROGRESS'
+    WHEN 'submitted' THEN 'SUBMITTED'
+    WHEN 'graded' THEN 'SUBMITTED'
+    WHEN 'abandoned' THEN 'ABANDONED'
+    ELSE upper(a.status)
+  END AS status,
+  a.progress_pct,
+  a.mode,
+  a.score,
+  a.verified_score,
+  a.updated_at,
+  a.client_updated_at,
+  a.started_at,
+  a.submitted_at
+FROM attempts a;
 ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS objective TEXT NOT NULL DEFAULT '';
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
@@ -272,3 +313,112 @@ CREATE INDEX IF NOT EXISTS idx_progress_status ON exercise_progress(status);
 CREATE INDEX IF NOT EXISTS idx_progress_events_user ON progress_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skill_progress_user ON skill_progress(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_evaluations_level ON student_evaluations(level);
+
+CREATE TABLE IF NOT EXISTS first_attempt_q (
+  attempt_id      TEXT PRIMARY KEY REFERENCES attempts(id) ON DELETE CASCADE,
+  locate_fail     INTEGER NOT NULL DEFAULT 0,
+  tool_fail       INTEGER NOT NULL DEFAULT 0,
+  configure_fail  INTEGER NOT NULL DEFAULT 0,
+  fail_count      INTEGER NOT NULL DEFAULT 0,
+  item_count      INTEGER NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS staff_sessions (
+  id            TEXT PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  ended_at      TIMESTAMPTZ,
+  client        TEXT NOT NULL DEFAULT 'web'
+);
+
+CREATE TABLE IF NOT EXISTS staff_events (
+  id            BIGSERIAL PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  session_id    TEXT,
+  event         TEXT NOT NULL,
+  path          TEXT NOT NULL DEFAULT '',
+  detail        JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_staff_events_user ON staff_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_user ON staff_sessions(user_id, last_seen_at DESC);
+
+-- Dual-role Micro-LMS: LIS roster + LTI 1.3 Tool Provider (không forum / quiz / luận)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lis_sourced_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lti_sub TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS lti_issuer TEXT;
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS lti_context_id TEXT;
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS lti_deployment_id TEXT;
+ALTER TABLE attempts ADD COLUMN IF NOT EXISTS lti_launch_id TEXT;
+
+CREATE TABLE IF NOT EXISTS lti_platforms (
+  id              SERIAL PRIMARY KEY,
+  name            TEXT NOT NULL DEFAULT '',
+  issuer          TEXT NOT NULL UNIQUE,
+  client_id       TEXT NOT NULL,
+  auth_login_url  TEXT NOT NULL,
+  auth_token_url  TEXT NOT NULL DEFAULT '',
+  jwks_url        TEXT NOT NULL DEFAULT '',
+  jwks_json       JSONB,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lti_deployments (
+  platform_id     INTEGER NOT NULL REFERENCES lti_platforms(id) ON DELETE CASCADE,
+  deployment_id   TEXT NOT NULL,
+  PRIMARY KEY (platform_id, deployment_id)
+);
+
+CREATE TABLE IF NOT EXISTS lti_nonces (
+  state           TEXT PRIMARY KEY,
+  nonce           TEXT NOT NULL,
+  target_link_uri TEXT NOT NULL DEFAULT '',
+  login_hint      TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lti_launches (
+  id              TEXT PRIMARY KEY,
+  user_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  platform_id     INTEGER REFERENCES lti_platforms(id) ON DELETE SET NULL,
+  deployment_id   TEXT NOT NULL DEFAULT '',
+  context_id      TEXT NOT NULL DEFAULT '',
+  resource_link_id TEXT NOT NULL DEFAULT '',
+  project_id      TEXT,
+  lineitem        TEXT NOT NULL DEFAULT '',
+  ags_scopes      JSONB NOT NULL DEFAULT '[]'::jsonb,
+  lti_sub         TEXT NOT NULL DEFAULT '',
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_lti_sub
+  ON users (lti_issuer, lti_sub)
+  WHERE lti_issuer IS NOT NULL AND lti_sub IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_lti_launches_user ON lti_launches(user_id, created_at DESC);
+
+-- Command Center: roster join-code, assignment LAN/adaptive, telemetry indexes
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS join_code TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_classes_join_code ON classes(join_code) WHERE join_code IS NOT NULL AND join_code <> '';
+
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS time_limit_sec INTEGER;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS ip_allow TEXT NOT NULL DEFAULT '';
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS unlock_below DOUBLE PRECISION;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS unlock_project_id TEXT;
+
+CREATE TABLE IF NOT EXISTS adaptive_rules (
+  id                 SERIAL PRIMARY KEY,
+  class_id           INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  source_project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  below_score        DOUBLE PRECISION NOT NULL DEFAULT 50,
+  unlock_project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  created_by         INTEGER REFERENCES users(id),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (class_id, source_project_id, unlock_project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_ts ON telemetry(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_attempt_ts ON telemetry(attempt_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_attempts_updated ON attempts(updated_at DESC);

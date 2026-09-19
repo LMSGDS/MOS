@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Lỗ hổng kiến thức{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Bản đồ lỗ hổng kiến thức</h1>
+  <p class="lead">Bản đồ tri thức lớp — heatmap Q-Matrix + radar Word/Excel/PPT. Hệ thống đề xuất phút ôn, không xuất Excel vô hồn.</p>
+  {% include "admin_nav.html" %}
+  {% set axes = radar|default([]) %}
+  {% if axes %}
+  <h2 style="margin-top:16px;font-size:18px">Radar lớp (Word · Excel · PPT)</h2>
+  <svg class="q-radar" viewBox="0 0 240 210" width="240" height="210" aria-label="Radar lớp">
+    {% set w = ((axes[0].score if axes|length > 0 else 0) or 0) / 100 %}
+    {% set e = ((axes[1].score if axes|length > 1 else 0) or 0) / 100 %}
+    {% set p = ((axes[2].score if axes|length > 2 else 0) or 0) / 100 %}
+    <polygon points="120,36 188,164 52,164" fill="none" stroke="#cbd5e1" />
+    <polygon points="120,{{ 100 - 64 * w }} {{ 120 + 68 * e }},{{ 100 + 64 * e }} {{ 120 - 68 * p }},{{ 100 + 64 * p }}" fill="rgba(0,142,226,0.28)" stroke="#008EE2" />
+    <text x="120" y="18" text-anchor="middle" font-size="12">Word {{ axes[0].score if axes|length > 0 else 0 }}</text>
+    <text x="230" y="188" text-anchor="end" font-size="12">Excel {{ axes[1].score if axes|length > 1 else 0 }}</text>
+    <text x="10" y="188" text-anchor="start" font-size="12">PPT {{ axes[2].score if axes|length > 2 else 0 }}</text>
+  </svg>
+  {% endif %}
+  <form method="get" action="/quan-tri/lo-hong" class="live-filter">
+    <label>Lớp
+      <select name="lop" onchange="this.form.submit()">
+        <option value="0" {% if class_id == 0 %}selected{% endif %}>Tất cả lớp</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}" {% if class_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Lớp</th>
+        <th>Chuyên đề</th>
+        <th>Bài</th>
+        <th>Sai / mẫu</th>
+        <th>Tỷ lệ sai</th>
+        <th>Định vị</th>
+        <th>Công cụ</th>
+        <th>Cấu hình</th>
+        <th>Gợi ý giảng dạy</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in gaps %}
+      <tr class="heat-{{ g.heat }}">
+        <td>{{ g.class_name }}</td>
+        <td>{{ g.skill }}</td>
+        <td>{{ g.title }}</td>
+        <td>{{ g.fails }}/{{ g.n }}</td>
+        <td><strong>{{ "%.0f"|format(g.fail_pct) }}%</strong></td>
+        <td>{{ g.locate_fail }}</td>
+        <td>{{ g.tool_fail }}</td>
+        <td>{{ g.configure_fail }}</td>
+        <td>{{ g.action or "—" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9">Chưa đủ bài nộp để vẽ bản đồ.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

@@ -194,16 +194,17 @@ def test_windows_sources_include_action_demo():
     assert "RunNavigate" in demo
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
-    assert "Demo tất cả bài tập" not in form
     assert "OnTeacherHotkeys" in form
     assert "Keys.D" in form
     assert "Lưu tạm và Về trang chủ" in form
-    assert "Chế độ gắn mép" in form
-    assert "Tháo cửa sổ nổi" in form
-    assert "Đặt lại kích thước thanh ghim" in form
-    assert "_resetNavItem.Enabled = _docking" in form
-    assert 'new ToolStripMenuItem("Trang chủ")' not in form
-    assert "1.16.13" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.21.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
+    assert "/api/v1/progress/adaptive" in (root / "HomeRadar.cs").read_text(encoding="utf-8")
+    assert "Q-Matrix" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert "LocalExamStore" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "X-MOS-Artifact-SHA256" in (root / "Portal.cs").read_text(encoding="utf-8")
+    assert "using System.Text.Json;" in (root / "BackgroundSync.cs").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")

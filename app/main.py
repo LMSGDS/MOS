@@ -20,6 +20,8 @@ from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
 from app.gitinfo import git_revision
 from app.hooks import router as hooks_router
+from app.live import router as live_router
+from app.lti import router as lti_router
 from app.kulkul_layout import Rect, compute, grow_for_help, measure
 from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
@@ -72,7 +74,9 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="MOS-KulKul", docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(client_v1_router)
 app.include_router(progress_router)
+app.include_router(live_router)
 app.include_router(hooks_router)
+app.include_router(lti_router)
 app.include_router(admin_router)
 app.add_middleware(
     SessionMiddleware,
@@ -90,6 +94,14 @@ async def frame_same_origin(request, call_next):
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+    path = request.url.path
+    if request.method == "GET" and path.startswith("/quan-tri"):
+        user = request.session.get("user")
+        if isinstance(user, dict) and user.get("username"):
+            from app.stafflog import touch_from_username
+
+            event = "live_open" if "giam-sat" in path else "page"
+            touch_from_username(user["username"], event, path)
     return response
 
 
@@ -198,8 +210,14 @@ async def api_login(request: Request):
         return JSONResponse({"ok": False, "error": "sai"}, status_code=401)
     from app.accounts import record_login
 
-    record_login(user["username"], "web")
+    row = record_login(user["username"], "web")
     request.session["user"] = user
+    if row and row.get("role") in ("admin", "teacher", "leadership") and row.get("id"):
+        from app.stafflog import open_staff_session
+
+        sid = open_staff_session(int(row["id"]))
+        if sid:
+            request.session["staff_session_id"] = sid
     return {"ok": True, "user": user, "program": resolve(chuong)}
 
 
@@ -242,7 +260,24 @@ def home(request: Request):
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
     template = "dock_content.html" if _is_dock(request) else "portal.html"
-    return TEMPLATES.TemplateResponse(request, template, _ctx(request))
+    cards = []
+    if user.get("role") == "student" and user.get("id"):
+        from app.adaptive import adaptive_cards
+
+        cards = adaptive_cards(int(user["id"]))
+    elif user.get("username"):
+        try:
+            from app.adaptive import adaptive_cards
+            from app.db import cursor
+
+            with cursor() as cur:
+                cur.execute("SELECT id, role FROM users WHERE username = %s", (user["username"],))
+                row = cur.fetchone()
+            if row and row.get("role") == "student":
+                cards = adaptive_cards(int(row["id"]))
+        except Exception:
+            cards = []
+    return TEMPLATES.TemplateResponse(request, template, _ctx(request, {"adaptive": cards}))
 
 
 @app.get("/khung/word", response_class=HTMLResponse)
@@ -284,11 +319,37 @@ def login(
         return RedirectResponse("/dang-nhap?loi=sai", status_code=303)
     from app.accounts import record_login
 
-    record_login(user["username"], "web")
+    row = record_login(user["username"], "web")
     request.session["user"] = user
+    if row and row.get("role") in ("admin", "teacher", "leadership") and row.get("id"):
+        from app.stafflog import open_staff_session
+
+        sid = open_staff_session(int(row["id"]))
+        if sid:
+            request.session["staff_session_id"] = sid
     dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
     dest += f"{'&' if '?' in dest else '?'}chuong-trinh={normalize(chuong_trinh)}"
     return RedirectResponse(dest, status_code=303)
+
+
+@app.post("/vao-lop")
+def join_class(request: Request, ma: str = Form(...)):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    from app.db import cursor
+    from app.roster import join_by_code
+
+    with cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE username = %s", (user.get("username"),))
+        row = cur.fetchone()
+    if not row:
+        return RedirectResponse("/", status_code=303)
+    try:
+        join_by_code(row["id"], ma)
+    except ValueError:
+        return RedirectResponse("/tien-do?lop=sai", status_code=303)
+    return RedirectResponse("/tien-do", status_code=303)
 
 
 @app.get("/cai-dat", response_class=HTMLResponse)

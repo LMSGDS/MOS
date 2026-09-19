@@ -58,6 +58,7 @@ static class Program
                 first && parsed.Demo);
             first = false;
             Application.Run(main);
+            BackgroundSync.Stop();
             Portal.Token = null;
             ExamSession.ClearExam();
             if (!main.SignOutRequested)

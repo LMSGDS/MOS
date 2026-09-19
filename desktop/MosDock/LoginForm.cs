@@ -409,6 +409,7 @@ sealed class LoginForm : Form
 
             DisplayName = name;
             TrySaveLastUser(_user.Text.Trim());
+            BackgroundSync.Start();
             DialogResult = DialogResult.OK;
             Close();
         }
