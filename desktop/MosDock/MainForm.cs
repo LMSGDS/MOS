@@ -71,7 +71,7 @@ sealed class MainForm : Form
     bool _compact;
     bool _docking;
     bool _pinned = true;
-    bool _helpVisible = true;
+    bool _helpVisible = false;
     bool _summaryOpen;
     bool _navResizing;
     int? _navThickness;
@@ -831,6 +831,11 @@ sealed class MainForm : Form
         }
 
         _helpVisible = !_helpVisible;
+        if (_helpVisible)
+        {
+            var elapsed = Math.Max(0, (int)(DateTime.UtcNow - ExamSession.OpenedUtc).TotalMilliseconds);
+            _ = ExamHub.TrackAsync("hint", new { elapsed_ms = elapsed, source = "dock" });
+        }
         if (_docking)
         {
             ApplyDock(waitForWord: true);
@@ -1436,14 +1441,15 @@ sealed class MainForm : Form
         var train = ExamSession.Mode != "testing";
         _dockCheck.Visible = train;
         _dockHint.Visible = train;
-        _helpVisible = train;
+        _helpVisible = false;
+        ExamSession.OpenedUtc = DateTime.UtcNow;
         _summaryOpen = false;
         ExamSession.LastCheck = [];
         ActionEvidence.Begin(ExamSession.AttemptId);
         WordActionProbe.Reset();
         _taskIndex = 0;
         _examStatus.Text = train
-            ? "Bóng đèn: hướng dẫn. Danh sách: tổng hợp nhiệm vụ. Đĩa: lưu và thoát."
+            ? "Thử tự làm trước. Bóng đèn: gợi ý khi cần. Danh sách: tổng hợp. Đĩa: lưu và thoát."
             : "Danh sách nhiệm vụ. Đĩa: lưu và thoát. Nộp bài trong menu hoặc Nộp bài.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria

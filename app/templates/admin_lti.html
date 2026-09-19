@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}LTI 1.3 Tool Provider{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  <h1>Dual-role: LMS riêng + công cụ LTI 1.3</h1>
+  <p class="lead">mos.gds.edu.vn vừa là Micro-LMS standalone (admin tạo lớp, giao bài MOS, giám sát) vừa là Tool Provider cho Canvas/Moodle. Điểm chính thức vẫn do lõi chấm OpenXML — Grade Passback chỉ gửi số về sổ điểm nền tảng kia.</p>
+  {% include "admin_nav.html" %}
+  <p class="hint">Không xây forum, bài luận, quiz chung, hay hòm thư. Giao tiếp để Teams / Zalo.</p>
+
+  <h2 style="margin-top:20px;font-size:18px">Cổng LTI (dán vào Canvas Developer Key)</h2>
+  <table class="grid">
+    <tbody>
+      <tr><td>OIDC Login</td><td><code>{{ login_url }}</code></td></tr>
+      <tr><td>Redirect / Launch</td><td><code>{{ launch_url }}</code></td></tr>
+      <tr><td>JWKS</td><td><code>{{ jwks_url }}</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:24px;font-size:18px">Đăng ký nền tảng (Canvas / Moodle)</h2>
+  <form method="post" action="/quan-tri/lti" class="grid" style="margin:16px 0;gap:8px">
+    <label>Tên trường <input name="name" placeholder="Canvas trường đối tác" /></label>
+    <label>Issuer <input name="issuer" required placeholder="https://canvas.example.edu" /></label>
+    <label>Client ID <input name="client_id" required /></label>
+    <label>OIDC Auth URL <input name="auth_login_url" required placeholder="https://canvas.example.edu/api/lti/authorize_redirect" /></label>
+    <label>Token URL (AGS) <input name="auth_token_url" placeholder="https://canvas.example.edu/login/oauth2/token" /></label>
+    <label>JWKS URL <input name="jwks_url" placeholder="https://canvas.example.edu/api/lti/security/jwks" /></label>
+    <button type="submit">Lưu platform</button>
+  </form>
+
+  <h2 style="margin-top:24px;font-size:18px">Platform đã kết nối</h2>
+  <table class="grid">
+    <thead><tr><th>Tên</th><th>Issuer</th><th>Client ID</th></tr></thead>
+    <tbody>
+      {% for p in platforms %}
+      <tr><td>{{ p.name }}</td><td>{{ p.issuer }}</td><td>{{ p.client_id }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">Chưa đăng ký Canvas/Moodle — trường không có LMS vẫn dùng mos.gds.edu.vn như LMS chính.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

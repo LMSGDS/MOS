@@ -25,7 +25,7 @@ bash scripts/run-mos-web.sh
 - JWT client: `/api/v1/auth/login`, `/api/v1/projects`, `/api/v1/attempts`, checkpoint `/api/v1/attempts/{id}/checkpoints`
 - App PC: đăng nhập → trang chủ (Bài mới / Tiếp tục / Đã nộp) → chọn chương trình → Luyện tập hoặc Thi
 - Chấm Word 1.1 (bookmark/hyperlink Open XML): 62 điểm artifact, 38 điểm Find/Go To còn `unverified` khi chưa có bộ ghi nhận thao tác
-- Quản trị web: `/quan-tri` (admin / giáo viên / BGH)
+- Quản trị web: `/quan-tri` (admin / giáo viên)
 
 systemd `deploy/mos.service` đọc `DATABASE_URL`.
 

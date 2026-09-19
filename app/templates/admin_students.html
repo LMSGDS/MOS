@@ -22,7 +22,7 @@
         {% endfor %}
       </select>
     </label>
-    {% if user.role in ['admin', 'leadership'] %}
+    {% if user.role == 'admin' %}
     <label>Vai trò
       <select name="role">
         <option value="student">Học sinh</option>

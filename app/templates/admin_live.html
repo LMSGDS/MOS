@@ -93,6 +93,16 @@
   src.onmessage = function (msg) {
     try { upsert(JSON.parse(msg.data)); } catch (e) {}
   };
+  function ping() {
+    fetch("/api/v1/staff/heartbeat", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({live: true, path: location.pathname}),
+      credentials: "same-origin"
+    }).catch(function () {});
+  }
+  ping();
+  setInterval(ping, 20000);
 })();
 </script>
 {% endblock %}

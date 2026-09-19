@@ -6,6 +6,12 @@
   {% if user.role in ['admin', 'teacher', 'leadership'] %}
   {% include "admin_nav.html" %}
   {% endif %}
+  {% if adaptive %}
+  <h2 style="margin-top:8px;font-size:18px">Lộ trình thích ứng</h2>
+  {% for c in adaptive %}
+  <p class="alert heat-red"><strong>{{ c.title }}</strong> — {{ c.reason }}</p>
+  {% endfor %}
+  {% endif %}
   {% if not evaluation %}
   <p class="lead">Chưa có dữ liệu bài làm.</p>
   {% else %}

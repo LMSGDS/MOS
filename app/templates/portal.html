@@ -5,7 +5,16 @@
   <h1>Xin chào {{ user.name }}</h1>
   <p class="lead">Trên web không chọn Word / Excel / PowerPoint. Cài MOS-KulKul trên máy để mở Office, luyện tập và thi.</p>
   <p><a class="linkish" href="/cai-dat">Cài MOS-KulKul trên máy (Windows PowerShell / macOS)</a></p>
-  {% if user.role in ['admin', 'teacher', 'leadership'] %}
+  {% if adaptive %}
+  <h2 style="margin-top:16px;font-size:18px">Lộ trình thích ứng</h2>
+  {% for c in adaptive %}
+  <p class="alert heat-red">
+    <strong>{{ c.title }}</strong> — {{ c.reason }}
+    Mở MOS-KulKul, bài <code>{{ c.project_id }}</code>.
+  </p>
+  {% endfor %}
+  {% endif %}
+  {% if user.role in ['admin', 'teacher'] %}
   <p><a class="linkish" href="/quan-tri">Bảng điều khiển quản trị</a></p>
   {% else %}
   <p><a class="linkish" href="/tien-do">Tiến độ, tiến bộ và đánh giá bài tập</a></p>

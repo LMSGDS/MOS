@@ -11,6 +11,13 @@ from fastapi.templating import Jinja2Templates
 from app.accounts import create_account, list_classes
 from app.db import cursor
 from app.insights import annotate_sessions, bank_reliability, skill_gaps
+from app.pedagogy import (
+    class_first_attempt_fail,
+    class_hint_dependency,
+    class_unresolved_stuck,
+    pedagogy_alerts,
+    teacher_footprint,
+)
 from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
@@ -35,6 +42,10 @@ def _session_user(request: Request) -> dict | None:
 
 def _staff(user: dict | None) -> bool:
     return bool(user and user.get("role") in ("admin", "teacher", "leadership"))
+
+
+def _leaders(user: dict | None) -> bool:
+    return bool(user and user.get("role") == "admin")
 
 
 def _jsonish(value):
@@ -147,6 +158,7 @@ def _dashboard(request: Request, user: dict):
         )
         evidence_rows = cur.fetchall()
     roster = list_roster()[:12]
+    pedagogy = pedagogy_alerts(24) if _leaders(user) else []
     return TEMPLATES.TemplateResponse(
         request,
         "admin.html",
@@ -155,6 +167,7 @@ def _dashboard(request: Request, user: dict):
             user,
             {
                 "nav": "home",
+                "pedagogy_alerts": pedagogy,
                 "stats": {
                     "students": students,
                     "classes": classes,
@@ -218,7 +231,7 @@ def admin_create_student(
             password=password,
             role=(
                 "teacher"
-                if role == "teacher" and user.get("role") in ("admin", "leadership")
+                if role == "teacher" and user.get("role") == "admin"
                 else "student"
             ),
             student_code=student_code,
@@ -357,6 +370,92 @@ def admin_bank(request: Request):
     )
 
 
+@router.get("/quan-tri/su-pham", response_class=HTMLResponse)
+def admin_pedagogy(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    hours = request.query_params.get("gio") or "24"
+    hours_n = int(hours) if str(hours).isdigit() else 24
+    hours_n = max(1, min(hours_n, 168))
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_pedagogy.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "pedagogy",
+                "hours": hours_n,
+                "hints": class_hint_dependency(hours_n),
+                "first_fail": class_first_attempt_fail(hours_n),
+                "stuck": class_unresolved_stuck(hours_n),
+                "teachers": teacher_footprint(hours_n),
+                "alerts": pedagogy_alerts(hours_n),
+            },
+        ),
+    )
+
+
+@router.get("/quan-tri/lti", response_class=HTMLResponse)
+def admin_lti(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    from app.lti import list_platforms
+
+    host = request.headers.get("host", "mos.gds.edu.vn")
+    scheme = "https" if "edu.vn" in host else request.url.scheme
+    base = f"{scheme}://{host}"
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_lti.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "lti",
+                "platforms": list_platforms(),
+                "login_url": f"{base}/lti/login",
+                "launch_url": f"{base}/lti/launch",
+                "jwks_url": f"{base}/lti/jwks",
+            },
+        ),
+    )
+
+
+@router.post("/quan-tri/lti")
+def admin_lti_save(
+    request: Request,
+    name: str = Form(""),
+    issuer: str = Form(...),
+    client_id: str = Form(...),
+    auth_login_url: str = Form(...),
+    auth_token_url: str = Form(""),
+    jwks_url: str = Form(""),
+):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    from app.lti import register_platform
+
+    register_platform(
+        name=name,
+        issuer=issuer,
+        client_id=client_id,
+        auth_login_url=auth_login_url,
+        auth_token_url=auth_token_url,
+        jwks_url=jwks_url,
+    )
+    return RedirectResponse("/quan-tri/lti", status_code=303)
+
+
 @router.get("/quan-tri/bai-tap", response_class=HTMLResponse)
 def admin_exercises(request: Request):
     user = _session_user(request)
@@ -386,6 +485,8 @@ def my_progress(request: Request):
     if evaluation:
         evaluation["weak_skills"] = _jsonish(evaluation.get("weak_skills"))
         evaluation["strong_skills"] = _jsonish(evaluation.get("strong_skills"))
+    from app.adaptive import adaptive_cards
+
     return TEMPLATES.TemplateResponse(
         request,
         "progress.html",
@@ -395,6 +496,7 @@ def my_progress(request: Request):
             {
                 "nav": "mine",
                 "evaluation": evaluation,
+                "adaptive": adaptive_cards(user_id),
                 "exercises": list_student_exercises(user_id, "word"),
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),

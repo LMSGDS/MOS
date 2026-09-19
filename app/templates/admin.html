@@ -5,6 +5,17 @@
   <h1>Bảng điều khiển MOS-KulKul</h1>
   <p class="lead">Cơ sở dữ liệu bài tập, liên kết học sinh, tiến trình — tiến độ — tiến bộ và đánh giá toàn diện.</p>
   {% include "admin_nav.html" %}
+  {% if pedagogy_alerts %}
+  <h2 style="margin-top:20px;font-size:18px">Cảnh báo sư phạm (tự động)</h2>
+  {% for a in pedagogy_alerts %}
+  <p class="alert {% if a.risk == 'cao' %}heat-red{% endif %}">
+    <a href="/quan-tri/su-pham"><strong>{{ a.class_name }}</strong></a>
+    · {{ a.teacher or "—" }} · mức {{ a.risk }} — {{ a.summary }}
+  </p>
+  {% endfor %}
+  {% elif user.role == 'admin' %}
+  <p class="hint" style="margin-top:16px">Chưa có cảnh báo sư phạm trong 24 giờ. Xem <a href="/quan-tri/su-pham">chỉ số lớp</a>.</p>
+  {% endif %}
   <div class="program-grid" style="margin-top:12px">
     <div class="program-tile"><span class="pname">Học sinh<br><strong>{{ stats.students }}</strong></span></div>
     <div class="program-tile"><span class="pname">Lớp<br><strong>{{ stats.classes }}</strong></span></div>

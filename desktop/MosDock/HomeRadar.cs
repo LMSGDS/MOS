@@ -53,6 +53,23 @@ sealed class HomeRadar : Panel
             }
 
             _caption = $"Word {_word:0} · Excel {_excel:0} · PowerPoint {_ppt:0} — chênh lệch kỹ năng để tự chọn lộ trình ôn.";
+            try
+            {
+                using var adapt = await Portal.GetJsonAsync("/api/v1/progress/adaptive");
+                if (adapt.RootElement.TryGetProperty("cards", out var cards) && cards.GetArrayLength() > 0)
+                {
+                    var first = cards[0];
+                    var title = first.TryGetProperty("title", out var t) ? t.GetString() : "";
+                    if (!string.IsNullOrWhiteSpace(title))
+                    {
+                        _caption = title + " — " + _caption;
+                    }
+                }
+            }
+            catch
+            {
+                // radar vẫn dùng được khi máy chủ cũ chưa có /progress/adaptive
+            }
         }
         catch
         {

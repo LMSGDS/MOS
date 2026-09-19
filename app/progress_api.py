@@ -6,7 +6,16 @@ from fastapi import APIRouter, HTTPException, Request
 from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
+from app.adaptive import adaptive_cards
 from app.insights import bank_reliability, program_radar, skill_gaps
+from app.pedagogy import (
+    class_first_attempt_fail,
+    class_hint_dependency,
+    class_unresolved_stuck,
+    pedagogy_alerts,
+    teacher_footprint,
+)
+from app.stafflog import record_staff_event
 from app.progress import (
     LEVELS,
     STATUS_LABELS,
@@ -121,6 +130,49 @@ async def v1_assign(request: Request, class_id: int):
     return {"ok": True, "assigned": count, "class_id": class_id}
 
 
+@router.post("/staff/heartbeat")
+async def v1_staff_heartbeat(request: Request):
+    user = bearer_user(request) if request.headers.get("authorization") else None
+    if user is None:
+        sess = request.session.get("user")
+        user = sess if isinstance(sess, dict) else None
+    if not user or not user.get("username"):
+        raise HTTPException(status_code=401, detail="token")
+    row = _require_user(user)
+    if not _staff(row):
+        raise HTTPException(status_code=403, detail="forbidden")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    path = str((body or {}).get("path") or "/quan-tri/giam-sat")
+    event = "heartbeat"
+    if (body or {}).get("live"):
+        event = "heartbeat"
+        if "giam-sat" not in path:
+            path = "/quan-tri/giam-sat"
+    record_staff_event(row["id"], event, path, request.session.get("staff_session_id"))
+    return {"ok": True}
+
+
+@router.get("/insights/pedagogy")
+def v1_pedagogy(request: Request, hours: int = 24):
+    user = bearer_user(request)
+    row = _require_user(user)
+    if row.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="forbidden")
+    hours = max(1, min(int(hours or 24), 168))
+    return {
+        "ok": True,
+        "hours": hours,
+        "hints": class_hint_dependency(hours),
+        "first_fail": class_first_attempt_fail(hours),
+        "stuck": class_unresolved_stuck(hours),
+        "teachers": teacher_footprint(hours),
+        "alerts": pedagogy_alerts(hours),
+    }
+
+
 @router.get("/insights/gaps")
 def v1_skill_gaps(request: Request, class_id: int = 0):
     user = bearer_user(request)
@@ -146,6 +198,15 @@ def v1_radar(request: Request, user_id: int | None = None):
     target = user_id or row["id"]
     _as_staff_or_self(row, target)
     return {"ok": True, "axes": program_radar(target)}
+
+
+@router.get("/progress/adaptive")
+def v1_adaptive(request: Request, user_id: int | None = None):
+    user = bearer_user(request)
+    row = _require_user(user)
+    target = user_id or row["id"]
+    _as_staff_or_self(row, target)
+    return {"ok": True, "cards": adaptive_cards(target)}
 
 
 @router.get("/classes/{class_id}/roster")
