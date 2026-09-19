@@ -396,8 +396,8 @@ sealed class MainForm : Form
         _products.Controls.Add(word);
         _products.Controls.Add(excel);
         _products.Controls.Add(ppt);
-        _products.Resize += (_, _) => Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 88, LayoutMath.DashGap);
-        Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 88, LayoutMath.DashGap);
+        _products.Resize += (_, _) => Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 96, LayoutMath.DashGap);
+        Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 96, LayoutMath.DashGap);
         _tests.Dock = DockStyle.Fill;
         _tests.AutoScroll = true;
         _tests.WrapContents = true;

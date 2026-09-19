@@ -148,7 +148,7 @@ sealed class HomeDash : Panel
     {
         var shell = Ui.SoftCard(out var inner);
         shell.Margin = new Padding(0, 0, LayoutMath.DashWidgetGap, LayoutMath.DashWidgetGap);
-        inner.Padding = new Padding(14, 12, 12, 12);
+        inner.Padding = new Padding(Ui.CardPad);
         inner.AutoScroll = false;
 
         var head = new Label
@@ -164,7 +164,7 @@ sealed class HomeDash : Panel
         _stats.FlowDirection = FlowDirection.LeftToRight;
         _stats.WrapContents = true;
         _stats.Dock = DockStyle.Top;
-        _stats.Height = 116;
+        _stats.Height = 128;
         _stats.BackColor = Ui.Card;
         _stats.Margin = Padding.Empty;
         _stats.Controls.Add(StatBlock("Điểm cao nhất", _bestValue, _bestHint, Ui.Primary));
@@ -198,23 +198,23 @@ sealed class HomeDash : Panel
     {
         var row = new Panel
         {
-            Size = new Size(120, 108),
-            MinimumSize = new Size(96, 100),
+            Size = new Size(LayoutMath.DashStatCol, 120),
+            MinimumSize = new Size(140, 112),
             BackColor = Ui.Card,
-            Padding = new Padding(6, 4, 6, 4),
+            Padding = new Padding(8, 6, 8, 6),
             Margin = new Padding(0, 0, 8, 8),
         };
         var bar = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = accent };
         value.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
         value.ForeColor = Ui.Text;
         value.Dock = DockStyle.Top;
-        value.Height = 40;
+        value.Height = 44;
         value.AutoEllipsis = false;
         value.UseMnemonic = false;
         value.TextAlign = ContentAlignment.MiddleLeft;
         hint.Font = Ui.SmallFont;
         hint.ForeColor = Ui.Muted;
-        hint.Dock = DockStyle.Fill;
+        hint.Dock = DockStyle.Top;
         hint.AutoEllipsis = false;
         hint.UseMnemonic = false;
         var caption = new Label
@@ -223,15 +223,32 @@ sealed class HomeDash : Panel
             Font = Ui.SmallFont,
             ForeColor = Ui.Muted,
             Dock = DockStyle.Top,
-            Height = 18,
+            Height = 20,
             UseMnemonic = false,
         };
-        var copy = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Card, Padding = new Padding(8, 0, 0, 0) };
+        var copy = new Panel { Dock = DockStyle.Fill, BackColor = Ui.Card, Padding = new Padding(10, 0, 0, 0) };
         copy.Controls.Add(hint);
         copy.Controls.Add(value);
         copy.Controls.Add(caption);
         row.Controls.Add(copy);
         row.Controls.Add(bar);
+        void FitStat(object? _, EventArgs e)
+        {
+            var w = Math.Max(72, copy.ClientSize.Width - copy.Padding.Horizontal);
+            caption.Height = Math.Max(20, Ui.MeasureH(caption.Text, Ui.SmallFont, w) + 4);
+            value.Height = 44;
+            hint.Height = Math.Max(20, Ui.MeasureH(hint.Text, Ui.SmallFont, w) + 8);
+            var next = row.Padding.Vertical + caption.Height + value.Height + hint.Height + 4;
+            if (row.Height != next)
+            {
+                row.Height = Math.Max(112, next);
+            }
+        }
+
+        row.Resize += FitStat;
+        copy.Resize += FitStat;
+        hint.TextChanged += FitStat;
+        value.TextChanged += FitStat;
         return row;
     }
 
@@ -239,7 +256,7 @@ sealed class HomeDash : Panel
     {
         var shell = Ui.SoftCard(out var inner);
         shell.Margin = new Padding(0, 0, LayoutMath.DashWidgetGap, LayoutMath.DashWidgetGap);
-        inner.Padding = new Padding(14, 12, 14, 12);
+        inner.Padding = new Padding(Ui.CardPad);
 
         var head = new Panel { Dock = DockStyle.Top, Height = 28, BackColor = Ui.Card };
         var title = new Label
@@ -249,6 +266,8 @@ sealed class HomeDash : Panel
             ForeColor = Ui.Text,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            Padding = new Padding(0, 0, 8, 0),
             UseMnemonic = false,
         };
         head.Controls.Add(title);
@@ -277,7 +296,7 @@ sealed class HomeDash : Panel
     {
         var shell = Ui.SoftCard(out var inner);
         shell.Margin = new Padding(0, 0, 0, LayoutMath.DashGap);
-        inner.Padding = new Padding(14, 12, 14, 12);
+        inner.Padding = new Padding(Ui.CardPad);
         _recentHost.Dock = DockStyle.Fill;
         _recentHost.BackColor = Ui.Card;
         _recentHost.Padding = new Padding(0, 8, 0, 0);
@@ -302,6 +321,8 @@ sealed class HomeDash : Panel
             ForeColor = Ui.Text,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            Padding = new Padding(0, 0, 8, 0),
             UseMnemonic = false,
         };
         var all = Ui.TextLink("Xem tất cả", onAll);
@@ -344,20 +365,34 @@ sealed class HomeDash : Panel
             Ui.FitWrapRow(_apps, LayoutMath.DashCourseMin, LayoutMath.DashAppH, LayoutMath.DashGap);
 
             var progressW = widths.Length > 0 ? widths[0] : inner;
-            var statInner = Math.Max(90, progressW - 40);
-            var statWide = !stacked && statInner >= 340;
-            var statW = statWide ? Math.Max(96, (statInner - 16) / 3) : statInner;
+            var statInner = Math.Max(140, progressW - Ui.CardPad * 2 - 8);
+            var statWide = !stacked && statInner >= LayoutMath.DashStatCol * 3 + 16;
+            var statW = statWide ? Math.Max(LayoutMath.DashStatCol, (statInner - 16) / 3) : statInner;
+            var statsH = 0;
             foreach (Control stat in _stats.Controls)
             {
                 stat.Width = statW;
-                stat.Height = 108;
+                statsH = statWide ? Math.Max(statsH, stat.Height) : statsH + stat.Height + 8;
             }
 
-            _stats.Height = statWide ? 116 : 108 * 3 + 16;
+            _stats.Height = Math.Max(112, statWide ? statsH + 8 : statsH);
             var radarH = Math.Max(180, statWide ? 200 : 220);
-            var progressH = 28 + 16 + _stats.Height + 20 + radarH + 24;
-            var resumeH = 28 + 16 + _resumeActions.Height + (_resumeShown == 0 ? 120 : _resumeShown * 132) + 20;
-            var recentH = 240;
+            var progressH = 32 + Ui.CardPad * 2 + _stats.Height + 24 + radarH;
+            var resumeInnerW = widths.Length > 1 ? widths[1] : inner;
+            foreach (Control row in _resumeItems.Controls)
+            {
+                row.Width = Math.Max(160, resumeInnerW - Ui.CardPad * 2 - 8);
+            }
+
+            _resumeItems.PerformLayout();
+            var resumeBody = 0;
+            foreach (Control row in _resumeItems.Controls)
+            {
+                resumeBody += row.Height + row.Margin.Vertical;
+            }
+
+            var resumeH = 32 + Ui.CardPad * 2 + _resumeActions.Height + Math.Max(120, resumeBody) + 16;
+            var recentH = 260;
             var widgetH = Math.Max(progressH, Math.Max(resumeH, recentH));
 
             for (var i = 0; i < _widgets.Controls.Count; i++)
@@ -543,16 +578,14 @@ sealed class HomeDash : Panel
     {
         var row = new Panel
         {
-            Height = 124,
             Width = Math.Max(180, _resumeItems.ClientSize.Width),
             BackColor = Ui.Card,
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, 12),
         };
         var go = Ui.PrimaryBtn("Tiếp tục", 120);
         go.BackColor = Ui.Success;
         go.FlatAppearance.MouseOverBackColor = Color.FromArgb(2, 110, 48);
-        go.Dock = DockStyle.Bottom;
-        go.Height = 36;
+        go.Size = new Size(120, 36);
         var item = attempt;
         go.Click += async (_, _) =>
         {
@@ -561,22 +594,21 @@ sealed class HomeDash : Panel
                 await ResumeAttempt(item);
             }
         };
-        var bar = new Ui.PercentTrack { Dock = DockStyle.Bottom, Height = 22 };
+        var bar = new Ui.PercentTrack { Height = 22 };
         var title = new Label
         {
             Text = attempt.DisplayTitle,
             Font = Ui.HeadFont,
             ForeColor = Ui.Text,
-            Dock = DockStyle.Top,
-            Height = 28,
-            AutoEllipsis = true,
+            AutoSize = false,
+            AutoEllipsis = false,
             UseMnemonic = false,
         };
         var lead = new Label
         {
-            Font = Ui.BodyFont,
+            Font = Ui.SmallFont,
             ForeColor = Ui.Muted,
-            Dock = DockStyle.Fill,
+            AutoSize = false,
             UseMnemonic = false,
         };
         var appMode = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode);
@@ -591,35 +623,55 @@ sealed class HomeDash : Panel
             bar.Set(12, "Chưa chấm");
         }
 
-        row.Controls.Add(lead);
+        void FitRow(object? _, EventArgs e)
+        {
+            var w = Math.Max(80, row.ClientSize.Width);
+            title.SetBounds(0, 0, w, Math.Max(24, Ui.MeasureH(title.Text, Ui.HeadFont, w) + 8));
+            lead.SetBounds(0, title.Bottom + 2, w, Math.Max(18, Ui.MeasureH(lead.Text, Ui.SmallFont, w) + 6));
+            bar.SetBounds(0, lead.Bottom + 8, w, 22);
+            go.Location = new Point(0, bar.Bottom + 10);
+            row.Height = go.Bottom + 4;
+        }
+
+        row.Resize += FitRow;
         row.Controls.Add(title);
+        row.Controls.Add(lead);
         row.Controls.Add(bar);
         row.Controls.Add(go);
+        FitRow(null, EventArgs.Empty);
         return row;
     }
 
     static Panel ResumeEmpty(string title, string lead)
     {
-        var box = new Panel { Height = 110, Dock = DockStyle.Top, BackColor = Ui.Card };
+        var box = new Panel { Height = 120, Dock = DockStyle.Top, BackColor = Ui.Card };
         var h = new Label
         {
             Text = title,
             Font = Ui.HeadFont,
             ForeColor = Ui.Text,
             Dock = DockStyle.Top,
-            Height = 36,
+            Height = 32,
             UseMnemonic = false,
         };
         var p = new Label
         {
             Text = lead,
-            Font = Ui.BodyFont,
+            Font = Ui.SmallFont,
             ForeColor = Ui.Muted,
-            Dock = DockStyle.Fill,
+            Dock = DockStyle.Top,
             UseMnemonic = false,
         };
+        Ui.BindWrap(p, 8);
         box.Controls.Add(p);
         box.Controls.Add(h);
+        void FitEmpty(object? _, EventArgs e)
+        {
+            box.Height = Math.Max(100, h.Height + p.Height + 16);
+        }
+
+        box.Resize += FitEmpty;
+        p.SizeChanged += FitEmpty;
         return box;
     }
 

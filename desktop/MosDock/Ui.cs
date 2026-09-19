@@ -36,6 +36,9 @@ static class Ui
     public static readonly Color DockHint = Color.FromArgb(201, 148, 36);
     /// <summary>UDL Tab focus ring: 2px solid #005fb8, offset 2px.</summary>
     public static readonly Color FocusRing = Color.FromArgb(0, 95, 184);
+    /// <summary>Canvas LMS ic-box: 16px pad, 8px radius painted only — never a clipping Region.</summary>
+    public const int CardPad = 16;
+    public const int CardRadius = 8;
 
     /// <summary>
     /// Form error SOP: radius 8, idle Line, focus Primary + soft shadow,
@@ -377,22 +380,21 @@ static class Ui
         return btn;
     }
 
-    public static Panel SoftCard(out Panel inner, int radius = 12)
+    public static Panel SoftCard(out Panel inner, int radius = CardRadius)
     {
+        _ = radius;
         var shell = new Panel
         {
-            BackColor = WarmShadow,
-            Padding = new Padding(0, 0, 1, 3),
+            BackColor = Line,
+            Padding = new Padding(1),
             Margin = new Padding(0, 0, 12, 12),
         };
         inner = new Panel
         {
             Dock = DockStyle.Fill,
             BackColor = Card,
-            Padding = new Padding(16, 14, 16, 14),
+            Padding = new Padding(CardPad),
         };
-        RoundControl(shell, radius + 2);
-        RoundControl(inner, radius);
         shell.Controls.Add(inner);
         return shell;
     }
@@ -681,17 +683,16 @@ static class Ui
         var shell = SoftCard(out var inner);
         shell.Margin = new Padding(0, 0, 12, 0);
         inner.Cursor = Cursors.Hand;
-        inner.Padding = new Padding(14, 12, 14, 12);
-        var bar = new Panel { Dock = DockStyle.Top, Height = 5, BackColor = accent, Cursor = Cursors.Hand };
+        inner.Padding = new Padding(CardPad);
+        var bar = new Panel { Dock = DockStyle.Top, Height = 4, BackColor = accent, Cursor = Cursors.Hand };
         var glyphBox = new Panel
         {
-            Size = new Size(40, 40),
             Dock = DockStyle.Top,
-            Height = 44,
+            Height = 40,
             Cursor = Cursors.Hand,
             BackColor = Card,
         };
-        glyphBox.Paint += (_, e) => PaintAppGlyph(e.Graphics, new Rectangle(0, 4, 36, 36), accent, glyph);
+        glyphBox.Paint += (_, e) => PaintAppGlyph(e.Graphics, new Rectangle(0, 2, 32, 32), accent, glyph);
         var h = new Label
         {
             Text = title,
@@ -699,7 +700,6 @@ static class Ui
             ForeColor = Text,
             AutoSize = false,
             Dock = DockStyle.Top,
-            Height = 26,
             UseMnemonic = false,
             Cursor = Cursors.Hand,
         };
@@ -713,7 +713,17 @@ static class Ui
             UseMnemonic = false,
             Cursor = Cursors.Hand,
         };
-        BindWrap(p, 4);
+        var copy = new TileCopy { Title = h, Lead = p };
+        shell.Tag = copy;
+        void FitTile(object? _, EventArgs e)
+        {
+            var w = Math.Max(80, inner.ClientSize.Width - inner.Padding.Horizontal);
+            h.Height = Math.Max(24, MeasureH(title, HeadFont, w) + 8);
+            p.Height = Math.Max(20, MeasureH(lead, SmallFont, w) + 8);
+        }
+
+        inner.Resize += FitTile;
+        FitTile(null, EventArgs.Empty);
         inner.Controls.Add(p);
         inner.Controls.Add(h);
         inner.Controls.Add(glyphBox);
@@ -729,6 +739,20 @@ static class Ui
         inner.MouseEnter += (_, _) => inner.BackColor = Color.FromArgb(252, 249, 245);
         inner.MouseLeave += (_, _) => inner.BackColor = Card;
         return shell;
+    }
+
+    public sealed class TileCopy
+    {
+        public Label Title = null!;
+        public Label Lead = null!;
+
+        public int HeightFor(int width)
+        {
+            var inner = Math.Max(80, width - 2 - CardPad * 2);
+            return 4 + 40 + Math.Max(24, MeasureH(Title.Text, HeadFont, inner) + 8)
+                + Math.Max(20, MeasureH(Lead.Text, SmallFont, inner) + 8)
+                + CardPad * 2 + 8;
+        }
     }
 
     public static Panel MiniScoreRow(string title, string score, Color accent, Action? onClick)
@@ -985,7 +1009,7 @@ static class Ui
             Margin = new Padding(0, 0, 0, 14),
             Tag = "card",
         };
-        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(24, 18, 22, 18) };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(CardPad, CardPad, CardPad, CardPad) };
         if (action is not null)
         {
             var side = new Panel
@@ -1019,8 +1043,6 @@ static class Ui
             Dock = DockStyle.Top,
             UseMnemonic = false,
         };
-        BindWrap(d, 4);
-        BindWrap(t, 6);
         copy.Controls.Add(d);
         copy.Controls.Add(t);
         inner.Controls.Add(copy);
@@ -1029,10 +1051,12 @@ static class Ui
         void Fit(object? _, EventArgs e)
         {
             var actionW = action is null ? 0 : Math.Max(148, action.Width + 40);
-            var tw = Math.Max(160, card.ClientSize.Width - 52 - actionW);
-            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 48;
-            var ah = action is null ? 0 : action.Height + 40;
-            var next = Math.Max(72, Math.Max(th, ah));
+            var tw = Math.Max(160, card.ClientSize.Width - CardPad * 2 - 4 - actionW);
+            t.Height = Math.Max(24, MeasureH(title, HeadFont, tw) + 10);
+            d.Height = Math.Max(20, MeasureH(detail, SmallFont, tw) + 8);
+            var th = t.Height + d.Height + CardPad * 2 + 12;
+            var ah = action is null ? 0 : action.Height + CardPad * 2;
+            var next = Math.Max(88, Math.Max(th, ah));
             if (card.Height != next)
             {
                 card.Height = next;
@@ -1073,18 +1097,39 @@ static class Ui
             cols--;
         }
 
+        var heights = new int[Math.Max(1, n)];
         for (var i = 0; i < n; i++)
         {
             var child = row.Controls[i];
             child.Dock = DockStyle.None;
             child.Width = cardW;
-            child.Height = height;
             var lastInRow = cols <= 1 || (i % cols) == cols - 1 || i == n - 1;
             child.Margin = new Padding(0, 0, lastInRow ? 0 : gap, gap);
+            var contentH = child.Tag is TileCopy copy ? copy.HeightFor(cardW) : height;
+            heights[i] = Math.Max(height, contentH);
         }
 
         var lines = n == 0 ? 1 : Math.Max(1, (n + cols - 1) / cols);
-        row.Height = lines * (height + gap);
+        var lineH = new int[lines];
+        for (var i = 0; i < n; i++)
+        {
+            var r = cols <= 0 ? 0 : i / cols;
+            lineH[r] = Math.Max(lineH[r], heights[i]);
+        }
+
+        for (var i = 0; i < n; i++)
+        {
+            var r = cols <= 0 ? 0 : i / cols;
+            row.Controls[i].Height = lineH[r];
+        }
+
+        var total = 0;
+        foreach (var h in lineH)
+        {
+            total += h + gap;
+        }
+
+        row.Height = Math.Max(height + gap, total);
     }
 
     public static void AttachFocusRing(Control control)

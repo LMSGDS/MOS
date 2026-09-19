@@ -57,7 +57,9 @@ public static class LayoutMath
     public const int DashStack = 1024;
     public const int DashGap = 16;
     public const int DashWidgetGap = 24;
-    public const int DashAppH = 156;
+    public const int DashAppH = 172;
+    /// <summary>Each progress stat needs this width or they stack so 91% never sits on its hint.</summary>
+    public const int DashStatCol = 152;
     public const int OverlayMinW = 48;
     public const int OverlayMinH = 48;
     public const int RefIcon = 32;

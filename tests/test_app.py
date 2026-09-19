@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.11" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.12" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -285,8 +285,13 @@ def test_windows_sources_include_action_demo():
     assert "PlayReveal" in ui
     assert "Xem tất cả (" in home
     assert "Take(2)" in home
-    assert "Height = 40" in home
+    assert "Height = 44" in home
     assert "AutoEllipsis = false" in home
+    assert "CardPad" in ui
+    assert "TileCopy" in ui
+    assert "DashStatCol = 152" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "go.Dock = DockStyle.Bottom" not in home
+    assert "RoundControl(inner, radius)" not in ui
     assert "FindOpenAttempt" in hub
     assert "ConfirmSessionForm" in form
     assert "Làm lại từ đầu" in (root / "ConfirmSubmitForm.cs").read_text(encoding="utf-8")
@@ -342,7 +347,7 @@ def test_windows_sources_include_action_demo():
     assert "OutlineBtn" in ui
     assert 'OutlineBtn("Thi"' in form
     assert "Microsoft Word trên máy" not in form
-    assert "Padding = new Padding(24, 18, 22, 18)" in ui
+    assert "Padding = new Padding(CardPad, CardPad, CardPad, CardPad)" in ui
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
     assert "FileShare.ReadWrite" in (root / "WordGrade.cs").read_text(encoding="utf-8")
@@ -351,7 +356,7 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.11"' in (
+    assert 'MyAppVersion "1.16.12"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
