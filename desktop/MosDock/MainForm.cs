@@ -255,11 +255,11 @@ sealed class MainForm : Form
     void OrientNav()
     {
         var grip = _docking && _compact ? 6 : 0;
-        var keepHelp = _docking && _compact && HelpOpen && !_summaryOpen;
+        var keepCopy = _docking && _compact && !_summaryOpen;
         if (_docking && _compact && _state is "left" or "right")
         {
             _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
-            _dockChrome.Width = keepHelp
+            _dockChrome.Width = keepCopy
                 ? _nav.ClusterW
                 : Math.Max(_nav.ClusterW, Math.Max(8, ClientSize.Width - grip));
             _dockFlow.FlowDirection = FlowDirection.TopDown;
@@ -273,7 +273,7 @@ sealed class MainForm : Form
         }
 
         _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
-        _dockChrome.Height = keepHelp
+        _dockChrome.Height = keepCopy
             ? _nav.ClusterH
             : Math.Max(_nav.ClusterH, Math.Max(8, ClientSize.Height - grip));
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
@@ -544,6 +544,7 @@ sealed class MainForm : Form
         _exam.Controls.Add(_summary);
         _exam.Controls.Add(_tasks);
         _exam.Controls.Add(_helpPane);
+        _exam.Controls.Add(_promptCard);
         _exam.Controls.Add(_navGrip);
         _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_examStatus);
@@ -653,15 +654,7 @@ sealed class MainForm : Form
         helpCard.Controls.Add(bodyWrap);
         helpCard.Controls.Add(_helpHeader);
 
-        var gap = new Panel
-        {
-            Dock = DockStyle.Top,
-            Height = 6,
-            BackColor = Color.FromArgb(245, 247, 249),
-        };
         _helpPane.Controls.Add(helpCard);
-        _helpPane.Controls.Add(gap);
-        _helpPane.Controls.Add(_promptCard);
         ApplyHelpFonts();
     }
 
@@ -1222,6 +1215,7 @@ sealed class MainForm : Form
         var criteria = ExamSession.Rubric?.Criteria;
         if (criteria is not { Count: > 0 })
         {
+            _promptTitle.Text = "Đề bài";
             _promptBody.Text = ExamSession.ProjectTitle ?? "Bài MOS";
             SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
             return;
@@ -1230,6 +1224,7 @@ sealed class MainForm : Form
         _taskIndex = Math.Clamp(_taskIndex, 0, criteria.Count - 1);
         var item = criteria[_taskIndex];
         var prompt = string.IsNullOrWhiteSpace(item.Prompt) ? item.Id : item.Prompt;
+        _promptTitle.Text = "Đề bài · Câu " + (_taskIndex + 1) + "/" + criteria.Count;
         _promptBody.Text = Ui.StripMarks(prompt);
         if (item.HelpSteps is { Count: > 0 })
         {
@@ -1319,7 +1314,7 @@ sealed class MainForm : Form
     void HighlightDockIcons()
     {
         _pinItem.Checked = _pinned;
-        Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn từng bước" : "Hiện hướng dẫn từng bước");
+        Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn — giữ đề bài và danh sách câu hỏi" : "Hiện hướng dẫn từng bước");
         Ui.DockTips.SetToolTip(_dockTasks, "Chấm bài đang làm và hiện danh sách nhiệm vụ");
         Ui.DockTips.SetToolTip(_dockCheck, "Chấm lại tệp Word đang mở");
         Ui.DockTips.SetToolTip(_dockSave, "Lưu bài và về Trang chủ — chưa nộp");
@@ -1333,8 +1328,9 @@ sealed class MainForm : Form
     void ApplyExamChrome()
     {
         var showSummary = _summaryOpen;
-        var showTasks = !showSummary && (!_compact || !_docking);
         var showHelp = !showSummary && HelpOpen;
+        var showPrompt = !showSummary;
+        var showTasks = !showSummary && (!_compact || !_docking || !HelpOpen);
         _exam.Padding = showTasks || (showSummary && !_docking) ? new Padding(12, 8, 12, 0) : Padding.Empty;
         _exam.BackColor = showTasks || showSummary ? Color.White : Color.FromArgb(245, 247, 249);
         _summary.Visible = showSummary;
@@ -1345,12 +1341,14 @@ sealed class MainForm : Form
             OrientNav();
             _dockChrome.Padding = new Padding(_nav.ChromePad);
         }
+        _promptCard.Visible = showPrompt;
+        _promptCard.Dock = DockStyle.Top;
+        _promptCard.Height = LayoutMath.PromptBand;
         _helpPane.Visible = showHelp;
         if (showHelp && _compact && _docking)
         {
             _helpPane.Dock = DockStyle.Fill;
             _helpPane.Padding = new Padding(8, 6, 8, 6);
-            _promptCard.Height = 112;
             _helpHeader.Height = 32;
             _helpFooter.Visible = false;
             _helpFooter.Height = 0;
@@ -1358,9 +1356,8 @@ sealed class MainForm : Form
         else
         {
             _helpPane.Dock = DockStyle.Top;
-            _helpPane.Height = Math.Max(_nav.HelpH, 280);
+            _helpPane.Height = Math.Max(_nav.HelpH, 200);
             _helpPane.Padding = new Padding(8, 6, 8, 6);
-            _promptCard.Height = 120;
             _helpHeader.Height = 32;
             _helpFooter.Visible = false;
             _helpFooter.Height = 0;
@@ -2185,9 +2182,11 @@ sealed class MainForm : Form
     (Rect Dock, Rect Word) DockAndWord(Rect work)
     {
         var (dock, _) = LayoutMath.Compute(work, _state, _compact, thickness: _navThickness);
-        if (_compact && HelpOpen)
+        if (_compact && !_summaryOpen)
         {
-            dock = LayoutMath.GrowForHelp(dock, work, _state);
+            dock = HelpOpen
+                ? LayoutMath.GrowForHelp(dock, work, _state)
+                : LayoutMath.GrowForPrompt(dock, work, _state);
         }
 
         dock = LayoutMath.PinToWork(dock, work, _state);

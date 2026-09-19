@@ -60,6 +60,10 @@ public static class LayoutMath
     public const int RefIconGap = 2;
     public const int RefChromePad = 4;
     public const int OverlayCapPct = 16;
+    /// <summary>Đề bài stays on the dock when hướng dẫn is closed.</summary>
+    public const int PromptBand = 132;
+    /// <summary>Task list peek when hướng dẫn is closed.</summary>
+    public const int TaskPeek = 168;
 
     public static int DashColumns(int innerW)
     {
@@ -270,17 +274,29 @@ public static class LayoutMath
     public static Rect GrowForHelp(Rect dock, Rect work, string state, float scale = 1f)
     {
         var nav = Measure(ScaleWork(work, scale));
+        return GrowForCopy(dock, work, state, nav.HelpW, nav.HelpH);
+    }
+
+    /// <summary>Keep đề bài + câu hỏi on the dock without opening hướng dẫn.</summary>
+    public static Rect GrowForPrompt(Rect dock, Rect work, string state)
+    {
+        var extra = PromptBand + TaskPeek;
+        return GrowForCopy(dock, work, state, extra, extra);
+    }
+
+    public static Rect GrowForCopy(Rect dock, Rect work, string state, int extraW, int extraH)
+    {
         state = (state ?? "bottom").ToLowerInvariant();
         if (state is "left" or "right")
         {
-            var cap = Math.Max(nav.ClusterW, work.W * HelpCapPct / 100);
-            var w = Math.Min(Math.Max(dock.W, dock.W + nav.HelpW), Math.Min(cap, Math.Max(dock.W, work.W - MinWord)));
+            var cap = Math.Max(dock.W, work.W * HelpCapPct / 100);
+            var w = Math.Min(Math.Max(dock.W, dock.W + extraW), Math.Min(cap, Math.Max(dock.W, work.W - MinWord)));
             var x = state == "left" ? work.X : work.Right - w;
             return PinToWork(new Rect(x, work.Y, w, work.H), work, state);
         }
 
-        var capH = Math.Max(nav.ClusterH, work.H * HelpCapPct / 100);
-        var h = Math.Min(Math.Max(dock.H, dock.H + nav.HelpH), Math.Min(capH, Math.Max(dock.H, work.H - MinWord)));
+        var capH = Math.Max(dock.H, work.H * HelpCapPct / 100);
+        var h = Math.Min(Math.Max(dock.H, dock.H + extraH), Math.Min(capH, Math.Max(dock.H, work.H - MinWord)));
         var y = state == "top" ? work.Y : work.Bottom - h;
         return PinToWork(new Rect(work.X, y, work.W, h), work, state);
     }

@@ -1292,9 +1292,10 @@ static class Ui
     public static string HelpStepsRtf(IReadOnlyList<string> steps, float bodyPt)
     {
         var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
+        var sl = Math.Max(fs * 12, (int)Math.Round(bodyPt * 36));
         var sb = new System.Text.StringBuilder();
         sb.Append(@"{\rtf1\ansi\deff0\viewkind4\uc1{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}}");
-        sb.Append(@"\pard\widctlpar\ql\sl360\slmult1\sa120\li0\ri200\wrapdefault\cf0\f0\fs").Append(fs).Append(' ');
+        sb.Append(@"\pard\widctlpar\ql\sl").Append(sl).Append(@"\slmult0\sa220\li0\ri200\cf0\f0\fs").Append(fs).Append(' ');
         for (var i = 0; i < steps.Count; i++)
         {
             sb.Append(i + 1).Append(". ");
