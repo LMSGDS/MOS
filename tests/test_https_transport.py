@@ -159,7 +159,9 @@ def test_github_sync_downloads_installers_over_https():
     sync = (root / "scripts" / "sync-installers.sh").read_text(encoding="utf-8")
     git_sync = (root / "scripts" / "git-sync.sh").read_text(encoding="utf-8")
     main = (root / "app" / "main.py").read_text(encoding="utf-8")
-    assert '== "main"' in sync
+    assert "MOS_INSTALLER_BRANCH" in sync
+    assert "cursor/micro-lms-lti-f267" in sync
+    assert "MOS_INSTALLER_ARTIFACT_ID" in sync
     assert "dependabot/" in sync
     assert "https://api.github.com/repos/" in sync
     assert "MOS-KulKul-Setup-Windows-Full.exe" in sync

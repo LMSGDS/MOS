@@ -76,19 +76,33 @@ except urllib.error.HTTPError as exc:
     sys.exit(1)
 
 artifacts = [a for a in listing.get("artifacts") or [] if not a.get("expired")]
+# Prefer the already-built 1.21.0 Windows Full.exe (micro-lms-lti, artifact
+# 10585480706). Do not prefer stale main 1.16.13; newest-by-time is 1.20.0.
+preferred_id = os.environ.get("MOS_INSTALLER_ARTIFACT_ID", "").strip()
+preferred_branch = os.environ.get(
+    "MOS_INSTALLER_BRANCH", "cursor/micro-lms-lti-f267"
+).strip()
 copied = 0
 for name, files in wanted.items():
     matches = [a for a in artifacts if a.get("name") == name]
     matches.sort(key=lambda a: a.get("created_at") or "", reverse=True)
-    pick = [
-        a
-        for a in matches
-        if (a.get("workflow_run") or {}).get("head_branch") == "main"
-    ] or [
-        a
-        for a in matches
-        if not str((a.get("workflow_run") or {}).get("head_branch") or "").startswith("dependabot/")
-    ]
+    pick = []
+    if preferred_id:
+        pick = [a for a in matches if str(a.get("id")) == preferred_id]
+    if not pick and preferred_branch:
+        pick = [
+            a
+            for a in matches
+            if (a.get("workflow_run") or {}).get("head_branch") == preferred_branch
+        ]
+    if not pick:
+        pick = [
+            a
+            for a in matches
+            if not str((a.get("workflow_run") or {}).get("head_branch") or "").startswith(
+                "dependabot/"
+            )
+        ]
     if not pick:
         sys.stderr.write(f"Khong co artifact {name}\n")
         continue
@@ -105,7 +119,8 @@ for name, files in wanted.items():
                 continue
             shutil.copy2(found, dest / fname)
             copied += 1
-            print(f"{fname}  {found.stat().st_size}  artifact={art['id']}")
+            branch = (art.get("workflow_run") or {}).get("head_branch") or "?"
+            print(f"{fname}  {found.stat().st_size}  artifact={art['id']}  branch={branch}")
 
 print(f"copied={copied} dir={dest}")
 if copied == 0:

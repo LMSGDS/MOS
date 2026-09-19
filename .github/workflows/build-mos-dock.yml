@@ -2,14 +2,6 @@ name: Build MOS-KulKul
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "desktop/**"
-      - ".github/workflows/build-mos-dock.yml"
-  pull_request:
-    paths:
-      - "desktop/**"
-      - ".github/workflows/build-mos-dock.yml"
 
 permissions:
   contents: read

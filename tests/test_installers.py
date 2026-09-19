@@ -26,10 +26,15 @@ def test_mac_installer_scripts_use_kulkul_names_and_version():
     sync = (ROOT / "scripts" / "sync-installers.sh").read_text(encoding="utf-8")
     assert '"MOS-KulKul-Setup-macOS"' in sync
     assert "MOS-KulKul-Setup-macOS.pkg" in sync
+    assert "MOS_INSTALLER_BRANCH" in sync
+    assert "cursor/micro-lms-lti-f267" in sync
     workflow = (ROOT / ".github" / "workflows" / "build-mos-dock.yml").read_text(encoding="utf-8")
     assert "MOS-KulKul-Setup-macOS" in workflow
     assert "name: MOS-Dock-Setup-macOS" not in workflow
     assert "workflow_dispatch" in workflow
+    on_block = workflow.split("jobs:", 1)[0]
+    assert "push:" not in on_block
+    assert "pull_request:" not in on_block
 
 
 def test_make_zip_includes_command_version_and_guide(tmp_path, monkeypatch):
