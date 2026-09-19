@@ -76,12 +76,10 @@ except urllib.error.HTTPError as exc:
     sys.exit(1)
 
 artifacts = [a for a in listing.get("artifacts") or [] if not a.get("expired")]
-# Prefer the already-built 1.21.0 Windows Full.exe (micro-lms-lti, artifact
-# 10585480706). Do not prefer stale main 1.16.13; newest-by-time is 1.20.0.
+# Prefer Windows Full.exe built from main (Help / không trợ giúp). Override
+# with MOS_INSTALLER_ARTIFACT_ID or MOS_INSTALLER_BRANCH if needed.
 preferred_id = os.environ.get("MOS_INSTALLER_ARTIFACT_ID", "").strip()
-preferred_branch = os.environ.get(
-    "MOS_INSTALLER_BRANCH", "cursor/micro-lms-lti-f267"
-).strip()
+preferred_branch = os.environ.get("MOS_INSTALLER_BRANCH", "main").strip()
 copied = 0
 for name, files in wanted.items():
     matches = [a for a in artifacts if a.get("name") == name]

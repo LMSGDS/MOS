@@ -160,7 +160,7 @@ def test_github_sync_downloads_installers_over_https():
     git_sync = (root / "scripts" / "git-sync.sh").read_text(encoding="utf-8")
     main = (root / "app" / "main.py").read_text(encoding="utf-8")
     assert "MOS_INSTALLER_BRANCH" in sync
-    assert "cursor/micro-lms-lti-f267" in sync
+    assert 'os.environ.get("MOS_INSTALLER_BRANCH", "main")' in sync
     assert "MOS_INSTALLER_ARTIFACT_ID" in sync
     assert "dependabot/" in sync
     assert "https://api.github.com/repos/" in sync
