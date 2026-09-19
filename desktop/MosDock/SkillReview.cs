@@ -133,6 +133,23 @@ static class SkillReview
         return item.HelpSteps.Select(Ui.StripMarks).Where(s => s.Length > 0).ToArray();
     }
 
+    public static string Hint(LocalCriterion hit, JsonCriterion? item)
+    {
+        _ = hit;
+        if (HideScores)
+        {
+            return "";
+        }
+
+        var steps = HintSteps(item);
+        if (steps.Count == 0)
+        {
+            return "Chưa có hướng dẫn từng bước cho kỹ năng này.";
+        }
+
+        return string.Join("\n", steps.Select((s, i) => $"{i + 1}. {s}"));
+    }
+
     public static LocalCriterion Find(IReadOnlyList<LocalCriterion> rows, string? id, int index)
     {
         if (!string.IsNullOrWhiteSpace(id))

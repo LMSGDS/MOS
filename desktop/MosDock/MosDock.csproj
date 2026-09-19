@@ -17,6 +17,9 @@
     <ApplicationIcon>Assets\kulkul.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="HomeDash.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Include="Assets\kulkul.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

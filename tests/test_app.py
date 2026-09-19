@@ -266,6 +266,8 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "GroupByObjective" in hub
     assert "OverviewText" in hub
     assert "readonly record struct MosProgress" in hub
+    assert "public static string Hint(" in (root / "SkillReview.cs").read_text(encoding="utf-8")
+    assert '<Compile Remove="HomeDash.cs" />' in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "GrowForPrompt" in form
     assert "PromptBand" in layout
     assert "Un-dock" in form
