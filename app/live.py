@@ -63,8 +63,8 @@ def list_class_sessions(class_id: int) -> list[dict]:
             JOIN projects p ON p.id = s.exam_id
             WHERE (%s = 0 OR s.class_id = %s)
               AND (
-                s.status IN ('IN_PROGRESS', 'SUBMITTED')
-                OR s.updated_at > now() - interval '12 hours'
+                s.status = 'IN_PROGRESS'
+                OR (s.status = 'SUBMITTED' AND s.updated_at > now() - interval '12 hours')
               )
             ORDER BY s.updated_at DESC NULLS LAST
             LIMIT 80

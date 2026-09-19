@@ -38,7 +38,7 @@
           <span class="live-progress">{{ s.progress_pct or 0 }}%</span>
         </td>
         <td class="live-score">{% if s.verified_score is not none %}{{ s.verified_score }}{% elif s.score is not none %}{{ s.score }}{% else %}—{% endif %}</td>
-        <td class="live-updated">{{ s.updated_at }}</td>
+        <td class="live-updated">{% if s.updated_at.strftime is defined %}{{ s.updated_at.strftime('%d/%m %H:%M') }}{% else %}{{ s.updated_at }}{% endif %}</td>
       </tr>
       {% else %}
       <tr class="empty-row"><td colspan="6">Chưa có phiên đang mở.</td></tr>
