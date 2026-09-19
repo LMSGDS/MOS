@@ -3,7 +3,7 @@
 {% block body %}
 <section class="card hero admin-wide">
   <h1>Giám sát phòng thực hành</h1>
-  <p class="lead">Lưới thời gian thực: tiến độ cả lớp, cảnh báo khi học sinh kẹt quá lâu hoặc liên tục chọn sai công cụ.</p>
+  <p class="lead">Lưới phòng máy qua SSE (không SignalR). 🟢 ổn · 🟡 không tương tác &gt; 3 phút · 🔴 kẹt &gt; 5 phút hoặc rage-click.</p>
   {% include "admin_nav.html" %}
   <form method="get" action="/quan-tri/giam-sat" class="live-filter">
     <label>Lớp
@@ -23,7 +23,7 @@
   </div>
   <div class="proctor-grid" id="live-grid">
     {% for s in sessions %}
-    <article class="proctor-card{% if s.alert %} has-alert{% endif %}{% if s.status == 'SUBMITTED' %} is-done{% endif %}" data-session="{{ s.session_id }}">
+    <article class="proctor-card tone-{{ s.color or 'green' }}{% if s.alert %} has-alert{% endif %}{% if s.status == 'SUBMITTED' %} is-done{% endif %}" data-session="{{ s.session_id }}">
       <h3>{{ s.student }}{% if s.student_code %} <span class="hint">{{ s.student_code }}</span>{% endif %}</h3>
       <p class="proctor-exam">{{ s.title }}</p>
       <p class="live-status">{{ s.status }}{% if s.mode == 'testing' %} · Thi{% else %} · Luyện tập{% endif %}</p>
@@ -76,6 +76,8 @@
     card.querySelector(".live-score").textContent = "Điểm: " + (ev.score == null || ev.score === "" ? "—" : ev.score);
     card.querySelector(".live-updated").textContent = ev.updated_at || "";
     setAlerts(card, ev.alerts);
+    card.classList.remove("tone-green", "tone-yellow", "tone-red");
+    card.classList.add("tone-" + (ev.color || "green"));
     if (ev.status === "SUBMITTED") {
       card.classList.add("is-done", "just-submitted");
       statusEl.textContent = "Đã nộp: " + (ev.student || "");

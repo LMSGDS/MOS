@@ -87,6 +87,7 @@ def test_annotate_stuck_session():
     )
     assert rows[0]["alert"] is True
     assert any(a["code"] == "stuck" for a in rows[0]["alerts"])
+    assert rows[0]["color"] == "red"
 
 
 def test_skill_gaps_and_bank_query(client):

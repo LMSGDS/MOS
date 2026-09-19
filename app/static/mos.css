@@ -538,6 +538,9 @@ tr.just-submitted td { animation: live-flash 1.8s ease; }
 .proctor-card h3 { margin: 0 0 4px; font-size: 16px; }
 .proctor-card.has-alert { border-color: #dc2626; box-shadow: 0 0 0 2px #fecaca; }
 .proctor-card.is-done { border-color: #16a34a; }
+.proctor-card.tone-green { border-color: #16a34a; background: #f0fdf4; }
+.proctor-card.tone-yellow { border-color: #ca8a04; background: #fefce8; box-shadow: 0 0 0 2px #fde68a; }
+.proctor-card.tone-red { border-color: #dc2626; background: #fef2f2; box-shadow: 0 0 0 2px #fecaca; }
 .proctor-exam, .proctor-flags { margin: 4px 0; font-size: 13px; color: var(--muted); }
 .badge-alert { background: #fee2e2; color: #991b1b; margin: 2px 4px 0 0; }
 .alert-stack .live-alert { margin: 6px 0; }

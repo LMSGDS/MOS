@@ -332,6 +332,26 @@ def login(
     return RedirectResponse(dest, status_code=303)
 
 
+@app.post("/vao-lop")
+def join_class(request: Request, ma: str = Form(...)):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    from app.db import cursor
+    from app.roster import join_by_code
+
+    with cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE username = %s", (user.get("username"),))
+        row = cur.fetchone()
+    if not row:
+        return RedirectResponse("/", status_code=303)
+    try:
+        join_by_code(row["id"], ma)
+    except ValueError:
+        return RedirectResponse("/tien-do?lop=sai", status_code=303)
+    return RedirectResponse("/tien-do", status_code=303)
+
+
 @app.get("/cai-dat", response_class=HTMLResponse)
 def install_page(request: Request):
     return TEMPLATES.TemplateResponse(
