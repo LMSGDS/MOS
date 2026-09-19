@@ -311,6 +311,7 @@ sealed class MainForm : Form
             SignOutRequested = true;
             Close();
         };
+        Ui.AttachFocusRing(_signOut);
 
         _user.AutoSize = false;
         _user.Dock = DockStyle.Right;
@@ -336,6 +337,7 @@ sealed class MainForm : Form
         _back.TextAlign = ContentAlignment.MiddleCenter;
         _back.Margin = new Padding(0, 0, 12, 0);
         _back.Click += (_, _) => ShowHome();
+        Ui.AttachFocusRing(_back);
 
         _crumb.Text = "MOS-KulKul";
         _crumb.ForeColor = Color.White;
@@ -394,8 +396,8 @@ sealed class MainForm : Form
         _products.Controls.Add(word);
         _products.Controls.Add(excel);
         _products.Controls.Add(ppt);
-        _products.Resize += (_, _) => Ui.FitWrapRow(_products, LayoutMath.DashCardMin, 88);
-        Ui.FitWrapRow(_products, LayoutMath.DashCardMin, 88);
+        _products.Resize += (_, _) => Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 88, LayoutMath.DashGap);
+        Ui.FitWrapRow(_products, LayoutMath.DashCourseMin, 88, LayoutMath.DashGap);
         _tests.Dock = DockStyle.Fill;
         _tests.AutoScroll = true;
         _tests.WrapContents = true;
@@ -1497,6 +1499,7 @@ sealed class MainForm : Form
         if (_items.Count == 0)
         {
             _tests.Controls.Add(new Label { Text = "Chưa có đề cho chương trình này.", AutoSize = true, ForeColor = Ui.Muted, Margin = new Padding(12) });
+            Ui.PlayReveal(_tests);
             return;
         }
 
@@ -1504,6 +1507,9 @@ sealed class MainForm : Form
         {
             _tests.Controls.Add(TestCard(project));
         }
+
+        Ui.FitCards(_tests);
+        Ui.PlayReveal(_tests);
     }
 
     Panel TestCard(MosProject project)
@@ -1616,17 +1622,46 @@ sealed class MainForm : Form
 
     async Task ConfirmStart(MosProject project, string mode)
     {
-        var modeText = mode == "testing"
-            ? "Thi: ẩn điểm và hướng dẫn cho đến khi nộp bài."
-            : "Luyện tập: hiện hướng dẫn từng bước, nút AAA đổi cỡ chữ, Kiểm tra nhiệm vụ, và tổng hợp phân tích Đạt / Chưa đạt từng kỹ năng.";
-        var ask = MessageBox.Show(
-            "Mở «" + project.Title + "» trên " + Ui.AppName(project.Program) + " đã cài trên máy?\n\n" + modeText,
-            "Bắt đầu bài MOS",
-            MessageBoxButtons.OKCancel,
-            MessageBoxIcon.Question);
-        if (ask != DialogResult.OK)
+        MosAttempt? open = null;
+        try
         {
-            return;
+            var rows = await ExamHub.ListAttemptsAsync();
+            open = ExamHub.FindOpenAttempt(rows, project.Id);
+        }
+        catch
+        {
+            // offline: treat as a new session
+        }
+
+        if (open is { } existing)
+        {
+            using var sessionAsk = new ConfirmSessionForm(project.Title, existing.ProgressPct);
+            var choice = sessionAsk.ShowDialog(this);
+            if (choice == DialogResult.Yes)
+            {
+                await ResumeOpenAttempt(existing);
+                return;
+            }
+
+            if (choice != DialogResult.Retry)
+            {
+                return;
+            }
+        }
+        else
+        {
+            var modeText = mode == "testing"
+                ? "Thi: ẩn điểm và hướng dẫn cho đến khi nộp bài."
+                : "Luyện tập: hiện hướng dẫn từng bước, nút AAA đổi cỡ chữ, Kiểm tra nhiệm vụ, và tổng hợp phân tích Đạt / Chưa đạt từng kỹ năng.";
+            var ask = MessageBox.Show(
+                "Mở «" + project.Title + "» trên " + Ui.AppName(project.Program) + " đã cài trên máy?\n\n" + modeText,
+                "Bắt đầu bài MOS",
+                MessageBoxButtons.OKCancel,
+                MessageBoxIcon.Question);
+            if (ask != DialogResult.OK)
+            {
+                return;
+            }
         }
 
         Cursor = Cursors.WaitCursor;

@@ -112,6 +112,75 @@ sealed class ConfirmSubmitForm : Form
     }
 }
 
+/// <summary>Session controller: continue an in-progress objective or start over.</summary>
+sealed class ConfirmSessionForm : Form
+{
+    public ConfirmSessionForm(string title, int? progressPct)
+    {
+        Text = "Bài đang làm dở";
+        FormBorderStyle = FormBorderStyle.FixedDialog;
+        StartPosition = FormStartPosition.CenterParent;
+        MaximizeBox = false;
+        MinimizeBox = false;
+        ShowInTaskbar = false;
+        AutoScaleMode = AutoScaleMode.Dpi;
+        Font = Ui.BodyFont;
+        BackColor = Color.White;
+        ClientSize = new Size(460, 236);
+        Ui.ApplyWindowIcon(this);
+
+        var head = new Label
+        {
+            Text = "Bài đang làm dở",
+            Font = new Font("Segoe UI", 14f, FontStyle.Bold),
+            ForeColor = Ui.Text,
+            Dock = DockStyle.Top,
+            Height = 36,
+            UseMnemonic = false,
+        };
+        var body = new Label
+        {
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Text,
+            UseMnemonic = false,
+            Text = progressPct is { } n
+                ? "Bạn đã hoàn thành " + n + "% bài «" + title + "». Tiếp tục hay Làm lại từ đầu?"
+                : "Bạn đang làm dở «" + title + "». Tiếp tục hay Làm lại từ đầu?",
+        };
+        var go = Ui.PrimaryBtn("Tiếp tục", 120);
+        go.BackColor = Ui.Success;
+        go.FlatAppearance.MouseOverBackColor = Color.FromArgb(2, 110, 48);
+        go.DialogResult = DialogResult.Yes;
+        var restart = Ui.OutlineBtn("Làm lại từ đầu", Ui.Orange, 148);
+        restart.DialogResult = DialogResult.Retry;
+        var cancel = Ui.GhostBtn("Hủy", 88);
+        cancel.DialogResult = DialogResult.Cancel;
+        AcceptButton = go;
+        CancelButton = cancel;
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 52,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Color.White,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+        go.Margin = new Padding(0, 0, 10, 0);
+        restart.Margin = new Padding(0, 0, 10, 0);
+        actions.Controls.Add(go);
+        actions.Controls.Add(restart);
+        actions.Controls.Add(cancel);
+        var inner = new Panel { Dock = DockStyle.Fill, Padding = new Padding(20, 12, 20, 16) };
+        inner.Controls.Add(body);
+        inner.Controls.Add(head);
+        inner.Controls.Add(actions);
+        Controls.Add(inner);
+    }
+}
+
 sealed class PostSubmitForm : Form
 {
     public PostSubmitForm(string summary)

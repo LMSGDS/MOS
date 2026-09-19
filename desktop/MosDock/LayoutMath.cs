@@ -47,12 +47,16 @@ public static class LayoutMath
     /// <summary>Hub window floor for split-screen with Word. Cards wrap before this clips text.</summary>
     public const int HubMinW = 420;
     public const int HubMinH = 480;
-    /// <summary>Three dashboard columns when the inner canvas is at least this wide.</summary>
-    public const int DashWide = 1200;
-    /// <summary>Below this, Bài mới / widgets stack to one column (split-screen).</summary>
-    public const int DashStack = 900;
+    /// <summary>Course tiles (Word/Excel/PPT) auto-fit at this min — wrap instead of clipping.</summary>
+    public const int DashCourseMin = 250;
+    /// <summary>Progress widget min so the radar and 91% / 20 stats stay whole.</summary>
+    public const int DashProgressMin = 400;
+    /// <summary>Resume / submitted widget floor.</summary>
     public const int DashCardMin = 300;
-    public const int DashGap = 12;
+    /// <summary>Dashboard widgets stack to one column at or below this width.</summary>
+    public const int DashStack = 1024;
+    public const int DashGap = 16;
+    public const int DashWidgetGap = 24;
     public const int DashAppH = 156;
     public const int OverlayMinW = 48;
     public const int OverlayMinH = 48;
@@ -65,31 +69,85 @@ public static class LayoutMath
     /// <summary>Task list peek when hướng dẫn is closed.</summary>
     public const int TaskPeek = 168;
 
-    public static int DashColumns(int innerW)
+    /// <summary>CSS auto-fit analog: as many minmax(minW, 1fr) columns as actually fit.</summary>
+    public static int AutoFitColumns(int innerW, int minW, int gap = DashGap)
     {
-        if (innerW >= DashWide)
-        {
-            return 3;
-        }
-
-        if (innerW >= DashStack)
-        {
-            return 2;
-        }
-
-        return 1;
+        var span = Math.Max(1, innerW);
+        var cell = Math.Max(1, minW + gap);
+        return Math.Max(1, (span + gap) / cell);
     }
 
-    public static int DashCardWidth(int innerW)
+    public static int AutoFitCardWidth(int innerW, int minW, int count, int gap = DashGap)
     {
-        var cols = DashColumns(innerW);
-        var span = Math.Max(DashCardMin, innerW);
-        if (cols <= 1)
+        var cols = Math.Min(Math.Max(1, count), AutoFitColumns(innerW, minW, gap));
+        while (cols > 1)
         {
-            return span;
+            var width = (innerW - gap * (cols - 1)) / cols;
+            if (width >= minW && cols * width + (cols - 1) * gap <= innerW)
+            {
+                return width;
+            }
+
+            cols--;
         }
 
-        return Math.Max(DashCardMin, (span - DashGap * (cols - 1)) / cols);
+        return Math.Max(minW, innerW);
+    }
+
+    public static int DashColumns(int innerW) => AutoFitColumns(innerW, DashCourseMin, DashGap);
+
+    public static int DashCardWidth(int innerW) =>
+        AutoFitCardWidth(innerW, DashCourseMin, 3, DashGap);
+
+    public static bool WidgetStack(int innerW) =>
+        innerW < DashStack
+        || innerW < DashProgressMin + 2 * DashCardMin + 2 * DashWidgetGap;
+
+    /// <summary>Progress 1.5fr (min 400) then two 1fr (min 300); one column under 1024px.</summary>
+    public static int[] WidgetWidths(int innerW, int count)
+    {
+        count = Math.Max(0, count);
+        var full = Math.Max(DashCardMin, innerW);
+        if (count == 0)
+        {
+            return [];
+        }
+
+        if (count == 1 || WidgetStack(innerW))
+        {
+            var stacked = new int[count];
+            Array.Fill(stacked, full);
+            return stacked;
+        }
+
+        var remain = innerW - DashWidgetGap * (count - 1);
+        var units = 1.5 + Math.Max(0, count - 1);
+        if (remain < DashProgressMin + DashCardMin * (count - 1))
+        {
+            var stacked = new int[count];
+            Array.Fill(stacked, full);
+            return stacked;
+        }
+
+        var progress = Math.Max(DashProgressMin, (int)Math.Round(remain * 1.5 / units));
+        var other = Math.Max(DashCardMin, (int)Math.Round(remain * 1.0 / units));
+        var widths = new int[count];
+        widths[0] = progress;
+        var used = progress;
+        for (var i = 1; i < count; i++)
+        {
+            widths[i] = i == count - 1 ? Math.Max(DashCardMin, remain - used) : other;
+            used += widths[i];
+        }
+
+        if (used > remain)
+        {
+            var stacked = new int[count];
+            Array.Fill(stacked, full);
+            return stacked;
+        }
+
+        return widths;
     }
 
     public static Rect FromScreen(System.Drawing.Rectangle wa) =>

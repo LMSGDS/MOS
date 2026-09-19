@@ -199,6 +199,24 @@ static class ExamHub
             rows.Where(a => !a.IsOpen).OrderByDescending(When).ToList());
     }
 
+    public static MosAttempt? FindOpenAttempt(IReadOnlyList<MosAttempt> rows, string projectId)
+    {
+        if (string.IsNullOrWhiteSpace(projectId))
+        {
+            return null;
+        }
+
+        foreach (var attempt in GroupAttempts(rows).Open)
+        {
+            if (string.Equals(attempt.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+            {
+                return attempt;
+            }
+        }
+
+        return null;
+    }
+
     public static async Task<MosProgress?> GetProgressAsync(string program)
     {
         using var doc = await Portal.GetJsonAsync("/api/v1/progress?program=" + Uri.EscapeDataString(program));

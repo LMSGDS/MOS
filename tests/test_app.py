@@ -192,7 +192,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.16.10" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.16.11" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
@@ -272,10 +272,25 @@ def test_windows_sources_include_action_demo():
     assert "Relayout" in home
     assert "WrapContents = true" in home
     assert "DashColumns" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "DashWide = 1200" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
-    assert "DashStack = 900" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DashCourseMin = 250" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DashProgressMin = 400" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "DashStack = 1024" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "AutoFitColumns" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "WidgetStack" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
+    assert "WidgetWidths" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "HubMinW = 420" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "FitWrapRow" in ui
+    assert "AttachFocusRing" in ui
+    assert "FocusRing" in ui
+    assert "PlayReveal" in ui
+    assert "Xem tất cả (" in home
+    assert "Take(2)" in home
+    assert "Height = 40" in home
+    assert "AutoEllipsis = false" in home
+    assert "FindOpenAttempt" in hub
+    assert "ConfirmSessionForm" in form
+    assert "Làm lại từ đầu" in (root / "ConfirmSubmitForm.cs").read_text(encoding="utf-8")
+    assert "DashCourseMin" in form
     assert "AutoEllipsis = false" in ui
     assert "lần cũ đã gom" in home
     assert "Chưa chấm" in home
@@ -336,9 +351,43 @@ def test_windows_sources_include_action_demo():
     assert "SaveCopyAs" in (root / "OfficeCapture.cs").read_text(encoding="utf-8")
     assert "Word đang giữ tệp bài làm" in hub
     assert "Chọn một ô bên dưới" not in form
-    assert 'MyAppVersion "1.16.10"' in (
+    assert 'MyAppVersion "1.16.11"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
+
+
+def _autofit_columns(inner_w: int, min_w: int, gap: int) -> int:
+    span = max(1, inner_w)
+    cell = max(1, min_w + gap)
+    return max(1, (span + gap) // cell)
+
+
+def _autofit_card_width(inner_w: int, min_w: int, count: int, gap: int) -> int:
+    cols = min(max(1, count), _autofit_columns(inner_w, min_w, gap))
+    while cols > 1:
+        width = (inner_w - gap * (cols - 1)) // cols
+        if width >= min_w and cols * width + (cols - 1) * gap <= inner_w:
+            return width
+        cols -= 1
+    return max(min_w, inner_w)
+
+
+def _widget_stack(inner_w: int) -> bool:
+    return inner_w < 1024 or inner_w < 400 + 2 * 300 + 2 * 24
+
+
+def test_dashboard_autofit_keeps_powerpoint():
+    # 3×250 + 2×16 = 782 — PowerPoint stays on row 1
+    assert _autofit_columns(800, 250, 16) == 3
+    assert _autofit_columns(782, 250, 16) == 3
+    assert _autofit_columns(781, 250, 16) == 2
+    assert _autofit_card_width(800, 250, 3, 16) >= 250
+    assert 3 * _autofit_card_width(800, 250, 3, 16) + 32 <= 800
+    # old FitWrapRow bug: 3 theoretical columns but tiles overflow and clip
+    assert min(3, _autofit_columns(1200, 250, 16)) == 3
+    assert not _widget_stack(1280)
+    assert _widget_stack(1024)
+    assert _widget_stack(900)
 
 
 def test_word_window_only_docks_current_exam():

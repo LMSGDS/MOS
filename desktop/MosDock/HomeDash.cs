@@ -3,7 +3,7 @@ using System.Drawing.Drawing2D;
 namespace MosDock;
 
 /// <summary>
-/// Trang chủ: wrap cards at 1200 / 900 / 1-col, never clip titles or overlap the radar.
+/// Trang chủ: auto-fit course tiles (min 250), widgets 400/300/300 then stack under 1024.
 /// </summary>
 sealed class HomeDash : Panel
 {
@@ -31,13 +31,13 @@ sealed class HomeDash : Panel
     readonly FlowLayoutPanel _stats = new();
     readonly Panel _radarHost = new();
     readonly RadarView _radar = new();
-    readonly Label _resumeTitle = new();
-    readonly Label _resumeLead = new();
-    readonly Ui.PercentTrack _resumeBar = new();
+    readonly FlowLayoutPanel _resumeItems = new();
+    readonly Panel _resumeActions = new();
+    readonly Button _resumeAll;
     readonly Button _resumeGo;
     readonly Panel _recentHost = new();
     readonly FlowLayoutPanel _recent = new();
-    MosAttempt? _resume;
+    int _resumeShown;
     bool _fitting;
 
     public Action<string>? OpenProgram { get; set; }
@@ -54,17 +54,12 @@ sealed class HomeDash : Panel
 
         _resumeGo = Ui.PrimaryBtn("Tiếp tục", 120);
         _resumeGo.BackColor = Ui.Success;
-        _resumeGo.Click += async (_, _) =>
-        {
-            if (_resume is { } attempt && ResumeAttempt is not null)
-            {
-                await ResumeAttempt(attempt);
-            }
-            else
-            {
-                OpenProgram?.Invoke("word");
-            }
-        };
+        _resumeGo.FlatAppearance.MouseOverBackColor = Color.FromArgb(2, 110, 48);
+        _resumeGo.Click += (_, _) => OpenProgram?.Invoke("word");
+        _resumeAll = Ui.TextLink("Xem tất cả", () => OpenResumeList?.Invoke());
+        _resumeAll.AutoSize = false;
+        _resumeAll.Dock = DockStyle.Right;
+        _resumeAll.Width = 128;
 
         _page.FlowDirection = FlowDirection.TopDown;
         _page.WrapContents = false;
@@ -152,7 +147,7 @@ sealed class HomeDash : Panel
     Control ProgressCard()
     {
         var shell = Ui.SoftCard(out var inner);
-        shell.Margin = new Padding(0, 0, LayoutMath.DashGap, LayoutMath.DashGap);
+        shell.Margin = new Padding(0, 0, LayoutMath.DashWidgetGap, LayoutMath.DashWidgetGap);
         inner.Padding = new Padding(14, 12, 12, 12);
         inner.AutoScroll = false;
 
@@ -169,7 +164,7 @@ sealed class HomeDash : Panel
         _stats.FlowDirection = FlowDirection.LeftToRight;
         _stats.WrapContents = true;
         _stats.Dock = DockStyle.Top;
-        _stats.Height = 100;
+        _stats.Height = 116;
         _stats.BackColor = Ui.Card;
         _stats.Margin = Padding.Empty;
         _stats.Controls.Add(StatBlock("Điểm cao nhất", _bestValue, _bestHint, Ui.Primary));
@@ -203,19 +198,20 @@ sealed class HomeDash : Panel
     {
         var row = new Panel
         {
-            Size = new Size(110, 92),
-            MinimumSize = new Size(90, 84),
+            Size = new Size(120, 108),
+            MinimumSize = new Size(96, 100),
             BackColor = Ui.Card,
             Padding = new Padding(6, 4, 6, 4),
             Margin = new Padding(0, 0, 8, 8),
         };
         var bar = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = accent };
-        value.Font = new Font("Segoe UI", 15f, FontStyle.Bold);
+        value.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
         value.ForeColor = Ui.Text;
         value.Dock = DockStyle.Top;
-        value.Height = 26;
-        value.AutoEllipsis = true;
+        value.Height = 40;
+        value.AutoEllipsis = false;
         value.UseMnemonic = false;
+        value.TextAlign = ContentAlignment.MiddleLeft;
         hint.Font = Ui.SmallFont;
         hint.ForeColor = Ui.Muted;
         hint.Dock = DockStyle.Fill;
@@ -242,34 +238,37 @@ sealed class HomeDash : Panel
     Control ResumeCard()
     {
         var shell = Ui.SoftCard(out var inner);
-        shell.Margin = new Padding(0, 0, LayoutMath.DashGap, LayoutMath.DashGap);
+        shell.Margin = new Padding(0, 0, LayoutMath.DashWidgetGap, LayoutMath.DashWidgetGap);
         inner.Padding = new Padding(14, 12, 14, 12);
 
-        var head = CardHead("Tiếp tục bài", () => OpenResumeList?.Invoke());
-        var actions = new Panel { Dock = DockStyle.Bottom, Height = 44, BackColor = Ui.Card };
+        var head = new Panel { Dock = DockStyle.Top, Height = 28, BackColor = Ui.Card };
+        var title = new Label
+        {
+            Text = "Tiếp tục bài",
+            Font = Ui.HeadFont,
+            ForeColor = Ui.Text,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseMnemonic = false,
+        };
+        head.Controls.Add(title);
+        head.Controls.Add(_resumeAll);
+
+        _resumeItems.Dock = DockStyle.Fill;
+        _resumeItems.FlowDirection = FlowDirection.TopDown;
+        _resumeItems.WrapContents = false;
+        _resumeItems.BackColor = Ui.Card;
+        _resumeItems.Padding = new Padding(0, 6, 0, 0);
+
+        _resumeActions.Dock = DockStyle.Bottom;
+        _resumeActions.Height = 44;
+        _resumeActions.BackColor = Ui.Card;
         _resumeGo.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
         _resumeGo.Location = new Point(0, 6);
-        actions.Controls.Add(_resumeGo);
+        _resumeActions.Controls.Add(_resumeGo);
 
-        _resumeBar.Dock = DockStyle.Bottom;
-        _resumeBar.Height = 22;
-
-        _resumeTitle.Font = Ui.HeadFont;
-        _resumeTitle.ForeColor = Ui.Text;
-        _resumeTitle.Dock = DockStyle.Top;
-        _resumeTitle.Height = 48;
-        _resumeTitle.AutoEllipsis = true;
-        _resumeTitle.UseMnemonic = false;
-
-        _resumeLead.Font = Ui.BodyFont;
-        _resumeLead.ForeColor = Ui.Muted;
-        _resumeLead.Dock = DockStyle.Fill;
-        _resumeLead.UseMnemonic = false;
-
-        inner.Controls.Add(_resumeLead);
-        inner.Controls.Add(_resumeTitle);
-        inner.Controls.Add(_resumeBar);
-        inner.Controls.Add(actions);
+        inner.Controls.Add(_resumeItems);
+        inner.Controls.Add(_resumeActions);
         inner.Controls.Add(head);
         return shell;
     }
@@ -325,10 +324,10 @@ sealed class HomeDash : Panel
         try
         {
             var gutter = VScroll ? SystemInformation.VerticalScrollBarWidth : 0;
-            var inner = Math.Max(LayoutMath.DashCardMin, ClientSize.Width - gutter);
-            var cols = LayoutMath.DashColumns(inner);
-            var cardW = LayoutMath.DashCardWidth(inner);
-            var gap = LayoutMath.DashGap;
+            var inner = Math.Max(LayoutMath.DashCourseMin, ClientSize.Width - gutter);
+            var gap = LayoutMath.DashWidgetGap;
+            var widths = LayoutMath.WidgetWidths(inner, _widgets.Controls.Count);
+            var stacked = LayoutMath.WidgetStack(inner);
 
             _page.Width = inner;
             _apps.Width = inner;
@@ -342,30 +341,43 @@ sealed class HomeDash : Panel
             }
 
             _page.PerformLayout();
-            Ui.FitWrapRow(_apps, LayoutMath.DashCardMin, LayoutMath.DashAppH);
+            Ui.FitWrapRow(_apps, LayoutMath.DashCourseMin, LayoutMath.DashAppH, LayoutMath.DashGap);
 
-            var statInner = Math.Max(90, cardW - 40);
-            var statWide = statInner >= 340;
-            var statW = statWide ? Math.Max(90, (statInner - 16) / 3) : statInner;
+            var progressW = widths.Length > 0 ? widths[0] : inner;
+            var statInner = Math.Max(90, progressW - 40);
+            var statWide = !stacked && statInner >= 340;
+            var statW = statWide ? Math.Max(96, (statInner - 16) / 3) : statInner;
             foreach (Control stat in _stats.Controls)
             {
                 stat.Width = statW;
-                stat.Height = 92;
+                stat.Height = 108;
             }
 
-            _stats.Height = statWide ? 100 : 92 * 3 + 16;
+            _stats.Height = statWide ? 116 : 108 * 3 + 16;
             var radarH = Math.Max(180, statWide ? 200 : 220);
-            var widgetH = 28 + 16 + _stats.Height + 20 + radarH + 24;
+            var progressH = 28 + 16 + _stats.Height + 20 + radarH + 24;
+            var resumeH = 28 + 16 + _resumeActions.Height + (_resumeShown == 0 ? 120 : _resumeShown * 132) + 20;
+            var recentH = 240;
+            var widgetH = Math.Max(progressH, Math.Max(resumeH, recentH));
 
-            foreach (Control card in _widgets.Controls)
+            for (var i = 0; i < _widgets.Controls.Count; i++)
             {
-                card.Width = cardW;
-                card.Height = widgetH;
-                card.Margin = new Padding(0, 0, gap, gap);
+                var card = _widgets.Controls[i];
+                var last = i == _widgets.Controls.Count - 1;
+                card.Width = i < widths.Length ? widths[i] : inner;
+                card.Height = stacked ? (i == 0 ? progressH : i == 1 ? resumeH : recentH) : widgetH;
+                card.Margin = new Padding(0, 0, stacked || last ? 0 : gap, gap);
             }
 
-            var widgetRows = Math.Max(1, (_widgets.Controls.Count + cols - 1) / cols);
-            _widgets.Height = widgetRows * (widgetH + gap);
+            if (stacked)
+            {
+                var widgetRows = _widgets.Controls.Count;
+                _widgets.Height = progressH + resumeH + recentH + gap * widgetRows;
+            }
+            else
+            {
+                _widgets.Height = widgetH + gap;
+            }
 
             var y = 0;
             foreach (Control child in _page.Controls)
@@ -375,8 +387,13 @@ sealed class HomeDash : Panel
 
             _page.Height = y;
             _page.Location = new Point(0, 0);
-            AutoScrollMinSize = new Size(LayoutMath.DashCardMin, y);
+            AutoScrollMinSize = new Size(LayoutMath.DashCourseMin, y);
             FitRecent();
+            var resumeW = Math.Max(160, _resumeItems.ClientSize.Width);
+            foreach (Control row in _resumeItems.Controls)
+            {
+                row.Width = resumeW;
+            }
         }
         finally
         {
@@ -403,11 +420,13 @@ sealed class HomeDash : Panel
         _openValue.Text = "—";
         _openHint.Text = "Bài đang mở";
         _radar.SetValues(0, 0, 0);
-        _resume = null;
-        _resumeTitle.Text = "Đang tải…";
-        _resumeLead.Text = "";
-        _resumeBar.Set(null, "—");
+        _resumeShown = 0;
+        _resumeItems.Controls.Clear();
+        _resumeItems.Controls.Add(ResumeEmpty("Đang tải…", "Đang lấy bài làm dở gần nhất."));
+        _resumeGo.Visible = true;
         _resumeGo.Text = "Tiếp tục";
+        _resumeActions.Height = 44;
+        _resumeAll.Text = "Xem tất cả";
         _recent.Controls.Clear();
         _recentHost.Controls.Clear();
         Relayout();
@@ -416,9 +435,12 @@ sealed class HomeDash : Panel
     public void ShowError(string message)
     {
         _hello.Text = "Không tải được bảng điều khiển. " + message;
-        _resumeTitle.Text = "Chưa có dữ liệu";
-        _resumeLead.Text = message;
+        _resumeShown = 0;
+        _resumeItems.Controls.Clear();
+        _resumeItems.Controls.Add(ResumeEmpty("Chưa có dữ liệu", message));
+        _resumeGo.Visible = true;
         _resumeGo.Text = "Thử Word";
+        _resumeActions.Height = 44;
         Relayout();
     }
 
@@ -495,30 +517,110 @@ sealed class HomeDash : Panel
 
     void BindResume(List<MosAttempt> open)
     {
-        _resume = open.Count > 0 ? open[0] : null;
-        if (_resume is not { } attempt)
+        _resumeShown = Math.Min(2, open.Count);
+        _resumeAll.Text = open.Count > 2 ? "Xem tất cả (" + open.Count + "+)" : "Xem tất cả";
+        _resumeItems.Controls.Clear();
+        if (open.Count == 0)
         {
-            _resumeTitle.Text = "Chưa có bài đang làm dở";
-            _resumeLead.Text = "Bắt đầu Word, Excel hoặc PowerPoint ở trên — quay lại đây để mở tiếp, không tạo lần làm mới.";
-            _resumeBar.Set(null, "—");
+            _resumeItems.Controls.Add(ResumeEmpty(
+                "Chưa có bài đang làm dở",
+                "Bắt đầu Word, Excel hoặc PowerPoint ở trên — quay lại đây để mở tiếp, không tạo lần làm mới."));
+            _resumeGo.Visible = true;
             _resumeGo.Text = "Bài mới";
+            _resumeActions.Height = 44;
             return;
         }
 
-        _resumeTitle.Text = attempt.DisplayTitle;
+        _resumeGo.Visible = false;
+        _resumeActions.Height = 0;
+        foreach (var attempt in open.Take(2))
+        {
+            _resumeItems.Controls.Add(ResumeRow(attempt));
+        }
+    }
+
+    Panel ResumeRow(MosAttempt attempt)
+    {
+        var row = new Panel
+        {
+            Height = 124,
+            Width = Math.Max(180, _resumeItems.ClientSize.Width),
+            BackColor = Ui.Card,
+            Margin = new Padding(0, 0, 0, 8),
+        };
+        var go = Ui.PrimaryBtn("Tiếp tục", 120);
+        go.BackColor = Ui.Success;
+        go.FlatAppearance.MouseOverBackColor = Color.FromArgb(2, 110, 48);
+        go.Dock = DockStyle.Bottom;
+        go.Height = 36;
+        var item = attempt;
+        go.Click += async (_, _) =>
+        {
+            if (ResumeAttempt is not null)
+            {
+                await ResumeAttempt(item);
+            }
+        };
+        var bar = new Ui.PercentTrack { Dock = DockStyle.Bottom, Height = 22 };
+        var title = new Label
+        {
+            Text = attempt.DisplayTitle,
+            Font = Ui.HeadFont,
+            ForeColor = Ui.Text,
+            Dock = DockStyle.Top,
+            Height = 28,
+            AutoEllipsis = true,
+            UseMnemonic = false,
+        };
+        var lead = new Label
+        {
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Muted,
+            Dock = DockStyle.Fill,
+            UseMnemonic = false,
+        };
         var appMode = Ui.AppName(attempt.Program) + " · " + Ui.ModeLabel(attempt.Mode);
         if (attempt.ProgressPct is { } n)
         {
-            _resumeLead.Text = appMode + " — Đã hoàn thành " + n + "%";
-            _resumeBar.Set(n, n + "%");
+            lead.Text = appMode + " — Đã hoàn thành " + n + "%";
+            bar.Set(n, n + "%");
         }
         else
         {
-            _resumeLead.Text = appMode + " — Đang làm dở";
-            _resumeBar.Set(12, "Chưa chấm");
+            lead.Text = appMode + " — Đang làm dở";
+            bar.Set(12, "Chưa chấm");
         }
 
-        _resumeGo.Text = "Tiếp tục";
+        row.Controls.Add(lead);
+        row.Controls.Add(title);
+        row.Controls.Add(bar);
+        row.Controls.Add(go);
+        return row;
+    }
+
+    static Panel ResumeEmpty(string title, string lead)
+    {
+        var box = new Panel { Height = 110, Dock = DockStyle.Top, BackColor = Ui.Card };
+        var h = new Label
+        {
+            Text = title,
+            Font = Ui.HeadFont,
+            ForeColor = Ui.Text,
+            Dock = DockStyle.Top,
+            Height = 36,
+            UseMnemonic = false,
+        };
+        var p = new Label
+        {
+            Text = lead,
+            Font = Ui.BodyFont,
+            ForeColor = Ui.Muted,
+            Dock = DockStyle.Fill,
+            UseMnemonic = false,
+        };
+        box.Controls.Add(p);
+        box.Controls.Add(h);
+        return box;
     }
 
     void BindRecent(List<MosAttempt> done)

@@ -34,6 +34,8 @@ static class Ui
     public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
     public static readonly Color DockQuiet = Color.FromArgb(120, 136, 156);
     public static readonly Color DockHint = Color.FromArgb(201, 148, 36);
+    /// <summary>UDL Tab focus ring: 2px solid #005fb8, offset 2px.</summary>
+    public static readonly Color FocusRing = Color.FromArgb(0, 95, 184);
 
     /// <summary>
     /// Form error SOP: radius 8, idle Line, focus Primary + soft shadow,
@@ -268,6 +270,7 @@ static class Ui
         };
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = PrimaryDark;
+        AttachFocusRing(btn);
         return btn;
     }
 
@@ -318,6 +321,7 @@ static class Ui
         };
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = SignInHover;
+        AttachFocusRing(btn);
         return btn;
     }
 
@@ -369,6 +373,7 @@ static class Ui
             UseMnemonic = false,
         };
         btn.FlatAppearance.BorderColor = Line;
+        AttachFocusRing(btn);
         return btn;
     }
 
@@ -667,6 +672,7 @@ static class Ui
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(235, 244, 250);
         btn.Click += (_, _) => onClick();
+        AttachFocusRing(btn);
         return btn;
     }
 
@@ -1050,24 +1056,105 @@ static class Ui
         }
     }
 
-    /// <summary>flex-wrap analog: tiles keep min width and drop to the next row.</summary>
-    public static void FitWrapRow(FlowLayoutPanel row, int minW, int height)
+    /// <summary>auto-fit minmax: columns from real width so PowerPoint wraps instead of vanishing.</summary>
+    public static void FitWrapRow(FlowLayoutPanel row, int minW, int height, int gap = -1)
     {
-        var inner = Math.Max(minW, row.ClientSize.Width);
-        var cols = LayoutMath.DashColumns(inner);
-        var cardW = LayoutMath.DashCardWidth(inner);
-        var gap = LayoutMath.DashGap;
-        foreach (Control child in row.Controls)
+        if (gap < 0)
         {
-            child.Dock = DockStyle.None;
-            child.Width = Math.Max(minW, cardW);
-            child.Height = height;
-            child.Margin = new Padding(0, 0, gap, gap);
+            gap = LayoutMath.DashGap;
         }
 
+        var inner = Math.Max(minW, row.ClientSize.Width);
         var n = row.Controls.Count;
-        var lines = Math.Max(1, (n + cols - 1) / cols);
+        var cardW = LayoutMath.AutoFitCardWidth(inner, minW, Math.Max(1, n), gap);
+        var cols = Math.Min(Math.Max(1, n), LayoutMath.AutoFitColumns(inner, minW, gap));
+        while (cols > 1 && cols * cardW + (cols - 1) * gap > inner)
+        {
+            cols--;
+        }
+
+        for (var i = 0; i < n; i++)
+        {
+            var child = row.Controls[i];
+            child.Dock = DockStyle.None;
+            child.Width = cardW;
+            child.Height = height;
+            var lastInRow = cols <= 1 || (i % cols) == cols - 1 || i == n - 1;
+            child.Margin = new Padding(0, 0, lastInRow ? 0 : gap, gap);
+        }
+
+        var lines = n == 0 ? 1 : Math.Max(1, (n + cols - 1) / cols);
         row.Height = lines * (height + gap);
+    }
+
+    public static void AttachFocusRing(Control control)
+    {
+        control.GotFocus += (_, _) => control.Invalidate();
+        control.LostFocus += (_, _) => control.Invalidate();
+        control.Paint += (_, e) =>
+        {
+            if (!control.ContainsFocus && !control.Focused)
+            {
+                return;
+            }
+
+            if (!control.Focused)
+            {
+                return;
+            }
+
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = control.ClientRectangle;
+            box.Inflate(-2, -2);
+            if (box.Width < 6 || box.Height < 6)
+            {
+                return;
+            }
+
+            using var pen = new Pen(FocusRing, 2f);
+            g.DrawRectangle(pen, box.X, box.Y, box.Width - 1, box.Height - 1);
+        };
+    }
+
+    /// <summary>0.3s ease: opacity analog via 10px rise so tab switches do not snap.</summary>
+    public static void PlayReveal(Control host)
+    {
+        if (host is null || host.IsDisposed)
+        {
+            return;
+        }
+
+        const int shift = 10;
+        const int ms = 300;
+        var startPad = host.Padding;
+        host.Padding = new Padding(startPad.Left, startPad.Top + shift, startPad.Right, startPad.Bottom);
+        var start = Environment.TickCount;
+        var timer = new System.Windows.Forms.Timer { Interval = 16 };
+        timer.Tick += (_, _) =>
+        {
+            if (host.IsDisposed)
+            {
+                timer.Stop();
+                timer.Dispose();
+                return;
+            }
+
+            var t = Math.Clamp((Environment.TickCount - start) / (double)ms, 0, 1);
+            var ease = 1 - Math.Pow(1 - t, 3);
+            host.Padding = new Padding(
+                startPad.Left,
+                startPad.Top + (int)Math.Round(shift * (1 - ease)),
+                startPad.Right,
+                startPad.Bottom);
+            if (t >= 1)
+            {
+                host.Padding = startPad;
+                timer.Stop();
+                timer.Dispose();
+            }
+        };
+        timer.Start();
     }
 
     public static string AppName(string id) => id switch
@@ -1112,6 +1199,7 @@ static class Ui
             var kind = btn.Tag is NavIcon n ? n : icon;
             DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White, btn.BackColor);
         };
+        AttachFocusRing(btn);
         RoundControl(btn, 6);
         return btn;
     }
@@ -1178,6 +1266,7 @@ static class Ui
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 99, 177);
         DockTips.SetToolTip(btn, tip);
+        AttachFocusRing(btn);
         RoundControl(btn, 6);
         return btn;
     }
