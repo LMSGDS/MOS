@@ -2,9 +2,9 @@
 {% block title %}Chỉ số sư phạm lớp{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
   <h1>Chỉ số sư phạm — không phải camera</h1>
   <p class="lead">Telemetry hành vi cả lớp: gợi ý sớm, sai lần đầu, kẹt không được cứu, và dấu vết số của giáo viên trên web quản trị (phiên + tab Giám sát, không ghi phím).</p>
-  {% include "admin_nav.html" %}
   <form method="get" action="/quan-tri/su-pham" class="live-filter">
     <label>Cửa sổ
       <select name="gio" onchange="this.form.submit()">

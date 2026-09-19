@@ -2,10 +2,10 @@
 {% block title %}Tiến độ học tập{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
-  <h1>Tiến độ và đánh giá của bạn</h1>
   {% if user.role in ['admin', 'teacher', 'leadership'] %}
   {% include "admin_nav.html" %}
   {% endif %}
+  <h1>Tiến độ và đánh giá của bạn</h1>
   <form method="post" action="/vao-lop" class="live-filter">
     <label>Mã vào lớp <input name="ma" required placeholder="A1B2C3" /></label>
     <button type="submit">Tham gia</button>

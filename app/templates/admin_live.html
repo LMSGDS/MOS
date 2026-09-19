@@ -2,9 +2,9 @@
 {% block title %}Giám sát phòng thực hành{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
   <h1>Giám sát phòng thực hành</h1>
   <p class="lead">Lưới phòng máy qua SSE (không SignalR). 🟢 ổn · 🟡 không tương tác &gt; 3 phút · 🔴 kẹt &gt; 5 phút hoặc rage-click.</p>
-  {% include "admin_nav.html" %}
   <form method="get" action="/quan-tri/giam-sat" class="live-filter">
     <label>Lớp
       <select name="lop" onchange="this.form.submit()">

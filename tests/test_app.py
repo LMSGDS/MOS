@@ -390,8 +390,7 @@ def test_kulkul_home_after_login():
     c = TestClient(app)
     r = c.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"}, follow_redirects=True)
     assert r.status_code == 200
-    assert "Xin chào" in r.text
-    assert "Cài MOS-KulKul" in r.text
+    assert "Trung tâm chỉ huy MOS" in r.text
     assert "Trường GDS" not in r.text
     assert "mos.gds.edu.vn" in r.text
     assert "program-menu" not in r.text
@@ -405,7 +404,32 @@ def test_kulkul_home_after_login():
     assert "Bảng tin" in r.text
     assert "Lớp học" in r.text
     assert "Giám sát" in r.text
+    assert "ic-course-nav" in r.text
     assert "ic-app-header" not in TestClient(app).get("/dang-nhap").text
+
+
+def test_admin_sees_full_canvas_menus():
+    c = TestClient(app)
+    landed = c.post("/dang-nhap", data={"username": "admin", "password": "Mos@Gds2026"}, follow_redirects=False)
+    assert landed.status_code == 303
+    assert landed.headers["location"] == "/quan-tri"
+    page = c.get("/quan-tri")
+    assert page.status_code == 200
+    assert "menu-canvas" in page.text
+    assert "ic-app-header" in page.text
+    assert "ic-course-nav" in page.text
+    for label in ("Bảng tin", "Lớp học", "Bài tập", "Giám sát", "Phân tích", "Điểm", "Trợ giúp"):
+        assert label in page.text
+    for label in ("Tổng quan", "Học sinh", "Sư phạm lớp", "LTI 1.3"):
+        assert label in page.text
+    assert "inbox" not in page.text.lower()
+    student = TestClient(app)
+    student.post("/dang-nhap", data={"username": "hocsinh", "password": "Mos@Gds2026"})
+    home = student.get("/")
+    assert "menu-canvas" in home.text
+    assert "Bảng tin" in home.text
+    assert "Giám sát" not in home.text
+    assert "ic-course-nav" not in home.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text

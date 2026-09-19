@@ -2,9 +2,9 @@
 {% block title %}Học sinh · MOS-KulKul{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
   <h1>Học sinh và liên kết lớp</h1>
   <p class="lead">Tài khoản học sinh / giáo viên lưu trên PostgreSQL máy chủ. MOS-KulKul và web cùng đăng nhập HTTPS — bài làm, điểm, telemetry đẩy lên CSDL.</p>
-  {% include "admin_nav.html" %}
   {% if error %}
   <p class="alert" role="alert">Không tạo được tài khoản (trùng tên hoặc thiếu thông tin).</p>
   {% endif %}

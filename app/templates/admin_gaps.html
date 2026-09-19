@@ -2,9 +2,9 @@
 {% block title %}Lỗ hổng kiến thức{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
   <h1>Bản đồ lỗ hổng kiến thức</h1>
   <p class="lead">Bản đồ tri thức lớp — heatmap Q-Matrix + radar Word/Excel/PPT. Hệ thống đề xuất phút ôn, không xuất Excel vô hồn.</p>
-  {% include "admin_nav.html" %}
   {% set axes = radar|default([]) %}
   {% if axes %}
   <h2 style="margin-top:16px;font-size:18px">Radar lớp (Word · Excel · PPT)</h2>

@@ -43,7 +43,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul10")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul11")
 SESSION_SECRET = _session_secret()
 
 
@@ -112,6 +112,10 @@ async def frame_same_origin(request, call_next):
 def current_user(request: Request) -> dict | None:
     user = request.session.get("user")
     return user if isinstance(user, dict) else None
+
+
+def _staff_web(user: dict | None) -> bool:
+    return bool(user and user.get("role") in ("admin", "teacher", "leadership"))
 
 
 def current_program(request: Request) -> dict:
@@ -264,6 +268,8 @@ def home(request: Request):
     user = current_user(request)
     if not user:
         return RedirectResponse("/dang-nhap", status_code=303)
+    if _staff_web(user) and not _is_dock(request):
+        return RedirectResponse("/quan-tri", status_code=303)
     template = "dock_content.html" if _is_dock(request) else "portal.html"
     cards = []
     if user.get("role") == "student" and user.get("id"):
@@ -301,6 +307,8 @@ def login_form(request: Request, loi: str | None = None):
         request.session["che_do"] = che_do
     program = current_program(request)
     if current_user(request):
+        if _staff_web(current_user(request)) and request.session.get("che_do") != "dock":
+            return RedirectResponse("/quan-tri", status_code=303)
         dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
         dest += f"{'&' if '?' in dest else '?'}chuong-trinh={program['id']}"
         return RedirectResponse(dest, status_code=303)
@@ -332,6 +340,8 @@ def login(
         sid = open_staff_session(int(row["id"]))
         if sid:
             request.session["staff_session_id"] = sid
+    if _staff_web(user) and request.session.get("che_do") != "dock":
+        return RedirectResponse("/quan-tri", status_code=303)
     dest = "/?che-do=dock" if request.session.get("che_do") == "dock" else "/"
     dest += f"{'&' if '?' in dest else '?'}chuong-trinh={normalize(chuong_trinh)}"
     return RedirectResponse(dest, status_code=303)
