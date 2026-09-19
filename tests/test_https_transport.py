@@ -170,6 +170,8 @@ def test_github_sync_downloads_installers_over_https():
     assert "scp " not in sync.lower()
     assert "sshpass" not in sync.lower()
     assert "sync-installers.sh" in git_sync
+    assert 'pip" install' in git_sync or "pip install" in git_sync
+    assert "requirements.txt" in git_sync
     assert "x-access-token:" in git_sync
     assert "AUTHORIZATION: basic" in git_sync
     assert "reset --hard" in git_sync
