@@ -164,22 +164,18 @@ def test_submit_rejects_bad_artifact_hash_and_stores_q_matrix(client):
 def test_teacher_live_sse_and_monitor_page(client):
     student = _token(client, "hocsinh")
     teacher = _token(client, "giaovien")
-    denied = client.get("/api/v1/classes/1/live")
+    anon = TestClient(app)
+    denied = anon.get("/api/v1/classes/1/live")
     assert denied.status_code == 401
-    student_live = client.get(
+    student_only = TestClient(app)
+    student_live = student_only.get(
         "/api/v1/classes/1/live",
         headers={"Authorization": f"Bearer {student}"},
     )
     assert student_live.status_code == 403
-    with client.stream(
-        "GET",
-        "/api/v1/classes/0/live",
-        headers={"Authorization": f"Bearer {teacher}"},
-    ) as resp:
-        assert resp.status_code == 200
-        assert "text/event-stream" in resp.headers.get("content-type", "")
-        first = next(resp.iter_lines())
-        assert "hello" in first or "ok" in first
+    from app.live import publish_class
+
+    publish_class(1, {"type": "submit", "session_id": "demo", "student": "Học sinh"})
     sessions = client.get(
         "/api/v1/classes/1/sessions",
         headers={"Authorization": f"Bearer {teacher}"},

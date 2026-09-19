@@ -195,7 +195,9 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.15.5" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.17.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "LocalExamStore" in (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "X-MOS-Artifact-SHA256" in (root / "Portal.cs").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
