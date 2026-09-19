@@ -158,6 +158,7 @@ def _dashboard(request: Request, user: dict):
         )
         evidence_rows = cur.fetchall()
     roster = list_roster()[:12]
+    pedagogy = pedagogy_alerts(24) if _leaders(user) else []
     return TEMPLATES.TemplateResponse(
         request,
         "admin.html",
@@ -166,6 +167,7 @@ def _dashboard(request: Request, user: dict):
             user,
             {
                 "nav": "home",
+                "pedagogy_alerts": pedagogy,
                 "stats": {
                     "students": students,
                     "classes": classes,

@@ -8,7 +8,13 @@ from fastapi.testclient import TestClient
 
 from app.db import cursor, init_schema
 from app.main import app
-from app.pedagogy import class_first_attempt_fail, class_hint_dependency, pedagogy_alerts
+from app.pedagogy import (
+    class_first_attempt_fail,
+    class_hint_dependency,
+    class_unresolved_stuck,
+    pedagogy_alerts,
+    teacher_footprint,
+)
 from app.seed import seed
 from tests.test_platform import WORD11_RESULTS, WORD_MIME, _token, postgres_ready
 
@@ -88,4 +94,56 @@ def test_pedagogy_page_is_leadership_only(client):
     assert page.status_code == 200
     assert "Chỉ số sư phạm" in page.text
     assert "Lạm dụng Gợi ý" in page.text
+    assert pedagogy_alerts(24) is not None
+
+
+def test_unresolved_stuck_and_teacher_footprint(client):
+    token = _token(client, "hocsinh2")
+    headers = {"Authorization": f"Bearer {token}"}
+    started = client.post(
+        "/api/v1/attempts",
+        headers=headers,
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    attempt_id = started.json()["attempt_id"]
+    with cursor() as cur:
+        cur.execute(
+            """
+            UPDATE attempts
+            SET started_at = now() - interval '20 minutes',
+                submitted_at = now(),
+                status = 'submitted',
+                score = 0,
+                verified_score = 0
+            WHERE id = %s
+            """,
+            (attempt_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO telemetry (attempt_id, ts, action, detail)
+            VALUES (%s, now() - interval '18 minutes', 'open', '{}'::jsonb)
+            """,
+            (attempt_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO q_matrix_results (
+              attempt_id, criterion_id, locate, tool, configure, status
+            ) VALUES (%s, 'q1', 'fail', 'fail', '', 'fail')
+            """,
+            (attempt_id,),
+        )
+        cur.execute(
+            """
+            INSERT INTO first_attempt_q (attempt_id, locate_fail, tool_fail, fail_count, item_count)
+            VALUES (%s, 1, 1, 1, 1)
+            ON CONFLICT (attempt_id) DO NOTHING
+            """,
+            (attempt_id,),
+        )
+    stuck = class_unresolved_stuck(24)
+    assert any(int(r.get("unresolved") or 0) >= 1 for r in stuck)
+    feet = teacher_footprint(24)
+    assert any(r.get("role") == "teacher" for r in feet)
     assert pedagogy_alerts(24) is not None

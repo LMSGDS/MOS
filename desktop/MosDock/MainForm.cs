@@ -71,7 +71,7 @@ sealed class MainForm : Form
     bool _compact;
     bool _docking;
     bool _pinned = true;
-    bool _helpVisible = true;
+    bool _helpVisible = false;
     bool _summaryOpen;
     bool _navResizing;
     int? _navThickness;

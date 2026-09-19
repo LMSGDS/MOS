@@ -74,10 +74,17 @@ def class_first_attempt_fail(hours: int = 24) -> list[dict]:
               u.name AS teacher,
               COUNT(DISTINCT a.user_id) AS students,
               COUNT(DISTINCT a.user_id) FILTER (
-                WHERE f.tool_fail > 0 OR f.locate_fail > 0
+                WHERE q1.locate = 'fail' OR q1.tool = 'fail'
               ) AS first_fail
             FROM first_attempt_q f
             JOIN attempts a ON a.id = f.attempt_id
+            LEFT JOIN LATERAL (
+              SELECT locate, tool
+              FROM q_matrix_results q
+              WHERE q.attempt_id = f.attempt_id
+              ORDER BY q.id
+              LIMIT 1
+            ) q1 ON TRUE
             LEFT JOIN classes c ON c.id = a.class_id
             LEFT JOIN users u ON u.id = c.teacher_id
             WHERE f.created_at > now() - (%s || ' hours')::interval
@@ -116,14 +123,31 @@ def class_unresolved_stuck(hours: int = 24) -> list[dict]:
               u.name AS teacher,
               COUNT(*) AS submits,
               COUNT(*) FILTER (
-                WHERE EXTRACT(EPOCH FROM (
-                  a.submitted_at - COALESCE((
-                    SELECT MAX(t.ts) FROM telemetry t
-                    WHERE t.attempt_id = a.id
-                      AND t.action NOT IN ('submit', 'submit-offline')
-                  ), a.started_at)
-                )) >= %s
-                AND COALESCE(a.verified_score, a.score, 0) < 40
+                WHERE COALESCE(a.verified_score, a.score, 0) < 40
+                  AND NOT EXISTS (
+                    SELECT 1 FROM q_matrix_results q
+                    WHERE q.attempt_id = a.id
+                      AND (
+                        q.status IN ('pass', 'ok')
+                        OR q.locate = 'pass'
+                        OR q.tool = 'pass'
+                        OR q.configure = 'pass'
+                      )
+                  )
+                  AND (
+                    EXTRACT(EPOCH FROM (
+                      a.submitted_at - COALESCE((
+                        SELECT MAX(t.ts) FROM telemetry t
+                        WHERE t.attempt_id = a.id
+                          AND t.action NOT IN ('submit', 'submit-offline')
+                      ), a.started_at)
+                    )) >= %s
+                    OR (
+                      SELECT COUNT(*) FROM telemetry t
+                      WHERE t.attempt_id = a.id
+                        AND t.action IN ('wrong-tool', 'rage-click', 'rage')
+                    ) >= 8
+                  )
               ) AS unresolved
             FROM attempts a
             LEFT JOIN classes c ON c.id = a.class_id
