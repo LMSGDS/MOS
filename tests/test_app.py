@@ -198,6 +198,7 @@ def test_windows_sources_include_action_demo():
     assert "1.17.0" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert "LocalExamStore" in (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "X-MOS-Artifact-SHA256" in (root / "Portal.cs").read_text(encoding="utf-8")
+    assert "using System.Text.Json;" in (root / "BackgroundSync.cs").read_text(encoding="utf-8")
     assert "PinToWork" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "WithThickness" in (root / "LayoutMath.cs").read_text(encoding="utf-8")
     assert "NudgeNavThickness" in (root / "MainForm.cs").read_text(encoding="utf-8")
