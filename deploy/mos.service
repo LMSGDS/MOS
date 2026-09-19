@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=plhien
 WorkingDirectory=/home/plhien/MOS
+EnvironmentFile=-/home/plhien/MOS/data/git-sync.env
 Environment=MOS_HTTPS_ONLY=1
 Environment=MOS_SESSION_SECRET_FILE=/home/plhien/MOS/data/session.secret
 Environment=DATABASE_URL=postgresql://mos:mos@127.0.0.1:5432/mos
