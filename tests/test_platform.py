@@ -50,7 +50,14 @@ def _token(client: TestClient, username: str = "hocsinh") -> str:
 def test_healthz_reports_postgres(client):
     r = client.get("/healthz")
     assert r.status_code == 200
-    assert r.json()["postgres"] is True
+    body = r.json()
+    assert body["postgres"] is True
+    assert body["ok"] is True
+    assert body["transport"] == "https"
+    assert body["git"]["sha"]
+    assert body["git"]["ref"]
+    assert isinstance(body["installers"], list)
+    assert "version" in body
 
 
 def test_jwt_login_and_me(client):

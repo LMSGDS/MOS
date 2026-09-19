@@ -247,6 +247,13 @@ sudo systemctl enable --now mos-git-sync.timer
 
 `git-sync.sh` dùng token để `git pull` HTTPS và tải bộ cài CI vào `data/installers/`. Không đưa token vào git, chat, hay issue.
 
+Đối chiếu máy chủ với GitHub (không cần SSH):
+
+```bash
+curl -sS https://mos.gds.edu.vn/healthz
+# git.sha phải trùng `git rev-parse --short origin/main`
+```
+
 Webhook GitHub (HTTPS, chữ ký HMAC): Settings → Webhooks → `https://mos.gds.edu.vn/api/v1/hooks/github` (push). Secret = `MOS_GITHUB_WEBHOOK_SECRET`.
 
 `scripts/ssh-connect.sh` chủ động từ chối. Workflow SSH qua OpenVPN đã gỡ.
