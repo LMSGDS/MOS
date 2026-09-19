@@ -395,7 +395,7 @@ def test_post_evidence_regrades_existing_checkpoint(client):
     assert body["score"]["verified"] == 100
     assert body["score"]["pending"] == 0
     assert body["score"]["complete"] is True
-    assert body["score"]["grader_version"] == "1.3.1"
+    assert body["score"]["grader_version"] == "1.4.0"
     statuses = {c["criterion_id"]: c["status"] for c in body["score"]["criteria"]}
     assert statuses["W11-S01"] == "pass"
     assert statuses["W11-N02"] == "pass"

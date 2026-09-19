@@ -1,8 +1,8 @@
 namespace MosDock;
 
 /// <summary>
-/// Canvas LMS (Instructure) tokens: nav #394B58, primary #0374B5, page #F5F5F5, text #2D3B45.
-/// Layout uses Dock stacking and measured text — never overlapping Location for titles.
+/// Canvas LMS tokens with a warm-minimalist hub: nav #394B58, primary #0374B5,
+/// page linen #F7F3EE, text #2D3B45. Layout uses Dock stacking — never overlapping titles.
 /// </summary>
 static class Ui
 {
@@ -10,7 +10,13 @@ static class Ui
     public static readonly Color NavDark = Color.FromArgb(43, 57, 67);
     public static readonly Color Primary = Color.FromArgb(3, 116, 181);
     public static readonly Color PrimaryDark = Color.FromArgb(2, 94, 146);
-    public static readonly Color PageBg = Color.FromArgb(245, 245, 245);
+    public static readonly Color PageBg = Color.FromArgb(247, 243, 238);
+    public static readonly Color WarmShadow = Color.FromArgb(226, 214, 200);
+    public static readonly Color BannerBg = Color.FromArgb(227, 240, 248);
+    public static readonly Color ReviewResult = Color.FromArgb(232, 242, 250);
+    public static readonly Color ReviewYours = Color.FromArgb(255, 246, 230);
+    public static readonly Color ReviewCorrect = Color.FromArgb(230, 245, 233);
+    public static readonly Color ReviewPitfall = Color.FromArgb(255, 235, 230);
     public static readonly Color Card = Color.White;
     public static readonly Color Text = Color.FromArgb(45, 59, 69);
     public static readonly Color Muted = Color.FromArgb(107, 119, 128);
@@ -26,6 +32,20 @@ static class Ui
     public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
     public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
     public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
+    public static readonly Color DockQuiet = Color.FromArgb(120, 136, 156);
+    public static readonly Color DockHint = Color.FromArgb(201, 148, 36);
+    /// <summary>UDL Tab focus ring: 2px solid #005fb8, offset 2px.</summary>
+    public static readonly Color FocusRing = Color.FromArgb(0, 95, 184);
+    /// <summary>Canvas LMS ic-box: 16px pad, 8px radius painted only — never a clipping Region.</summary>
+    public const int CardPad = 16;
+    public const int CardRadius = 8;
+
+    /// <summary>
+    /// Form error SOP: radius 8, idle Line, focus Primary + soft shadow,
+    /// empty-field Danger border + SmallFont microcopy under the field,
+    /// auth/status errors use AlertBar above the first field (never under the password).
+    /// </summary>
+    public const int FormFieldRadius = 8;
 
     public static Color Navy => Nav;
     public static Color Blue => Primary;
@@ -253,7 +273,29 @@ static class Ui
         };
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = PrimaryDark;
+        AttachFocusRing(btn);
         return btn;
+    }
+
+    public static Button OutlineBtn(string text, Color accent, int minWidth = 128)
+    {
+        var btn = PrimaryBtn(text, minWidth);
+        btn.BackColor = Card;
+        btn.ForeColor = accent;
+        btn.FlatAppearance.BorderSize = 1;
+        btn.FlatAppearance.BorderColor = accent;
+        btn.FlatAppearance.MouseOverBackColor = Blend(accent, Card, 28);
+        btn.FlatAppearance.MouseDownBackColor = Blend(accent, Card, 46);
+        return btn;
+    }
+
+    public static Color Blend(Color tint, Color onto, int amount)
+    {
+        var a = Math.Clamp(amount, 0, 255);
+        return Color.FromArgb(
+            (tint.R * a + onto.R * (255 - a)) / 255,
+            (tint.G * a + onto.G * (255 - a)) / 255,
+            (tint.B * a + onto.B * (255 - a)) / 255);
     }
 
     public static Button NavBtn(string text, int minWidth = 120)
@@ -282,6 +324,7 @@ static class Ui
         };
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = SignInHover;
+        AttachFocusRing(btn);
         return btn;
     }
 
@@ -333,7 +376,430 @@ static class Ui
             UseMnemonic = false,
         };
         btn.FlatAppearance.BorderColor = Line;
+        AttachFocusRing(btn);
         return btn;
+    }
+
+    public static Panel SoftCard(out Panel inner, int radius = CardRadius)
+    {
+        _ = radius;
+        var shell = new Panel
+        {
+            BackColor = Line,
+            Padding = new Padding(1),
+            Margin = new Padding(0, 0, 12, 12),
+        };
+        inner = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Card,
+            Padding = new Padding(CardPad),
+        };
+        shell.Controls.Add(inner);
+        return shell;
+    }
+
+    public sealed class SoftField : Panel
+    {
+        Control? _focus;
+        bool _error;
+        bool _focused;
+
+        public SoftField()
+        {
+            Height = 50;
+            DoubleBuffered = true;
+            ResizeRedraw = true;
+            BackColor = Color.White;
+            Padding = new Padding(4, 3, 4, 4);
+        }
+
+        public void Bind(Control focus)
+        {
+            _focus = focus;
+            focus.GotFocus += (_, _) =>
+            {
+                _focused = true;
+                Invalidate();
+            };
+            focus.LostFocus += (_, _) =>
+            {
+                _focused = false;
+                Invalidate();
+            };
+        }
+
+        public void SetError(bool error)
+        {
+            _error = error;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = new Rectangle(3, 2, Math.Max(8, Width - 7), Math.Max(8, Height - 6));
+            using var path = RoundedRect(box, FormFieldRadius);
+            if (_focused && !_error)
+            {
+                using var shadow = new SolidBrush(Color.FromArgb(40, Primary));
+                var sh = box;
+                sh.Offset(0, 2);
+                using var sp = RoundedRect(sh, FormFieldRadius);
+                g.FillPath(shadow, sp);
+            }
+
+            using (var fill = new SolidBrush(Card))
+            {
+                g.FillPath(fill, path);
+            }
+
+            var border = _error ? Danger : _focused ? Primary : Line;
+            using var pen = new Pen(border, _focused || _error ? 1.8f : 1.2f);
+            g.DrawPath(pen, path);
+        }
+    }
+
+    public sealed class AlertBar : Panel
+    {
+        readonly Label _msg = new();
+        readonly Panel _icon = new();
+        string _tone = "danger";
+
+        public AlertBar()
+        {
+            Visible = false;
+            Height = 0;
+            Padding = new Padding(10, 8, 12, 8);
+            _icon.Dock = DockStyle.Left;
+            _icon.Width = 28;
+            _icon.Paint += (_, e) => PaintInfoMark(e.Graphics, _icon.ClientRectangle, AccentOf(_tone));
+            _msg.Dock = DockStyle.Fill;
+            _msg.Font = SmallFont;
+            _msg.ForeColor = Ui.Text;
+            _msg.UseMnemonic = false;
+            Controls.Add(_msg);
+            Controls.Add(_icon);
+            RoundControl(this, 10);
+        }
+
+        public void ShowMessage(string text, string tone)
+        {
+            _tone = tone;
+            _msg.Text = text;
+            Visible = true;
+            ApplyTone();
+            Invalidate();
+            _icon.Invalidate();
+        }
+
+        public void Clear()
+        {
+            _msg.Text = "";
+            Visible = false;
+            Height = 0;
+        }
+
+        public int FitWidth(int inner)
+        {
+            if (!Visible || string.IsNullOrWhiteSpace(_msg.Text))
+            {
+                Height = 0;
+                return 0;
+            }
+
+            Height = Math.Max(52, MeasureH(_msg.Text, SmallFont, Math.Max(120, inner - 56)) + 22);
+            return Height;
+        }
+
+        void ApplyTone()
+        {
+            var fill = _tone switch
+            {
+                "warn" => ReviewYours,
+                "info" => BannerBg,
+                _ => ReviewPitfall,
+            };
+            BackColor = fill;
+            _icon.BackColor = fill;
+            _msg.BackColor = fill;
+        }
+
+        static Color AccentOf(string tone) => tone switch
+        {
+            "warn" => Warning,
+            "info" => Primary,
+            _ => Danger,
+        };
+    }
+
+    public static void PaintEye(Graphics g, Rectangle r, Color color, bool open)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var cx = r.X + r.Width / 2f;
+        var cy = r.Y + r.Height / 2f;
+        using var pen = new Pen(color, 1.6f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        g.DrawBezier(pen, cx - 9, cy, cx - 4, cy - 6, cx + 4, cy - 6, cx + 9, cy);
+        g.DrawBezier(pen, cx - 9, cy, cx - 4, cy + 6, cx + 4, cy + 6, cx + 9, cy);
+        if (open)
+        {
+            g.DrawEllipse(pen, cx - 3, cy - 3, 6, 6);
+        }
+        else
+        {
+            g.DrawLine(pen, cx - 8, cy + 7, cx + 8, cy - 7);
+        }
+    }
+
+    public static void PaintGlobe(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var box = new Rectangle(r.X + (r.Width - 16) / 2, r.Y + (r.Height - 16) / 2, 16, 16);
+        using var pen = new Pen(color, 1.5f);
+        g.DrawEllipse(pen, box);
+        g.DrawEllipse(pen, box.X + 4, box.Y, 8, 16);
+        g.DrawLine(pen, box.X, box.Y + 8, box.Right, box.Y + 8);
+        g.DrawLine(pen, box.X + 2, box.Y + 4, box.Right - 2, box.Y + 4);
+        g.DrawLine(pen, box.X + 2, box.Y + 12, box.Right - 2, box.Y + 12);
+    }
+
+    public static Panel InfoBanner(string text)
+    {
+        var bar = new Panel
+        {
+            Height = 44,
+            MinimumSize = new Size(0, 40),
+            BackColor = BannerBg,
+            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(10, 8, 12, 8),
+        };
+        RoundControl(bar, 10);
+        var icon = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 28,
+            BackColor = BannerBg,
+        };
+        icon.Paint += (_, e) => PaintInfoMark(e.Graphics, icon.ClientRectangle, Primary);
+        var msg = new Label
+        {
+            Text = text,
+            Font = SmallFont,
+            ForeColor = Text,
+            Dock = DockStyle.Top,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = false,
+            UseMnemonic = false,
+        };
+        BindWrap(msg, 4);
+        void FitBar(object? _, EventArgs e)
+        {
+            var h = Math.Max(40, msg.Height + bar.Padding.Vertical);
+            if (bar.Height != h)
+            {
+                bar.Height = h;
+            }
+        }
+
+        bar.Resize += FitBar;
+        msg.SizeChanged += FitBar;
+        bar.Controls.Add(msg);
+        bar.Controls.Add(icon);
+        return bar;
+    }
+
+    public static void PaintInfoMark(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var size = Math.Min(r.Width, r.Height) - 8;
+        var box = new Rectangle(r.X + (r.Width - size) / 2, r.Y + (r.Height - size) / 2, size, size);
+        using var fill = new SolidBrush(color);
+        g.FillEllipse(fill, box);
+        using var pen = new Pen(Color.White, 1.6f);
+        var cx = box.X + box.Width / 2;
+        g.DrawLine(pen, cx, box.Y + 8, cx, box.Bottom - 5);
+        g.FillEllipse(Brushes.White, cx - 1, box.Y + 4, 3, 3);
+    }
+
+    public static void PaintAppGlyph(Graphics g, Rectangle r, Color color, string glyph)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+        using var fill = new SolidBrush(color);
+        using var path = RoundedRect(r, 10);
+        g.FillPath(fill, path);
+        TextRenderer.DrawText(
+            g,
+            glyph,
+            new Font("Segoe UI", 14f, FontStyle.Bold),
+            r,
+            Color.White,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
+    public static Label SectionLabel(string text)
+    {
+        return new Label
+        {
+            Text = text,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Height = 28,
+            Margin = new Padding(0, 4, 0, 8),
+            UseMnemonic = false,
+        };
+    }
+
+    public static Button TextLink(string text, Action onClick)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = true,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.Transparent,
+            ForeColor = Primary,
+            Font = SmallFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            Padding = Padding.Empty,
+            Margin = new Padding(0),
+            Height = 24,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(235, 244, 250);
+        btn.Click += (_, _) => onClick();
+        AttachFocusRing(btn);
+        return btn;
+    }
+
+    public static Panel AppLaunchTile(string title, string lead, Color accent, string glyph, Action onClick)
+    {
+        var shell = SoftCard(out var inner);
+        shell.Margin = new Padding(0, 0, 12, 0);
+        inner.Cursor = Cursors.Hand;
+        inner.Padding = new Padding(CardPad);
+        var bar = new Panel { Dock = DockStyle.Top, Height = 4, BackColor = accent, Cursor = Cursors.Hand };
+        var glyphBox = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            Cursor = Cursors.Hand,
+            BackColor = Card,
+        };
+        glyphBox.Paint += (_, e) => PaintAppGlyph(e.Graphics, new Rectangle(0, 2, 32, 32), accent, glyph);
+        var h = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        var p = new Label
+        {
+            Text = lead,
+            Font = SmallFont,
+            ForeColor = Muted,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+        };
+        var copy = new TileCopy { Title = h, Lead = p };
+        shell.Tag = copy;
+        void FitTile(object? _, EventArgs e)
+        {
+            var w = Math.Max(80, inner.ClientSize.Width - inner.Padding.Horizontal);
+            h.Height = Math.Max(24, MeasureH(title, HeadFont, w) + 8);
+            p.Height = Math.Max(20, MeasureH(lead, SmallFont, w) + 8);
+        }
+
+        inner.Resize += FitTile;
+        FitTile(null, EventArgs.Empty);
+        inner.Controls.Add(p);
+        inner.Controls.Add(h);
+        inner.Controls.Add(glyphBox);
+        inner.Controls.Add(bar);
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, inner, bar, glyphBox, h, p })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+        }
+
+        inner.MouseEnter += (_, _) => inner.BackColor = Color.FromArgb(252, 249, 245);
+        inner.MouseLeave += (_, _) => inner.BackColor = Card;
+        return shell;
+    }
+
+    public sealed class TileCopy
+    {
+        public Label Title = null!;
+        public Label Lead = null!;
+
+        public int HeightFor(int width)
+        {
+            var inner = Math.Max(80, width - 2 - CardPad * 2);
+            return 4 + 40 + Math.Max(24, MeasureH(Title.Text, HeadFont, inner) + 8)
+                + Math.Max(20, MeasureH(Lead.Text, SmallFont, inner) + 8)
+                + CardPad * 2 + 8;
+        }
+    }
+
+    public static Panel MiniScoreRow(string title, string score, Color accent, Action? onClick)
+    {
+        var row = new Panel
+        {
+            Height = 44,
+            Dock = DockStyle.Top,
+            BackColor = Card,
+            Padding = new Padding(0, 4, 0, 4),
+            Cursor = onClick is null ? Cursors.Default : Cursors.Hand,
+        };
+        var mark = new Panel { Dock = DockStyle.Left, Width = 6, BackColor = accent };
+        var pts = new Label
+        {
+            Text = score,
+            Font = HeadFont,
+            ForeColor = Text,
+            Dock = DockStyle.Right,
+            Width = 88,
+            TextAlign = ContentAlignment.MiddleRight,
+            UseMnemonic = false,
+        };
+        var name = new Label
+        {
+            Text = title,
+            Font = BodyFont,
+            ForeColor = Text,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            AutoEllipsis = true,
+            UseMnemonic = false,
+        };
+        row.Controls.Add(name);
+        row.Controls.Add(pts);
+        row.Controls.Add(mark);
+        if (onClick is not null)
+        {
+            void Click(object? _, EventArgs e) => onClick();
+            foreach (Control c in new Control[] { row, name, pts, mark })
+            {
+                c.Click += Click;
+                c.Cursor = Cursors.Hand;
+            }
+        }
+
+        return row;
     }
 
     public static Panel StackPage(string title, string subtitle, Control body)
@@ -352,6 +818,120 @@ static class Ui
         return page;
     }
 
+    public static Panel ProgramTile(string program, string title, Color accent, string glyph, Action onClick)
+    {
+        var shell = SoftCard(out var inner);
+        shell.Dock = DockStyle.Fill;
+        shell.Margin = new Padding(0, 0, 10, 10);
+        inner.Cursor = Cursors.Hand;
+        inner.Padding = new Padding(16, 12, 16, 12);
+        var bar = new Panel { Dock = DockStyle.Top, Height = 5, BackColor = accent, Cursor = Cursors.Hand };
+        var row = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        var glyphBox = new Panel
+        {
+            Size = new Size(44, 44),
+            Dock = DockStyle.Left,
+            Width = 48,
+            Cursor = Cursors.Hand,
+            BackColor = Card,
+        };
+        glyphBox.Paint += (_, e) =>
+        {
+            var wash = glyphBox.BackColor;
+            e.Graphics.Clear(wash);
+            PaintAppGlyph(e.Graphics, new Rectangle(0, 4, 36, 36), accent, glyph);
+        };
+        var h = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            UseMnemonic = false,
+            Cursor = Cursors.Hand,
+            Padding = new Padding(10, 0, 0, 0),
+        };
+        row.Controls.Add(h);
+        row.Controls.Add(glyphBox);
+        inner.Controls.Add(row);
+        inner.Controls.Add(bar);
+
+        var state = new ProgramTileState
+        {
+            Id = program,
+            Accent = accent,
+            Inner = inner,
+            Bar = bar,
+            Title = h,
+            Glyph = glyphBox,
+            Row = row,
+        };
+        shell.Tag = state;
+
+        void Click(object? _, EventArgs e) => onClick();
+        foreach (Control c in new Control[] { shell, inner, bar, row, glyphBox, h })
+        {
+            c.Click += Click;
+            c.Cursor = Cursors.Hand;
+            c.MouseEnter += (_, _) =>
+            {
+                state.Hover = true;
+                PaintProgramTile(state);
+            };
+            c.MouseLeave += (_, _) =>
+            {
+                state.Hover = inner.RectangleToScreen(inner.ClientRectangle).Contains(Cursor.Position);
+                PaintProgramTile(state);
+            };
+        }
+
+        PaintProgramTile(state);
+        return shell;
+    }
+
+    public static void MarkProgramTiles(Control host, string active)
+    {
+        foreach (Control child in host.Controls)
+        {
+            if (child.Tag is ProgramTileState state)
+            {
+                state.Active = string.Equals(state.Id, active, StringComparison.OrdinalIgnoreCase);
+                PaintProgramTile(state);
+            }
+        }
+    }
+
+    static void PaintProgramTile(ProgramTileState state)
+    {
+        var wash = state.Active
+            ? Blend(state.Accent, Card, 22)
+            : state.Hover
+                ? Color.FromArgb(252, 249, 245)
+                : Card;
+        state.Inner.BackColor = wash;
+        state.Row.BackColor = wash;
+        state.Glyph.BackColor = wash;
+        state.Title.BackColor = wash;
+        state.Title.ForeColor = state.Active ? Text : Muted;
+        state.Bar.Height = state.Active ? 7 : 4;
+        state.Glyph.Invalidate();
+    }
+
+    sealed class ProgramTileState
+    {
+        public string Id = "";
+        public Color Accent;
+        public Panel Inner = null!;
+        public Panel Bar = null!;
+        public Label Title = null!;
+        public Panel Glyph = null!;
+        public Panel Row = null!;
+        public bool Active;
+        public bool Hover;
+    }
+
     public static Panel Tile(string title, string lead, Color accent, Action onClick)
     {
         const int innerW = 244;
@@ -361,13 +941,15 @@ static class Ui
 
         var shell = new Panel
         {
-            Size = new Size(280, cardH),
-            BackColor = Line,
-            Padding = new Padding(1),
+            Size = new Size(280, cardH + 3),
+            BackColor = WarmShadow,
+            Padding = new Padding(0, 0, 1, 3),
             Margin = new Padding(0, 0, 16, 16),
             Cursor = Cursors.Hand,
         };
         var card = new Panel { Dock = DockStyle.Fill, BackColor = Card, Cursor = Cursors.Hand };
+        RoundControl(shell, 14);
+        RoundControl(card, 12);
         var bar = new Panel { Dock = DockStyle.Top, Height = 6, BackColor = accent, Cursor = Cursors.Hand };
         var inner = new Panel
         {
@@ -421,23 +1003,23 @@ static class Ui
         var card = new Panel
         {
             Width = 720,
-            Height = 88,
+            Height = 104,
             BackColor = Line,
             Padding = new Padding(1),
-            Margin = new Padding(0, 0, 0, 10),
+            Margin = new Padding(0, 0, 0, 14),
             Tag = "card",
         };
-        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(16, 12, 16, 12) };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card, Padding = new Padding(CardPad, CardPad, CardPad, CardPad) };
         if (action is not null)
         {
             var side = new Panel
             {
                 Dock = DockStyle.Right,
-                Width = Math.Max(136, action.Width + 8),
+                Width = Math.Max(148, action.Width + 16),
                 BackColor = Card,
-                Padding = new Padding(8, 0, 0, 0),
+                Padding = new Padding(16, 2, 4, 2),
             };
-            action.Location = new Point(8, 4);
+            action.Location = new Point(16, 4);
             side.Controls.Add(action);
             inner.Controls.Add(side);
         }
@@ -461,8 +1043,6 @@ static class Ui
             Dock = DockStyle.Top,
             UseMnemonic = false,
         };
-        BindWrap(d, 4);
-        BindWrap(t, 6);
         copy.Controls.Add(d);
         copy.Controls.Add(t);
         inner.Controls.Add(copy);
@@ -470,11 +1050,13 @@ static class Ui
 
         void Fit(object? _, EventArgs e)
         {
-            var actionW = action is null ? 0 : Math.Max(136, action.Width + 24);
-            var tw = Math.Max(160, card.ClientSize.Width - 36 - actionW);
-            var th = MeasureH(title, HeadFont, tw) + MeasureH(detail, SmallFont, tw) + 36;
-            var ah = action is null ? 0 : action.Height + 28;
-            var next = Math.Max(72, Math.Max(th, ah));
+            var actionW = action is null ? 0 : Math.Max(148, action.Width + 40);
+            var tw = Math.Max(160, card.ClientSize.Width - CardPad * 2 - 4 - actionW);
+            t.Height = Math.Max(24, MeasureH(title, HeadFont, tw) + 10);
+            d.Height = Math.Max(20, MeasureH(detail, SmallFont, tw) + 8);
+            var th = t.Height + d.Height + CardPad * 2 + 12;
+            var ah = action is null ? 0 : action.Height + CardPad * 2;
+            var next = Math.Max(88, Math.Max(th, ah));
             if (card.Height != next)
             {
                 card.Height = next;
@@ -488,7 +1070,7 @@ static class Ui
 
     public static void FitCards(FlowLayoutPanel list)
     {
-        var w = Math.Max(360, list.ClientSize.Width - 28);
+        var w = Math.Max(LayoutMath.DashCardMin, list.ClientSize.Width - 28);
         foreach (Control child in list.Controls)
         {
             if (Equals(child.Tag, "card"))
@@ -496,6 +1078,128 @@ static class Ui
                 child.Width = w;
             }
         }
+    }
+
+    /// <summary>auto-fit minmax: columns from real width so PowerPoint wraps instead of vanishing.</summary>
+    public static void FitWrapRow(FlowLayoutPanel row, int minW, int height, int gap = -1)
+    {
+        if (gap < 0)
+        {
+            gap = LayoutMath.DashGap;
+        }
+
+        var inner = Math.Max(minW, row.ClientSize.Width);
+        var n = row.Controls.Count;
+        var cardW = LayoutMath.AutoFitCardWidth(inner, minW, Math.Max(1, n), gap);
+        var cols = Math.Min(Math.Max(1, n), LayoutMath.AutoFitColumns(inner, minW, gap));
+        while (cols > 1 && cols * cardW + (cols - 1) * gap > inner)
+        {
+            cols--;
+        }
+
+        var heights = new int[Math.Max(1, n)];
+        for (var i = 0; i < n; i++)
+        {
+            var child = row.Controls[i];
+            child.Dock = DockStyle.None;
+            child.Width = cardW;
+            var lastInRow = cols <= 1 || (i % cols) == cols - 1 || i == n - 1;
+            child.Margin = new Padding(0, 0, lastInRow ? 0 : gap, gap);
+            var contentH = child.Tag is TileCopy copy ? copy.HeightFor(cardW) : height;
+            heights[i] = Math.Max(height, contentH);
+        }
+
+        var lines = n == 0 ? 1 : Math.Max(1, (n + cols - 1) / cols);
+        var lineH = new int[lines];
+        for (var i = 0; i < n; i++)
+        {
+            var r = cols <= 0 ? 0 : i / cols;
+            lineH[r] = Math.Max(lineH[r], heights[i]);
+        }
+
+        for (var i = 0; i < n; i++)
+        {
+            var r = cols <= 0 ? 0 : i / cols;
+            row.Controls[i].Height = lineH[r];
+        }
+
+        var total = 0;
+        foreach (var h in lineH)
+        {
+            total += h + gap;
+        }
+
+        row.Height = Math.Max(height + gap, total);
+    }
+
+    public static void AttachFocusRing(Control control)
+    {
+        control.GotFocus += (_, _) => control.Invalidate();
+        control.LostFocus += (_, _) => control.Invalidate();
+        control.Paint += (_, e) =>
+        {
+            if (!control.ContainsFocus && !control.Focused)
+            {
+                return;
+            }
+
+            if (!control.Focused)
+            {
+                return;
+            }
+
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var box = control.ClientRectangle;
+            box.Inflate(-2, -2);
+            if (box.Width < 6 || box.Height < 6)
+            {
+                return;
+            }
+
+            using var pen = new Pen(FocusRing, 2f);
+            g.DrawRectangle(pen, box.X, box.Y, box.Width - 1, box.Height - 1);
+        };
+    }
+
+    /// <summary>0.3s ease: opacity analog via 10px rise so tab switches do not snap.</summary>
+    public static void PlayReveal(Control host)
+    {
+        if (host is null || host.IsDisposed)
+        {
+            return;
+        }
+
+        const int shift = 10;
+        const int ms = 300;
+        var startPad = host.Padding;
+        host.Padding = new Padding(startPad.Left, startPad.Top + shift, startPad.Right, startPad.Bottom);
+        var start = Environment.TickCount;
+        var timer = new System.Windows.Forms.Timer { Interval = 16 };
+        timer.Tick += (_, _) =>
+        {
+            if (host.IsDisposed)
+            {
+                timer.Stop();
+                timer.Dispose();
+                return;
+            }
+
+            var t = Math.Clamp((Environment.TickCount - start) / (double)ms, 0, 1);
+            var ease = 1 - Math.Pow(1 - t, 3);
+            host.Padding = new Padding(
+                startPad.Left,
+                startPad.Top + (int)Math.Round(shift * (1 - ease)),
+                startPad.Right,
+                startPad.Bottom);
+            if (t >= 1)
+            {
+                host.Padding = startPad;
+                timer.Stop();
+                timer.Dispose();
+            }
+        };
+        timer.Start();
     }
 
     public static string AppName(string id) => id switch
@@ -538,8 +1242,9 @@ static class Ui
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             var kind = btn.Tag is NavIcon n ? n : icon;
-            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White);
+            DrawNavIcon(e.Graphics, btn.ClientRectangle, kind, Color.White, btn.BackColor);
         };
+        AttachFocusRing(btn);
         RoundControl(btn, 6);
         return btn;
     }
@@ -588,6 +1293,29 @@ static class Ui
         return tip;
     }
 
+    public static Button AaSizeButton(string text, string tip)
+    {
+        var btn = new Button
+        {
+            Size = new Size(40, 26),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = DockBlue,
+            ForeColor = Color.White,
+            Text = text,
+            Font = new Font("Segoe UI", 10f, FontStyle.Bold),
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            AccessibleName = tip,
+            Margin = new Padding(4, 0, 0, 0),
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(0, 99, 177);
+        DockTips.SetToolTip(btn, tip);
+        AttachFocusRing(btn);
+        RoundControl(btn, 6);
+        return btn;
+    }
+
     public static Button AaaButton()
     {
         var btn = new Button
@@ -622,12 +1350,85 @@ static class Ui
     public static string StripMarks(string? text) =>
         (text ?? "").Replace("**", "", StringComparison.Ordinal);
 
+    public static string MarkedDocumentRtf(string text, float bodyPt)
+    {
+        var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
+        var sb = new System.Text.StringBuilder();
+        sb.Append(@"{\rtf1\ansi\deff0\viewkind4\uc1{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}}");
+        var first = true;
+        foreach (var line in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+        {
+            if (!first)
+            {
+                sb.Append(@"\par ");
+            }
+
+            first = false;
+            var heading = line.StartsWith("**", StringComparison.Ordinal) && line.EndsWith("**", StringComparison.Ordinal) && line.Length > 4 && !line[2..^2].Contains("**", StringComparison.Ordinal);
+            sb.Append(@"\pard\widctlpar\ql\sa80\li0\ri80\f0\fs").Append(heading ? fs + 2 : fs).Append(' ');
+            AppendMarkedRtf(sb, line);
+        }
+
+        sb.Append('}');
+        return sb.ToString();
+    }
+
+    public static ImageList CreateStatusImages()
+    {
+        var list = new ImageList
+        {
+            ColorDepth = ColorDepth.Depth32Bit,
+            ImageSize = new Size(16, 16),
+        };
+        list.Images.Add("none", StatusIcon(Muted, "none"));
+        list.Images.Add("pass", StatusIcon(Success, "pass"));
+        list.Images.Add("fail", StatusIcon(Danger, "fail"));
+        list.Images.Add("warn", StatusIcon(Warning, "warn"));
+        return list;
+    }
+
+    static Bitmap StatusIcon(Color color, string kind)
+    {
+        var bmp = new Bitmap(16, 16);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+        using var brush = new SolidBrush(color);
+        using var pen = new Pen(Color.White, 1.8f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        if (kind == "none")
+        {
+            using var outline = new Pen(color, 1.5f);
+            g.DrawEllipse(outline, 3, 3, 10, 10);
+            return bmp;
+        }
+
+        g.FillEllipse(brush, 1, 1, 14, 14);
+        if (kind == "pass")
+        {
+            g.DrawLines(pen, new[] { new Point(4, 8), new Point(7, 11), new Point(12, 5) });
+        }
+        else if (kind == "fail")
+        {
+            g.DrawLine(pen, 5, 5, 11, 11);
+            g.DrawLine(pen, 11, 5, 5, 11);
+        }
+        else
+        {
+            g.FillRectangle(Brushes.White, 7, 4, 2, 5);
+            g.FillRectangle(Brushes.White, 7, 11, 2, 2);
+        }
+
+        return bmp;
+    }
+
     public static string HelpStepsRtf(IReadOnlyList<string> steps, float bodyPt)
     {
         var fs = Math.Max(16, (int)Math.Round(bodyPt * 2));
         var sb = new System.Text.StringBuilder();
-        sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil Segoe UI;}}");
-        sb.Append(@"\pard\qc\cf0\f0\fs").Append(fs).Append(' ');
+        sb.Append(@"{\rtf1\ansi\deff0\viewkind4\uc1{\fonttbl{\f0\fnil\fcharset0 Segoe UI;}}");
+        sb.Append(@"\pard\ql\sl0\slmult1\sa240\sb40\li0\ri120\cf0\f0\fs").Append(fs).Append(' ');
         for (var i = 0; i < steps.Count; i++)
         {
             sb.Append(i + 1).Append(". ");
@@ -672,6 +1473,245 @@ static class Ui
         }
     }
 
+    public static Panel SearchField(TextBox box, Action onFind)
+    {
+        var host = new Panel
+        {
+            Height = 36,
+            BackColor = Line,
+            Padding = new Padding(1),
+        };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = Card };
+        var find = new Button
+        {
+            Dock = DockStyle.Right,
+            Width = 34,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Card,
+            Cursor = Cursors.Hand,
+            Text = "",
+            TabStop = false,
+            AccessibleName = "Tìm",
+            UseMnemonic = false,
+        };
+        find.FlatAppearance.BorderSize = 0;
+        find.FlatAppearance.MouseOverBackColor = Color.FromArgb(236, 244, 250);
+        find.Paint += (_, e) => PaintSearchMark(e.Graphics, find.ClientRectangle, Muted);
+        find.Click += (_, _) => onFind();
+        DockTips.SetToolTip(find, "Tìm kỹ năng");
+        box.BorderStyle = BorderStyle.None;
+        box.Dock = DockStyle.Fill;
+        box.Font = BodyFont;
+        inner.Controls.Add(box);
+        inner.Controls.Add(find);
+        host.Controls.Add(inner);
+        RoundControl(host, 8);
+        return host;
+    }
+
+    public static void PaintSearchMark(Graphics g, Rectangle r, Color color)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var cx = r.X + r.Width / 2 - 1;
+        var cy = r.Y + r.Height / 2 - 1;
+        using var pen = new Pen(color, 1.7f);
+        pen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
+        pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+        g.DrawEllipse(pen, cx - 6, cy - 7, 11, 11);
+        g.DrawLine(pen, cx + 3, cy + 3, cx + 8, cy + 8);
+    }
+
+    public static Panel EmptyHint(string title, string lead)
+    {
+        var box = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Card,
+            MinimumSize = new Size(160, 150),
+            Padding = new Padding(8, 12, 8, 8),
+        };
+        var icon = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Card };
+        icon.Paint += (_, e) => PaintEmptyDoc(e.Graphics, icon.ClientRectangle);
+        var head = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            Dock = DockStyle.Top,
+            Height = 28,
+            TextAlign = ContentAlignment.TopCenter,
+            UseMnemonic = false,
+        };
+        var body = new Label
+        {
+            Text = lead,
+            Font = SmallFont,
+            ForeColor = Muted,
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.TopCenter,
+            UseMnemonic = false,
+        };
+        BindWrap(body, 4);
+        box.Controls.Add(body);
+        box.Controls.Add(head);
+        box.Controls.Add(icon);
+        return box;
+    }
+
+    public static void PaintEmptyDoc(Graphics g, Rectangle r)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        var w = 28;
+        var h = 34;
+        var x = r.X + (r.Width - w) / 2;
+        var y = r.Y + Math.Max(4, (r.Height - h) / 2);
+        using var fill = new SolidBrush(Color.FromArgb(36, Text));
+        using var pen = new Pen(Color.FromArgb(70, Text), 1.4f);
+        g.FillRectangle(fill, x, y, w, h);
+        g.DrawRectangle(pen, x, y, w, h);
+        g.DrawLine(pen, x + 6, y + 10, x + w - 6, y + 10);
+        g.DrawLine(pen, x + 6, y + 16, x + w - 6, y + 16);
+        g.DrawLine(pen, x + 6, y + 22, x + w - 10, y + 22);
+    }
+
+    public sealed class PercentTrack : Panel
+    {
+        int? _pct;
+        string _caption = "—";
+
+        public PercentTrack()
+        {
+            Height = 22;
+            DoubleBuffered = true;
+            BackColor = Card;
+        }
+
+        public void Set(int? pct, string caption)
+        {
+            _pct = pct is { } n ? Math.Clamp(n, 0, 100) : null;
+            _caption = caption;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            var labelW = 72;
+            var track = new Rectangle(0, Height / 2 - 5, Math.Max(20, Width - labelW - 4), 10);
+            using (var bg = new SolidBrush(Color.FromArgb(232, 226, 218)))
+            {
+                g.FillRectangle(bg, track);
+            }
+
+            if (_pct is { } n && n > 0)
+            {
+                var fillW = Math.Max(4, track.Width * n / 100);
+                using var fill = new SolidBrush(Success);
+                g.FillRectangle(fill, track.X, track.Y, fillW, track.Height);
+            }
+
+            TextRenderer.DrawText(
+                g,
+                _caption,
+                SmallFont,
+                new Rectangle(track.Right + 4, 0, labelW, Height),
+                Muted,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+        }
+    }
+
+    public static Color ReviewFill(string tone) => tone switch
+    {
+        "correct" => ReviewCorrect,
+        "pitfall" => ReviewPitfall,
+        "yours" => ReviewYours,
+        "result" => ReviewResult,
+        _ => Card,
+    };
+
+    public static Color ReviewAccent(string tone) => tone switch
+    {
+        "correct" => Success,
+        "pitfall" => Danger,
+        "yours" => Warning,
+        "result" => Primary,
+        _ => Line,
+    };
+
+    public static Panel ReviewCard(string title, string body, string tone)
+    {
+        var fill = ReviewFill(tone);
+        var accent = ReviewAccent(tone);
+        var shell = new Panel
+        {
+            BackColor = fill,
+            Margin = new Padding(0, 0, 0, 8),
+            Padding = Padding.Empty,
+            Tag = "review",
+        };
+        var bar = new Panel { Dock = DockStyle.Left, Width = 5, BackColor = accent };
+        var inner = new Panel { Dock = DockStyle.Fill, BackColor = fill, Padding = new Padding(10, 8, 10, 8) };
+        var head = new Label
+        {
+            Text = title,
+            Font = HeadFont,
+            ForeColor = Text,
+            AutoSize = false,
+            Dock = DockStyle.Top,
+            Height = 22,
+            UseMnemonic = false,
+        };
+        var box = new RichTextBox
+        {
+            Dock = DockStyle.Top,
+            ReadOnly = true,
+            BorderStyle = BorderStyle.None,
+            BackColor = fill,
+            ForeColor = Text,
+            ScrollBars = RichTextBoxScrollBars.None,
+            WordWrap = true,
+            DetectUrls = false,
+            TabStop = false,
+            Font = BodyFont,
+        };
+        try
+        {
+            box.Rtf = MarkedDocumentRtf(body, 10.5f);
+        }
+        catch
+        {
+            box.Text = StripMarks(body);
+        }
+
+        void Fit(object? _, EventArgs e)
+        {
+            var w = Math.Max(80, inner.ClientSize.Width - inner.Padding.Horizontal);
+            var h = MeasureH(StripMarks(body), BodyFont, w) + 12;
+            if (box.Height != h)
+            {
+                box.Height = h;
+            }
+
+            var next = inner.Padding.Vertical + head.Height + box.Height + 4;
+            if (shell.Height != next)
+            {
+                shell.Height = Math.Max(56, next);
+            }
+        }
+
+        inner.Controls.Add(box);
+        inner.Controls.Add(head);
+        shell.Controls.Add(inner);
+        shell.Controls.Add(bar);
+        RoundControl(shell, 8);
+        inner.Resize += Fit;
+        shell.Resize += Fit;
+        Fit(null, EventArgs.Empty);
+        return shell;
+    }
+
     public static FlowLayoutPanel DockChip()
     {
         var chip = new FlowLayoutPanel
@@ -700,7 +1740,7 @@ static class Ui
         btn.Invalidate();
     }
 
-    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color)
+    static void DrawNavIcon(Graphics g, Rectangle r, NavIcon icon, Color color, Color cutout)
     {
         using var pen = new Pen(color, 1.6f);
         using var brush = new SolidBrush(color);
@@ -736,7 +1776,7 @@ static class Ui
                 break;
             case NavIcon.Save:
                 g.FillRectangle(brush, new Rectangle(cx - 8, cy - 8, 16, 16));
-                using (var hole = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                using (var hole = new SolidBrush(cutout))
                 {
                     g.FillRectangle(hole, new Rectangle(cx - 4, cy - 6, 8, 5));
                     g.FillRectangle(hole, new Rectangle(cx - 5, cy + 2, 10, 5));
@@ -761,6 +1801,20 @@ static class Ui
                 g.DrawLine(pen, cx - 8, cy - 5, cx + 8, cy - 5);
                 g.DrawLine(pen, cx - 8, cy, cx + 8, cy);
                 g.DrawLine(pen, cx - 8, cy + 5, cx + 8, cy + 5);
+                break;
+            case NavIcon.Settings:
+                g.DrawEllipse(pen, cx - 4, cy - 4, 8, 8);
+                for (var i = 0; i < 6; i++)
+                {
+                    var a = i * Math.PI / 3.0;
+                    g.DrawLine(
+                        pen,
+                        cx + (float)Math.Cos(a) * 5,
+                        cy + (float)Math.Sin(a) * 5,
+                        cx + (float)Math.Cos(a) * 9,
+                        cy + (float)Math.Sin(a) * 9);
+                }
+
                 break;
             case NavIcon.Hint:
                 g.FillEllipse(brush, cx - 6, cy - 8, 12, 12);
@@ -819,4 +1873,5 @@ enum NavIcon
     Collapse,
     Check,
     Submit,
+    Settings,
 }

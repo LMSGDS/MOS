@@ -5,6 +5,7 @@ from app.kulkul_layout import (
     CLUSTER_W,
     DOCK_MAX_PCT,
     EXPANDED_SIDE_W,
+    HELP_CAP_PCT,
     HELP_H,
     HELP_W,
     Rect,
@@ -108,7 +109,8 @@ def test_grow_for_help_keeps_full_bottom_span():
     nav = measure(WORK)
     assert grown.w == WORK.w
     assert grown.h == dock.h + nav.help_h
-    assert grown.h <= WORK.h * DOCK_MAX_PCT // 100
+    assert grown.h <= WORK.h * HELP_CAP_PCT // 100
+    assert nav.help_h >= 160
     assert grown.bottom == dock.bottom
     leftover = Rect(WORK.x, WORK.y, WORK.w, grown.y - WORK.y)
     assert not overlap(grown, leftover)
@@ -120,13 +122,13 @@ def test_grow_for_help_keeps_top_bar_at_top():
     assert grown.y == dock.y
     assert grown.w == WORK.w
     assert grown.h > dock.h
-    assert grown.h <= WORK.h * DOCK_MAX_PCT // 100
+    assert grown.h <= WORK.h * HELP_CAP_PCT // 100
 
 
 def test_help_overlay_stays_on_full_vertical_edge():
     dock, word = compute(WORK, "left", compact=True)
     grown = grow_for_help(dock, WORK, "left")
-    cap = WORK.w * DOCK_MAX_PCT // 100
+    cap = WORK.w * HELP_CAP_PCT // 100
     assert not overlap(dock, word)
     assert grown.h == WORK.h
     assert grown.x == WORK.x
@@ -176,13 +178,13 @@ def test_measured_screens_navigation_never_covers_word():
                 assert dock.w == nav.cluster_w
                 assert dock.w / work.w <= 0.08
                 assert grown.h == work.h
-                assert grown.w <= work.w * DOCK_MAX_PCT // 100
+                assert grown.w <= work.w * HELP_CAP_PCT // 100
             else:
                 assert dock.w == work.w, f"{name} {state} must span full width"
                 assert dock.h == nav.cluster_h
                 assert dock.h / work.h <= 0.09
                 assert grown.w == work.w
-                assert grown.h <= work.h * DOCK_MAX_PCT // 100
+                assert grown.h <= work.h * HELP_CAP_PCT // 100
             leftover = (
                 Rect(grown.right, work.y, work.right - grown.right, work.h)
                 if state == "left"
@@ -213,10 +215,10 @@ def test_laptop_desktop_shrinks_navigation_thickness():
         assert not overlap(dock, word)
         if state in ("left", "right"):
             assert grown.h == LAPTOP.h
-            assert grown.w <= LAPTOP.w * DOCK_MAX_PCT // 100
+            assert grown.w <= LAPTOP.w * HELP_CAP_PCT // 100
         else:
             assert grown.w == LAPTOP.w
-            assert grown.h <= LAPTOP.h * DOCK_MAX_PCT // 100
+            assert grown.h <= LAPTOP.h * HELP_CAP_PCT // 100
 
 
 def test_large_desktop_keeps_navigation_thin():
@@ -238,7 +240,7 @@ def test_compact_scales_with_desktop_size():
     assert word.h == big.h - dock.h
     grown = grow_for_help(dock, big, "bottom")
     assert grown.w == big.w
-    assert grown.h <= big.h * DOCK_MAX_PCT // 100
+    assert grown.h <= big.h * HELP_CAP_PCT // 100
     assert grown.bottom == dock.bottom
 
 
@@ -256,7 +258,7 @@ def test_laptop_help_bar_stays_on_screen_edge():
     assert not overlap(dock, word)
     assert grown.bottom == dock.bottom
     assert grown.w == LAPTOP.w
-    assert grown.h <= LAPTOP.h * DOCK_MAX_PCT // 100
+    assert grown.h <= LAPTOP.h * HELP_CAP_PCT // 100
     assert grown.y > LAPTOP.y + LAPTOP.h // 2
 
 
@@ -318,3 +320,8 @@ def test_user_can_resize_navigation_thickness():
     grown = with_thickness(dock, WORK, "bottom", 120)
     assert grown.h == 120
     assert grown.w == WORK.w
+    helped = grow_for_help(compute(WORK, "bottom", compact=True)[0], WORK, "bottom")
+    nav = measure(WORK)
+    assert helped.h > nav.cluster_h
+    assert helped.h - nav.cluster_h >= 160
+    assert helped.w == WORK.w

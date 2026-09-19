@@ -59,6 +59,29 @@
         "Bấm vào mục lục.",
         "**References** > **Update Table**.",
         "Chọn **Update entire table**, **OK**."
+      ],
+      "q_matrix_nodes": [
+        {
+          "step_id": "q1",
+          "skill_type": "Navigation",
+          "validation_rule": "check_cursor_position",
+          "success_message": "Đã click vào bảng Mục lục.",
+          "error_feedback": "Bạn chưa chọn hoặc click chuột vào bảng Mục lục cũ trước khi cập nhật."
+        },
+        {
+          "step_id": "q2",
+          "skill_type": "Tool_Usage",
+          "validation_rule": "check_ribbon_action('References', 'Update Table')",
+          "success_message": "Đã gọi đúng công cụ Update Table.",
+          "error_feedback": "Bạn đang sử dụng sai công cụ. Thao tác chuẩn: Tab References > Update Table."
+        },
+        {
+          "step_id": "q3",
+          "skill_type": "Configuration",
+          "validation_rule": "check_config(entire_table)",
+          "success_message": "Đã cập nhật toàn bộ bảng.",
+          "error_feedback": "Bạn đã mở đúng công cụ nhưng chọn sai tham số cập nhật. Yêu cầu đề bài là cập nhật toàn bộ bảng (Entire table)."
+        }
       ]
     },
     {

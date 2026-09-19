@@ -6,9 +6,10 @@ import json
 import re
 from pathlib import Path
 
+from app.qmatrix import attach as attach_qmatrix
 from app.word_xml import extract_word_facts, norm, same
 
-GRADER_VERSION = "1.3.1"
+GRADER_VERSION = "1.4.0"
 RUBRIC_DIR = Path(__file__).resolve().parent / "rubrics"
 
 
@@ -665,10 +666,10 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
     for criterion in criteria:
         kind = criterion.get("kind") or "artifact"
         if kind == "action_sequence":
-            results.append(_grade_action(criterion, events))
+            results.append(attach_qmatrix(criterion, facts, _grade_action(criterion, events), events))
             continue
         if parse_error:
-            results.append(_result(criterion, "error", error_code))
+            results.append(attach_qmatrix(criterion, facts, _result(criterion, "error", error_code), events))
             continue
         pred = (criterion.get("predicate") or {}).get("type")
         dispatch = {
@@ -721,9 +722,9 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
         }
         handler = dispatch.get(pred)
         if handler:
-            results.append(handler(facts, criterion))
+            results.append(attach_qmatrix(criterion, facts, handler(facts, criterion), events))
         else:
-            results.append(_result(criterion, "error", "unknown_predicate"))
+            results.append(attach_qmatrix(criterion, facts, _result(criterion, "error", "unknown_predicate"), events))
 
     verified = round(sum(r["earned"] for r in results), 1)
     pending = round(sum(r["pending"] for r in results), 1)

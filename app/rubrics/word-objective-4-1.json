@@ -34,6 +34,29 @@
         "Đặt con trỏ sau từ cần chú thích (Jacob, Wilhelm, Hanau).",
         "Tab **References**, nhóm **Footnotes**, bấm **Insert Footnote**.",
         "Gõ nội dung chú thích rồi lặp đủ 3 chỗ."
+      ],
+      "q_matrix_nodes": [
+        {
+          "step_id": "q1",
+          "skill_type": "Navigation",
+          "validation_rule": "check_cursor_position",
+          "success_message": "Đã định vị đúng vị trí.",
+          "error_feedback": "Bạn chưa đặt con trỏ chuột đúng vị trí sau từ cần chú thích."
+        },
+        {
+          "step_id": "q2",
+          "skill_type": "Tool_Usage",
+          "validation_rule": "check_ribbon_action('References', 'Insert Footnote')",
+          "success_message": "Đã gọi đúng công cụ Footnote.",
+          "error_feedback": "Sai công cụ. Thao tác chuẩn: Tab References > Insert Footnote."
+        },
+        {
+          "step_id": "q3",
+          "skill_type": "Execution",
+          "validation_rule": "count_footnotes(min=3)",
+          "success_message": "Đã chèn đủ 3 chú thích.",
+          "error_feedback": "Nội dung đúng nhưng chưa đủ số lượng (Yêu cầu ít nhất 3)."
+        }
       ]
     },
     {

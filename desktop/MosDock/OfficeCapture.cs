@@ -31,6 +31,18 @@ static class OfficeCapture
             }
 
             dynamic office = com;
+            try
+            {
+                if (spec.Id == "word")
+                {
+                    office.Options.BackgroundSave = false;
+                }
+            }
+            catch
+            {
+                // Word cũ có thể không có Options.BackgroundSave
+            }
+
             string? path = spec.Id switch
             {
                 "excel" => SaveExcel(office),
@@ -129,6 +141,101 @@ static class OfficeCapture
         {
             return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    public static string? SaveCopy(string? app, string dest)
+    {
+        if (string.IsNullOrWhiteSpace(dest))
+        {
+            return null;
+        }
+
+        var dir = Path.GetDirectoryName(dest);
+        if (!string.IsNullOrWhiteSpace(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        var spec = OfficeApp.Resolve(app);
+        try
+        {
+            var com = Active(spec.Id switch
+            {
+                "excel" => "Excel.Application",
+                "powerpoint" => "PowerPoint.Application",
+                _ => "Word.Application",
+            });
+            if (com is null)
+            {
+                return null;
+            }
+
+            dynamic office = com;
+            if (spec.Id == "excel")
+            {
+                return SaveExcelCopy(office, dest);
+            }
+
+            if (spec.Id == "powerpoint")
+            {
+                return SavePptCopy(office, dest);
+            }
+
+            // Word: Save rồi copy với FileShare — không SaveAs (đổi đường dẫn bài đang mở).
+            SaveWord(office);
+            var source = ExamSession.LocalPath;
+            if (!string.IsNullOrWhiteSpace(source) && File.Exists(source))
+            {
+                LockedFile.Copy(source, dest);
+                return dest;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+
+        return null;
+    }
+
+    static string? SaveExcelCopy(dynamic excel, string dest)
+    {
+        var wanted = ExamSession.LocalPath;
+        dynamic books = excel.Workbooks;
+        int count = (int)books.Count;
+        for (int i = 1; i <= count; i++)
+        {
+            dynamic book = books[i];
+            string full = (string)book.FullName;
+            if (SamePath(full, wanted) || (count == 1 && string.IsNullOrWhiteSpace(wanted)))
+            {
+                book.Save();
+                book.SaveCopyAs(dest);
+                return dest;
+            }
+        }
+
+        return null;
+    }
+
+    static string? SavePptCopy(dynamic ppt, string dest)
+    {
+        var wanted = ExamSession.LocalPath;
+        dynamic presos = ppt.Presentations;
+        int count = (int)presos.Count;
+        for (int i = 1; i <= count; i++)
+        {
+            dynamic pres = presos[i];
+            string full = (string)pres.FullName;
+            if (SamePath(full, wanted) || (count == 1 && string.IsNullOrWhiteSpace(wanted)))
+            {
+                pres.Save();
+                pres.SaveCopyAs(dest);
+                return dest;
+            }
+        }
+
+        return null;
     }
 
     public static object? TryGet(string progId) => Active(progId);

@@ -6,8 +6,11 @@ sealed class LoginForm : Form
 {
     readonly TextBox _user = new();
     readonly TextBox _pass = new();
-    readonly ComboBox _lang = new();
-    readonly Label _error = new();
+    readonly Ui.SoftField _userField = new();
+    readonly Ui.SoftField _passField = new();
+    readonly Label _userHint = new();
+    readonly Label _passHint = new();
+    readonly Ui.AlertBar _alert = new();
     readonly Label _title = new();
     readonly Label _tag = new();
     readonly Label _hint = new();
@@ -17,6 +20,8 @@ sealed class LoginForm : Form
     readonly Panel _password;
     readonly Button _submit;
     readonly Button _eye = new();
+    readonly Button _lang = new();
+    readonly ContextMenuStrip _langMenu = new();
     readonly FlowLayoutPanel _stack = new();
     bool _showPass;
 
@@ -33,7 +38,8 @@ sealed class LoginForm : Form
         AutoScaleDimensions = new SizeF(96f, 96f);
         Font = Ui.BodyFont;
         BackColor = Color.White;
-        ClientSize = new Size(460, 780);
+        ClientSize = new Size(460, 700);
+        DoubleBuffered = true;
         Ui.ApplyWindowIcon(this);
 
         _stack.Dock = DockStyle.Fill;
@@ -41,48 +47,63 @@ sealed class LoginForm : Form
         _stack.WrapContents = false;
         _stack.AutoScroll = true;
         _stack.BackColor = Color.White;
-        _stack.Padding = new Padding(36, 28, 36, 16);
+        _stack.Padding = new Padding(36, 8, 36, 16);
 
         _user.BorderStyle = BorderStyle.None;
         _user.Font = new Font("Segoe UI", 11f);
+        _user.TextChanged += (_, _) => ClearFieldError(_userField, _userHint);
         _pass.BorderStyle = BorderStyle.None;
         _pass.Font = new Font("Segoe UI", 11f);
         _pass.UseSystemPasswordChar = true;
-
-        _lang.DropDownStyle = ComboBoxStyle.DropDownList;
-        _lang.FlatStyle = FlatStyle.Flat;
-        _lang.Font = new Font("Segoe UI", 11f);
-        _lang.Items.Add("Tiếng Việt");
-        _lang.SelectedIndex = 0;
-
-        _error.AutoSize = false;
-        _error.ForeColor = Ui.Danger;
-        _error.UseMnemonic = false;
-        _error.Margin = new Padding(0, 6, 0, 6);
-        _error.TextAlign = ContentAlignment.TopCenter;
+        _pass.TextChanged += (_, _) => ClearFieldError(_passField, _passHint);
 
         _submit = Ui.SignInBtn("Đăng nhập");
-        _submit.Margin = new Padding(0, 18, 0, 10);
+        _submit.Margin = new Padding(0, 16, 0, 8);
         _submit.Click += async (_, _) => await DoLogin();
         AcceptButton = _submit;
         Ui.RoundControl(_submit, 8);
 
-        _account = Labeled("Tài khoản", InputShell(_user));
-        _password = Labeled("Mật khẩu", PasswordShell());
+        _account = Labeled("Tài khoản", UserShell(), _userHint);
+        _password = Labeled("Mật khẩu", PasswordShell(), _passHint);
+        _alert.Margin = new Padding(0, 0, 0, 12);
 
         _stack.Controls.Add(BuildBrand());
+        _stack.Controls.Add(_alert);
         _stack.Controls.Add(_account);
         _stack.Controls.Add(_password);
-        _stack.Controls.Add(LangShell());
-        _stack.Controls.Add(_error);
         _stack.Controls.Add(_submit);
         _stack.Controls.Add(BuildHint());
         _stack.Controls.Add(Footer());
 
         Controls.Add(_stack);
+        Controls.Add(LangChrome());
         _stack.Resize += (_, _) => FitLayout();
         Shown += (_, _) => FitLayout();
         TryLoadLastUser();
+    }
+
+    Panel LangChrome()
+    {
+        var top = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            BackColor = Color.White,
+        };
+        _lang.Size = new Size(36, 32);
+        _lang.Dock = DockStyle.Right;
+        _lang.FlatStyle = FlatStyle.Flat;
+        _lang.BackColor = Color.White;
+        _lang.Cursor = Cursors.Hand;
+        _lang.AccessibleName = "Ngôn ngữ";
+        _lang.FlatAppearance.BorderSize = 0;
+        _lang.FlatAppearance.MouseOverBackColor = Color.FromArgb(245, 247, 249);
+        _lang.Paint += (_, e) => Ui.PaintGlobe(e.Graphics, _lang.ClientRectangle, Ui.Muted);
+        _langMenu.Items.Add(new ToolStripMenuItem("Tiếng Việt") { Checked = true });
+        _lang.Click += (_, _) => _langMenu.Show(_lang, new Point(0, _lang.Height));
+        Ui.DockTips.SetToolTip(_lang, "Tiếng Việt");
+        top.Controls.Add(_lang);
+        return top;
     }
 
     void FitLayout()
@@ -97,25 +118,22 @@ sealed class LoginForm : Form
         _title.Height = Math.Max(40, Ui.MeasureH(_title.Text, _title.Font, inner) + 12);
         _tag.Height = Math.Max(44, Ui.MeasureH(_tag.Text, _tag.Font, inner) + 14);
         _brand.Height = _logoHost.Height + _title.Height + _tag.Height + 4;
+        _alert.FitWidth(inner);
 
-        FitLabeled(_account, inner);
-        FitLabeled(_password, inner);
+        FitLabeled(_account, inner, _userHint);
+        FitLabeled(_password, inner, _passHint);
 
-        _eye.Width = Math.Max(76, Ui.MeasureW("Hiện", _eye.Font) + 24);
-        _error.Height = string.IsNullOrWhiteSpace(_error.Text)
-            ? 8
-            : Math.Max(24, Ui.MeasureH(_error.Text, _error.Font, inner) + 8);
         _submit.Width = inner;
         _submit.Height = 48;
-        _hint.Height = Math.Max(64, Ui.MeasureH(_hint.Text, _hint.Font, inner) + 18);
+        _hint.Height = Math.Max(22, Ui.MeasureH(_hint.Text, _hint.Font, inner) + 8);
     }
 
-    static void FitLabeled(Panel wrap, int inner)
+    static void FitLabeled(Panel wrap, int inner, Label hint)
     {
         Label? caption = null;
         foreach (Control child in wrap.Controls)
         {
-            if (child is Label label)
+            if (child is Label label && !ReferenceEquals(label, hint))
             {
                 caption = label;
                 break;
@@ -129,12 +147,16 @@ sealed class LoginForm : Form
             caption.Height = captionH;
         }
 
-        wrap.Height = captionH + 48 + 10;
+        var hintH = hint.Visible && !string.IsNullOrWhiteSpace(hint.Text)
+            ? Math.Max(18, Ui.MeasureH(hint.Text, hint.Font, inner) + 4)
+            : 0;
+        hint.Height = hintH;
+        wrap.Height = captionH + 50 + hintH + 8;
     }
 
     Panel BuildBrand()
     {
-        _brand.Margin = new Padding(0, 0, 0, 18);
+        _brand.Margin = new Padding(0, 0, 0, 12);
         _logoHost.Dock = DockStyle.Top;
         _logoHost.Height = 88;
         var logo = new PictureBox
@@ -174,9 +196,9 @@ sealed class LoginForm : Form
         return _brand;
     }
 
-    static Panel Labeled(string caption, Control field)
+    static Panel Labeled(string caption, Control field, Label hint)
     {
-        var wrap = new Panel { Margin = new Padding(0, 4, 0, 10) };
+        var wrap = new Panel { Margin = new Padding(0, 4, 0, 6) };
         var label = new Label
         {
             Text = caption,
@@ -188,95 +210,72 @@ sealed class LoginForm : Form
             Padding = new Padding(0, 2, 0, 4),
             TextAlign = ContentAlignment.BottomLeft,
         };
+        hint.AutoSize = false;
+        hint.Dock = DockStyle.Top;
+        hint.Font = Ui.SmallFont;
+        hint.ForeColor = Ui.Danger;
+        hint.UseMnemonic = false;
+        hint.Visible = false;
+        hint.Height = 0;
+        hint.Padding = new Padding(2, 2, 0, 0);
         field.Dock = DockStyle.Top;
-        field.Height = 48;
+        field.Height = 50;
+        wrap.Controls.Add(hint);
         wrap.Controls.Add(field);
         wrap.Controls.Add(label);
         return wrap;
     }
 
-    Panel InputShell(TextBox box)
+    Ui.SoftField UserShell()
     {
-        var shell = new Panel { Height = 48, BackColor = Color.White, Padding = new Padding(1) };
-        var pad = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12, 12, 12, 10) };
-        box.Dock = DockStyle.Fill;
-        box.BackColor = Color.White;
-        pad.Controls.Add(box);
-        shell.Controls.Add(pad);
-        PaintBorder(shell, box);
-        return shell;
+        var pad = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12, 11, 12, 10) };
+        _user.Dock = DockStyle.Fill;
+        _user.BackColor = Color.White;
+        pad.Controls.Add(_user);
+        _userField.Controls.Add(pad);
+        _userField.Bind(_user);
+        return _userField;
     }
 
-    Panel PasswordShell()
+    Ui.SoftField PasswordShell()
     {
-        var shell = new Panel { Height = 48, BackColor = Color.White, Padding = new Padding(1) };
-        _eye.Text = "Hiện";
+        _eye.Text = "";
         _eye.AutoSize = false;
         _eye.Dock = DockStyle.Right;
-        _eye.Width = 76;
+        _eye.Width = 36;
         _eye.FlatStyle = FlatStyle.Flat;
         _eye.BackColor = Color.White;
-        _eye.ForeColor = Ui.Muted;
-        _eye.Font = Ui.SmallFont;
         _eye.Cursor = Cursors.Hand;
         _eye.UseMnemonic = false;
-        _eye.TextAlign = ContentAlignment.MiddleCenter;
+        _eye.AccessibleName = "Hiện mật khẩu";
         _eye.FlatAppearance.BorderSize = 0;
+        _eye.Paint += (_, e) => Ui.PaintEye(e.Graphics, _eye.ClientRectangle, Ui.Muted, _showPass);
         _eye.Click += (_, _) =>
         {
             _showPass = !_showPass;
             _pass.UseSystemPasswordChar = !_showPass;
-            _eye.Text = _showPass ? "Ẩn" : "Hiện";
+            _eye.AccessibleName = _showPass ? "Ẩn mật khẩu" : "Hiện mật khẩu";
+            _eye.Invalidate();
         };
-        var pad = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12, 12, 8, 10) };
+        Ui.DockTips.SetToolTip(_eye, "Hiện hoặc ẩn mật khẩu");
+        var pad = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12, 11, 4, 10) };
         _pass.Dock = DockStyle.Fill;
         _pass.BackColor = Color.White;
         pad.Controls.Add(_pass);
-        shell.Controls.Add(pad);
-        shell.Controls.Add(_eye);
-        PaintBorder(shell, _pass);
-        return shell;
-    }
-
-    Panel LangShell()
-    {
-        var wrap = new Panel { Height = 56, Margin = new Padding(0, 8, 0, 6) };
-        var shell = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(1) };
-        _lang.Dock = DockStyle.Fill;
-        _lang.BackColor = Color.White;
-        _lang.ForeColor = Ui.Text;
-        shell.Controls.Add(_lang);
-        PaintBorder(shell, _lang);
-        wrap.Controls.Add(shell);
-        return wrap;
-    }
-
-    static void PaintBorder(Panel shell, Control focus)
-    {
-        shell.Paint += (_, e) =>
-        {
-            var color = focus.Focused ? Ui.Primary : Ui.Line;
-            using var pen = new Pen(color, 1.5f);
-            var r = new Rectangle(0, 0, shell.Width - 1, shell.Height - 1);
-            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var path = Ui.RoundedRect(r, 8);
-            e.Graphics.DrawPath(pen, path);
-        };
-        focus.GotFocus += (_, _) => shell.Invalidate();
-        focus.LostFocus += (_, _) => shell.Invalidate();
+        _passField.Controls.Add(pad);
+        _passField.Controls.Add(_eye);
+        _passField.Bind(_pass);
+        return _passField;
     }
 
     Label BuildHint()
     {
-        _hint.Text = "Tài khoản nhà trường." + Environment.NewLine
-            + "Bài MOS mở trên Office đã cài trên máy." + Environment.NewLine
-            + "Không dùng Office Online.";
+        _hint.Text = "Bài MOS mở trên Office đã cài trên máy — không dùng Office Online.";
         _hint.Font = Ui.SmallFont;
         _hint.ForeColor = Ui.Muted;
         _hint.AutoSize = false;
         _hint.TextAlign = ContentAlignment.TopCenter;
-        _hint.Margin = new Padding(4, 12, 4, 8);
-        _hint.Padding = new Padding(4, 4, 4, 4);
+        _hint.Margin = new Padding(4, 10, 4, 6);
         _hint.UseMnemonic = false;
         return _hint;
     }
@@ -284,24 +283,26 @@ sealed class LoginForm : Form
     static Panel Footer()
     {
         var wrap = new Panel { Height = 40, Margin = new Padding(0, 8, 0, 4) };
-        var help = Link("Trợ giúp", "https://mos.gds.edu.vn");
-        var down = Link("Tải MOS-KulKul", "https://mos.gds.edu.vn/cai-dat");
+        var help = Link("Trợ giúp", "https://mos.gds.edu.vn", primary: true);
+        var down = Link("Tải MOS-KulKul", "https://mos.gds.edu.vn/cai-dat", primary: false);
         help.Dock = DockStyle.Left;
         down.Dock = DockStyle.Right;
-        wrap.Controls.Add(help);
         wrap.Controls.Add(down);
+        wrap.Controls.Add(help);
         return wrap;
     }
 
-    static LinkLabel Link(string text, string url)
+    static LinkLabel Link(string text, string url, bool primary)
     {
         var link = new LinkLabel
         {
             Text = text,
             AutoSize = true,
-            LinkColor = Ui.Primary,
+            Font = primary ? new Font("Segoe UI", 10f, FontStyle.Bold) : Ui.SmallFont,
+            LinkColor = primary ? Ui.Primary : Ui.Muted,
             ActiveLinkColor = Ui.PrimaryDark,
-            VisitedLinkColor = Ui.Primary,
+            VisitedLinkColor = primary ? Ui.Primary : Ui.Muted,
+            LinkBehavior = primary ? LinkBehavior.AlwaysUnderline : LinkBehavior.NeverUnderline,
             UseMnemonic = false,
             Margin = new Padding(0, 8, 0, 0),
             Padding = new Padding(0, 6, 0, 0),
@@ -355,16 +356,53 @@ sealed class LoginForm : Form
         }
     }
 
+    static void ClearFieldError(Ui.SoftField field, Label hint)
+    {
+        field.SetError(false);
+        hint.Text = "";
+        hint.Visible = false;
+        hint.Height = 0;
+    }
+
+    void SetFieldError(Ui.SoftField field, Label hint, string message)
+    {
+        field.SetError(true);
+        hint.Text = message;
+        hint.Visible = true;
+    }
+
     async Task DoLogin()
     {
-        _error.Text = "";
+        _alert.Clear();
+        ClearFieldError(_userField, _userHint);
+        ClearFieldError(_passField, _passHint);
+
+        var emptyUser = string.IsNullOrWhiteSpace(_user.Text);
+        var emptyPass = string.IsNullOrWhiteSpace(_pass.Text);
+        if (emptyUser)
+        {
+            SetFieldError(_userField, _userHint, "Vui lòng nhập tài khoản để tiếp tục");
+        }
+
+        if (emptyPass)
+        {
+            SetFieldError(_passField, _passHint, "Vui lòng nhập mật khẩu để tiếp tục");
+        }
+
+        if (emptyUser || emptyPass)
+        {
+            FitLayout();
+            return;
+        }
+
         _submit.Enabled = false;
         try
         {
-            var (ok, err, name, _, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, "word");
+            var (ok, kind, err, name, _, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, "word");
             if (!ok)
             {
-                _error.Text = err ?? "Tên đăng nhập hoặc mật khẩu không đúng.";
+                var tone = kind == "status" ? "warn" : "danger";
+                _alert.ShowMessage(err ?? Portal.AuthWrong, tone);
                 FitLayout();
                 return;
             }
@@ -374,9 +412,9 @@ sealed class LoginForm : Form
             DialogResult = DialogResult.OK;
             Close();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _error.Text = ex.Message;
+            _alert.ShowMessage(Portal.StatusBusy, "warn");
             FitLayout();
         }
         finally

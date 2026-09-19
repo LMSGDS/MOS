@@ -120,7 +120,8 @@ static class WordXml
 
         try
         {
-            using var zip = ZipFile.OpenRead(path);
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var zip = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
             var docEntry = zip.GetEntry("word/document.xml");
             if (docEntry is null)
             {
@@ -190,10 +191,13 @@ static class WordXml
 
             void AddHyperlink(string text, string anchor, string rid, string fieldRaw = "")
             {
-                rels.TryGetValue(rid, out var rel);
-                if (anchor.Length == 0 && rel.Target.StartsWith("#", StringComparison.Ordinal))
+                // TOC / HYPERLINK fields often have no rId — missing rel must not NRE.
+                rels.TryGetValue(rid ?? "", out var rel);
+                var target = rel.Target ?? "";
+                var mode = rel.Mode ?? "";
+                if (anchor.Length == 0 && target.StartsWith("#", StringComparison.Ordinal))
                 {
-                    anchor = rel.Target[1..];
+                    anchor = target[1..];
                 }
 
                 if (anchor.Length == 0 && fieldRaw.Length > 0)
@@ -201,7 +205,7 @@ static class WordXml
                     (anchor, _) = FieldAnchor(fieldRaw);
                 }
 
-                var external = rel.Mode == "External" || (rel.Target.Length > 0 && anchor.Length == 0);
+                var external = mode == "External" || (target.Length > 0 && anchor.Length == 0);
                 if (fieldRaw.Length > 0)
                 {
                     var lower = fieldRaw.ToLowerInvariant();
@@ -384,6 +388,10 @@ static class WordXml
         catch (System.Xml.XmlException)
         {
             return new WordFacts { Ok = false, Error = "bad_xml" };
+        }
+        catch (Exception)
+        {
+            return new WordFacts { Ok = false, Error = "extract_failed" };
         }
     }
 
@@ -754,7 +762,11 @@ static class WordXml
     }
 }
 
-readonly record struct LocalCriterion(string Id, string Status, double Earned, double Possible, string Message);
+readonly record struct LocalCriterion(string Id, string Status, double Earned, double Possible, string Message)
+{
+    public IReadOnlyList<QNodeHit> QTrace { get; init; } = [];
+    public string BreakSkill { get; init; } = "";
+}
 
 static class WordGrade
 {
@@ -775,20 +787,33 @@ static class WordGrade
 
         foreach (var item in rubric.Criteria)
         {
+            item.Predicate ??= new JsonPredicate();
+            item.Selector ??= new JsonSelector();
+            item.Feedback ??= new JsonFeedback();
             var weight = item.Weight;
-            if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                results.Add(ActionEvidence.Grade(item, evidence));
-                continue;
-            }
+                LocalCriterion hit;
+                if (string.Equals(item.Kind, "action_sequence", StringComparison.OrdinalIgnoreCase))
+                {
+                    hit = ActionEvidence.Grade(item, evidence);
+                }
+                else if (!facts.Ok)
+                {
+                    hit = new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp.");
+                }
+                else
+                {
+                    hit = GradeArtifact(facts, item);
+                }
 
-            if (!facts.Ok)
+                results.Add(QMatrix.Attach(facts, item, evidence, hit));
+            }
+            catch (Exception ex)
             {
-                results.Add(new LocalCriterion(item.Id, "error", 0, weight, item.Feedback.Error ?? "Không đọc được tệp."));
-                continue;
+                var hit = new LocalCriterion(item.Id, "error", 0, weight, "Không chấm được mục này: " + ex.Message);
+                results.Add(QMatrix.Attach(facts, item, evidence, hit));
             }
-
-            results.Add(GradeArtifact(facts, item));
         }
 
         var verified = results.Sum(r => r.Earned);
@@ -1107,6 +1132,7 @@ sealed class JsonCriterion
     public double Weight { get; set; }
     public string Prompt { get; set; } = "";
     public List<string> HelpSteps { get; set; } = [];
+    public List<JsonQNode> QMatrixNodes { get; set; } = [];
     public JsonSelector Selector { get; set; } = new();
     public JsonPredicate Predicate { get; set; } = new();
     public JsonFeedback Feedback { get; set; } = new();
@@ -1157,4 +1183,13 @@ sealed class JsonFeedback
     public string? Fail { get; set; }
     public string? Unverified { get; set; }
     public string? Error { get; set; }
+}
+
+sealed class JsonQNode
+{
+    public string StepId { get; set; } = "";
+    public string SkillType { get; set; } = "";
+    public string ValidationRule { get; set; } = "";
+    public string SuccessMessage { get; set; } = "";
+    public string ErrorFeedback { get; set; } = "";
 }
