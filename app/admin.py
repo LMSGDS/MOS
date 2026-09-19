@@ -4,10 +4,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
+from app.accounts import create_account, list_classes
 from app.db import cursor
 from app.progress import (
     LEVELS,
@@ -179,8 +180,51 @@ def admin_students(request: Request):
     return TEMPLATES.TemplateResponse(
         request,
         "admin_students.html",
-        _ctx(request, user, {"nav": "students", "roster": list_roster()}),
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "students",
+                "roster": list_roster(),
+                "classes": list_classes(),
+                "error": request.query_params.get("loi"),
+            },
+        ),
     )
+
+
+@router.post("/quan-tri/hoc-sinh")
+def admin_create_student(
+    request: Request,
+    username: str = Form(...),
+    name: str = Form(...),
+    password: str = Form(...),
+    student_code: str = Form(""),
+    class_id: str = Form(""),
+    role: str = Form("student"),
+):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else None
+    try:
+        create_account(
+            username=username,
+            name=name,
+            password=password,
+            role=(
+                "teacher"
+                if role == "teacher" and user.get("role") in ("admin", "leadership")
+                else "student"
+            ),
+            student_code=student_code,
+            class_id=cid,
+        )
+    except ValueError:
+        return RedirectResponse("/quan-tri/hoc-sinh?loi=1", status_code=303)
+    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
 
 
 @router.get("/quan-tri/hoc-sinh/{user_id}", response_class=HTMLResponse)

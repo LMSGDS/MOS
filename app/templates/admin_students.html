@@ -3,8 +3,35 @@
 {% block body %}
 <section class="card hero admin-wide">
   <h1>Học sinh và liên kết lớp</h1>
-  <p class="lead">Mỗi học sinh gắn với lớp, bài tập được giao, tiến độ và mức đánh giá.</p>
+  <p class="lead">Tài khoản học sinh / giáo viên lưu trên PostgreSQL máy chủ. MOS-KulKul và web cùng đăng nhập HTTPS — bài làm, điểm, telemetry đẩy lên CSDL.</p>
   {% include "admin_nav.html" %}
+  {% if error %}
+  <p class="alert" role="alert">Không tạo được tài khoản (trùng tên hoặc thiếu thông tin).</p>
+  {% endif %}
+  <form method="post" action="/quan-tri/hoc-sinh" class="grid" style="margin:16px 0;gap:8px">
+    <p class="lead" style="margin:0">Thêm tài khoản lên PostgreSQL</p>
+    <label>Tài khoản <input name="username" required autocomplete="off" /></label>
+    <label>Họ tên <input name="name" required /></label>
+    <label>Mật khẩu <input name="password" type="password" required /></label>
+    <label>Mã HS <input name="student_code" /></label>
+    <label>Lớp
+      <select name="class_id">
+        <option value="">Chưa xếp lớp</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}">{{ c.name }}{% if c.teacher %} · {{ c.teacher }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% if user.role in ['admin', 'leadership'] %}
+    <label>Vai trò
+      <select name="role">
+        <option value="student">Học sinh</option>
+        <option value="teacher">Giáo viên</option>
+      </select>
+    </label>
+    {% endif %}
+    <button type="submit">Lưu vào PostgreSQL</button>
+  </form>
   <table class="grid">
     <thead>
       <tr>
