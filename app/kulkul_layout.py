@@ -4,9 +4,9 @@
 kích thước thanh Navigation ở left / right / top / bottom.
 
 Nguyên tắc cạnh:
-- top / bottom: bung hết chiều ngang màn hình, dày ClusterH (compact) hoặc ExpandedEdgeH.
-- left / right: bung hết chiều dọc màn hình, rộng ClusterW (compact) hoặc ExpandedSideW.
-Word luôn chiếm phần working area còn lại — thanh Navigation không đè lên tài liệu.
+- top / bottom: bung hết chiều ngang màn hình; dày ClusterH (mặc định) hoặc thickness do người dùng kéo.
+- left / right: bung hết chiều dọc màn hình; rộng ClusterW hoặc thickness đã chỉnh.
+Người dùng có thể kéo mép thanh (52px … 16% cạnh ngắn). Word luôn chiếm phần working area còn lại — thanh Navigation không đè lên tài liệu.
 """
 from __future__ import annotations
 
@@ -122,13 +122,38 @@ def horizontal(state: str | None) -> bool:
     return (state or "bottom").lower() not in ("left", "right")
 
 
-def size_for(work: Rect, state: str, compact: bool = True) -> tuple[int, int]:
+def thickness_of(dock: Rect, state: str | None) -> int:
+    return dock.h if horizontal(state) else dock.w
+
+
+def clamp_thickness(work: Rect, state: str | None, thickness: int) -> int:
+    lo = max(OVERLAY_MIN_H if horizontal(state) else OVERLAY_MIN_W, BAR_H_MIN if horizontal(state) else BAR_W_MIN)
+    span = work.h if horizontal(state) else work.w
+    cap = span * OVERLAY_CAP_PCT // 100
+    hi = max(lo, min(cap, span - MIN_WORD))
+    return max(lo, min(hi, thickness))
+
+
+def with_thickness(dock: Rect, work: Rect, state: str | None, thickness: int) -> Rect:
+    t = clamp_thickness(work, state, thickness)
+    if horizontal(state):
+        return pin_to_work(Rect(dock.x, dock.y, dock.w, t), work, state)
+    return pin_to_work(Rect(dock.x, dock.y, t, dock.h), work, state)
+
+
+def size_for(work: Rect, state: str, compact: bool = True, thickness: int | None = None) -> tuple[int, int]:
     nav = measure(work)
     state = (state or "bottom").lower()
     compact = compact or state == "minimized"
     if state in ("left", "right"):
-        return (nav.cluster_w if compact else nav.expanded_side_w), work.h
-    return work.w, (nav.cluster_h if compact else nav.expanded_edge_h)
+        w = nav.cluster_w if compact else nav.expanded_side_w
+        if compact and thickness is not None:
+            w = clamp_thickness(work, state, thickness)
+        return w, work.h
+    h = nav.cluster_h if compact else nav.expanded_edge_h
+    if compact and thickness is not None:
+        h = clamp_thickness(work, state, thickness)
+    return work.w, h
 
 
 def _clamp_word(word: Rect, work: Rect) -> Rect:
@@ -174,12 +199,24 @@ def word_beside(work: Rect, dock: Rect, state: str | None) -> Rect:
     return _clamp_word(word, work)
 
 
-def compute(work: Rect, state: str, compact: bool = False, scale: float = 1.0) -> tuple[Rect, Rect]:
+def compute(
+    work: Rect,
+    state: str,
+    compact: bool = False,
+    scale: float = 1.0,
+    thickness: int | None = None,
+) -> tuple[Rect, Rect]:
     state = (state or "bottom").lower()
     compact = compact or state == "minimized"
     nav = measure(_scale_work(work, scale))
     side = nav.cluster_w if compact else nav.expanded_side_w
     edge = nav.cluster_h if compact else nav.expanded_edge_h
+    if compact and thickness is not None:
+        t = clamp_thickness(work, state, thickness)
+        if state in ("left", "right"):
+            side = t
+        else:
+            edge = t
     if state == "left":
         dock = Rect(work.x, work.y, side, work.h)
     elif state == "right":

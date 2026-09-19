@@ -186,8 +186,9 @@ def api_layout(
     w: int = 1920,
     h: int = 1040,
     compact: bool = False,
+    thickness: int | None = None,
 ):
-    dock, word = compute(Rect(x, y, w, h), state, compact=compact)
+    dock, word = compute(Rect(x, y, w, h), state, compact=compact, thickness=thickness)
     nav = measure(Rect(x, y, w, h))
     compact_on = compact or state == "minimized"
     help_box = grow_for_help(dock, Rect(x, y, w, h), state) if compact_on else dock
@@ -205,6 +206,7 @@ def api_layout(
             "help_h": nav.help_h,
             "icon": nav.icon,
             "margin": nav.margin,
+            "thickness": dock.h if state in ("top", "bottom", "minimized") else dock.w,
         },
     }
 
