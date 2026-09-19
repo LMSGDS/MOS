@@ -29,9 +29,9 @@ static class Ui
     public static readonly Color Warning = Color.FromArgb(189, 107, 0);
     public static readonly Color SignIn = Color.FromArgb(11, 37, 69);
     public static readonly Color SignInHover = Color.FromArgb(8, 28, 54);
-    public static readonly Color DockBlue = Color.FromArgb(0, 120, 215);
-    public static readonly Color DockTeal = Color.FromArgb(0, 153, 153);
-    public static readonly Color DockGreen = Color.FromArgb(39, 174, 96);
+    public static readonly Color DockBlue = Color.FromArgb(3, 116, 181);
+    public static readonly Color DockTeal = Color.FromArgb(56, 142, 168);
+    public static readonly Color DockGreen = Color.FromArgb(46, 139, 87);
     public static readonly Color DockQuiet = Color.FromArgb(120, 136, 156);
     public static readonly Color DockHint = Color.FromArgb(201, 148, 36);
     /// <summary>UDL Tab focus ring: 2px solid #005fb8, offset 2px.</summary>
@@ -1816,6 +1816,16 @@ static class Ui
                 }
 
                 break;
+            case NavIcon.Help:
+                g.DrawEllipse(pen, cx - 8, cy - 8, 16, 16);
+                TextRenderer.DrawText(
+                    g,
+                    "?",
+                    new Font("Segoe UI", 10f, FontStyle.Bold),
+                    new Rectangle(cx - 8, cy - 9, 17, 18),
+                    color,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                break;
             case NavIcon.Hint:
                 g.FillEllipse(brush, cx - 6, cy - 8, 12, 12);
                 g.FillRectangle(brush, cx - 3, cy + 3, 6, 3);
@@ -1865,6 +1875,7 @@ enum NavIcon
     Refresh,
     Pin,
     Menu,
+    Help,
     Hint,
     Share,
     Back,

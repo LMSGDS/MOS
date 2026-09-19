@@ -23,30 +23,39 @@ sealed class MainForm : Form
     readonly Panel _exam = new();
     readonly Label _examTitle = new();
     readonly Label _examMeta = new();
+    readonly FlowLayoutPanel _objTabs = new();
     readonly ListView _tasks = new();
     readonly Label _examStatus = new();
     readonly Panel _dockChrome = new();
     readonly Panel _navGrip = new();
     readonly FlowLayoutPanel _dockFlow = new();
-    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi sang vị trí khác", Ui.DockBlue);
-    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.DockBlue);
-    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Hiện danh sách nhiệm vụ", Ui.DockBlue);
-    readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Kiểm tra nhiệm vụ", Ui.DockBlue);
-    readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim luôn trên cùng", Ui.DockBlue);
-    readonly Button _dockMenu = Ui.DockSquare(NavIcon.Menu, "Menu tùy chọn thêm", Ui.DockTeal);
-    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hiện hướng dẫn", Ui.DockTeal);
-    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.DockBlue);
-    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước, không chấm", Ui.DockBlue);
-    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Sang nhiệm vụ sau", Ui.DockGreen);
+    readonly Button _dockHelp = Ui.DockSquare(NavIcon.Help, "Help — mẹo giao diện, không mở hướng dẫn bài", Ui.Primary);
+    readonly Button _dockAaa = Ui.AaaButton();
+    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi: Top, Bottom hoặc Un-dock", Ui.Primary);
+    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.Primary);
+    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Tổng hợp nhiệm vụ", Ui.Primary);
+    readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Kiểm tra nhiệm vụ", Ui.Primary);
+    readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim luôn trên cùng", Ui.Primary);
+    readonly Button _dockMenu = Ui.DockSquare(NavIcon.Menu, "Menu tùy chọn thêm", Ui.Primary);
+    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hướng dẫn bài — chỉ Luyện tập, ẩn khi Thi không trợ giúp", Ui.Primary);
+    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.Primary);
+    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước", Ui.Primary);
+    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Nhiệm vụ sau", Ui.Primary);
     readonly ContextMenuStrip _dockMenuStrip = new();
     readonly ContextMenuStrip _extraMenu = new();
     readonly Panel _helpPane = new();
+    readonly Panel _tips = new();
+    readonly Label _tipsTitle = new();
+    readonly Label _tipsLead = new();
+    readonly ListView _tipsList = new();
+    readonly Button _tipsClose = Ui.PrimaryBtn("Đóng", 120);
     readonly Label _taskPrompt = new();
     readonly Label _helpTitle = new();
     readonly RichTextBox _helpBody = new();
     readonly Button _aaaBtn = Ui.AaaButton();
     readonly Panel _summary = new();
     readonly Label _summaryTitle = new();
+    readonly Label _summaryGroup = new();
     readonly TextBox _summarySearch = new();
     readonly ListView _summaryList = new();
     readonly Button _summaryCancel = Ui.PrimaryBtn("Hủy", 120);
@@ -72,12 +81,14 @@ sealed class MainForm : Form
     bool _docking;
     bool _pinned = true;
     bool _helpVisible = false;
+    bool _tipsOpen;
     bool _summaryOpen;
     bool _navResizing;
     int? _navThickness;
     int _navResizeOrigin;
     int _navResizeStart;
     int _helpScale;
+    int _objTab = -1;
     int _taskIndex;
     NavMetrics _nav = LayoutMath.Measure(new Rect(0, 0, LayoutMath.RefWorkW, LayoutMath.RefWorkH));
     Rectangle? _savedWorkspace;
@@ -105,6 +116,7 @@ sealed class MainForm : Form
         _fileOnStart = fileOnStart;
         _demoOnStart = demoOnStart;
         Text = "MOS-KulKul";
+        KeyPreview = true;
         FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -223,11 +235,10 @@ sealed class MainForm : Form
 
     Button[] DockButtons() =>
     [
-        _dockPos, _dockSave, _dockTasks, _dockCheck, _dockPin,
-        _dockMenu, _dockHint, _dockShare, _dockBack, _dockNext,
+        _dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint, _dockBack, _dockNext, _dockSave,
     ];
 
-        void ApplyNavChrome(NavMetrics nav)
+    void ApplyNavChrome(NavMetrics nav)
     {
         _nav = nav;
         var thick = _navThickness ?? (LayoutMath.Horizontal(_state) ? nav.ClusterH : nav.ClusterW);
@@ -406,7 +417,7 @@ sealed class MainForm : Form
         body.Controls.Add(_products);
         _catalog.Controls.Add(Ui.StackPage(
             "Bài mới",
-            "Chọn chương trình, chọn đề, rồi Luyện tập hoặc Thi.",
+            "Chọn chương trình, rồi một nhóm Objective — Luyện tập hoặc Thi.",
             body));
     }
 
@@ -430,8 +441,8 @@ sealed class MainForm : Form
 
         _dockChrome.Dock = DockStyle.Bottom;
         _dockChrome.Height = LayoutMath.ClusterH;
-        _dockChrome.BackColor = Color.FromArgb(236, 239, 241);
-        _dockChrome.Padding = new Padding(6, 4, 6, 4);
+        _dockChrome.BackColor = Ui.Primary;
+        _dockChrome.Padding = new Padding(8, 4, 8, 4);
 
         _dockFlow.Dock = DockStyle.Fill;
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
@@ -440,6 +451,10 @@ sealed class MainForm : Form
         _dockFlow.Padding = Padding.Empty;
         _dockFlow.Margin = Padding.Empty;
 
+        _dockHelp.Click += (_, _) => ShowTips(!_tipsOpen);
+        _dockAaa.Click += (_, _) => CycleTypeSize();
+        Ui.DockTips.SetToolTip(_dockAaa, "Đổi cỡ chữ đề bài và hướng dẫn");
+        _dockAaa.AccessibleName = "Đổi cỡ chữ đề bài và hướng dẫn";
         _dockPos.Click += (_, _) =>
         {
             _dockMenuStrip.Show(_dockPos, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
@@ -469,7 +484,7 @@ sealed class MainForm : Form
 
         _dockChrome.Controls.Add(_dockFlow);
 
-        _navGrip.BackColor = Color.FromArgb(176, 190, 197);
+        _navGrip.BackColor = Ui.PrimaryDark;
         _navGrip.Height = 6;
         _navGrip.Cursor = Cursors.SizeNS;
         Ui.DockTips.SetToolTip(_navGrip, "Kéo để đổi kích thước thanh Navigation");
@@ -478,10 +493,18 @@ sealed class MainForm : Form
         _navGrip.MouseUp += OnNavGripUp;
 
         _dockMenuStrip.Font = new Font("Segoe UI", 10f);
-        _dockMenuStrip.Items.Add(DockMenuItem("←  left", "left"));
-        _dockMenuStrip.Items.Add(DockMenuItem("→  right", "right"));
         _dockMenuStrip.Items.Add(DockMenuItem("↑  Top", "top"));
         _dockMenuStrip.Items.Add(DockMenuItem("↓  Bottom", "bottom"));
+        var undockItem = new ToolStripMenuItem("Un-dock");
+        undockItem.Click += (_, _) => UnDock();
+        _dockMenuStrip.Items.Add(undockItem);
+        _dockMenuStrip.Items.Add(new ToolStripSeparator());
+        _dockMenuStrip.Items.Add(DockMenuItem("←  Trái", "left"));
+        _dockMenuStrip.Items.Add(DockMenuItem("→  Phải", "right"));
+        _dockMenuStrip.Items.Add(new ToolStripSeparator());
+        var dockSubmit = new ToolStripMenuItem("Nộp bài");
+        dockSubmit.Click += async (_, _) => await SubmitExam();
+        _dockMenuStrip.Items.Add(dockSubmit);
 
         _extraMenu.Font = new Font("Segoe UI", 10f);
         var extraHome = new ToolStripMenuItem("Trang chủ");
@@ -519,10 +542,11 @@ sealed class MainForm : Form
         _extraMenu.Items.Add(extraHome);
 
         _examTitle.Dock = DockStyle.Top;
-        _examTitle.Font = Ui.HeadFont;
+        _examTitle.Font = new Font("Segoe UI", 16f, FontStyle.Regular);
         _examTitle.ForeColor = Ui.Text;
+        _examTitle.TextAlign = ContentAlignment.MiddleCenter;
         _examTitle.UseMnemonic = false;
-        Ui.BindWrap(_examTitle, 8);
+        Ui.BindWrap(_examTitle, 10);
 
         _examMeta.Dock = DockStyle.Top;
         _examMeta.ForeColor = Ui.Muted;
@@ -542,21 +566,25 @@ sealed class MainForm : Form
         _tasks.Columns.Add("Kết quả", 90);
         _tasks.BorderStyle = BorderStyle.FixedSingle;
         _tasks.BackColor = Color.White;
-        _tasks.SelectedIndexChanged += (_, _) =>
-        {
-            if (_tasks.SelectedIndices.Count > 0)
-            {
-                _taskIndex = _tasks.SelectedIndices[0];
-                RenderHelp();
-            }
-        };
+        _tasks.SelectedIndexChanged += OnTaskSelected;
+
+        _objTabs.Dock = DockStyle.Top;
+        _objTabs.WrapContents = true;
+        _objTabs.AutoSize = true;
+        _objTabs.Padding = new Padding(8, 4, 8, 6);
+        _objTabs.BackColor = Color.FromArgb(248, 249, 251);
+        _objTabs.FlowDirection = FlowDirection.LeftToRight;
 
         BuildHelpPane();
+        BuildTipsPane();
         BuildSummaryPane();
 
+        _exam.Controls.Add(_tips);
         _exam.Controls.Add(_summary);
         _exam.Controls.Add(_tasks);
         _exam.Controls.Add(_helpPane);
+        _exam.Controls.Add(_taskPrompt);
+        _exam.Controls.Add(_objTabs);
         _exam.Controls.Add(_navGrip);
         _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_examStatus);
@@ -576,8 +604,9 @@ sealed class MainForm : Form
         _taskPrompt.AutoSize = false;
         _taskPrompt.UseMnemonic = false;
         _taskPrompt.ForeColor = Ui.Text;
-        _taskPrompt.Padding = new Padding(2, 0, 2, 2);
-        Ui.BindWrap(_taskPrompt, 4, 36);
+        _taskPrompt.Padding = new Padding(16, 4, 16, 8);
+        _taskPrompt.TextAlign = ContentAlignment.TopCenter;
+        Ui.BindWrap(_taskPrompt, 8, 72);
 
         var card = new Panel
         {
@@ -618,12 +647,7 @@ sealed class MainForm : Form
             e.Graphics.DrawLine(pen, 0, 0, _helpFooter.Width, 0);
         };
         _aaaBtn.Margin = new Padding(0, 0, 0, 0);
-        _aaaBtn.Click += (_, _) =>
-        {
-            _helpScale = (_helpScale + 1) % 3;
-            ApplyHelpFonts();
-            RenderHelp();
-        };
+        _aaaBtn.Click += (_, _) => CycleTypeSize();
         _helpFooter.Controls.Add(_aaaBtn);
 
         _helpBody.Dock = DockStyle.Fill;
@@ -651,8 +675,77 @@ sealed class MainForm : Form
         card.Controls.Add(_helpFooter);
         card.Controls.Add(_helpHeader);
         _helpPane.Controls.Add(card);
-        _helpPane.Controls.Add(_taskPrompt);
+        _taskPrompt.BackColor = Color.White;
+        _taskPrompt.MinimumSize = new Size(0, 48);
         ApplyHelpFonts();
+    }
+
+    void BuildTipsPane()
+    {
+        _tips.Dock = DockStyle.Fill;
+        _tips.BackColor = Color.White;
+        _tips.Padding = new Padding(28, 20, 28, 20);
+        _tips.Visible = false;
+
+        _tipsTitle.Text = "Help — mẹo giao diện";
+        _tipsTitle.Dock = DockStyle.Top;
+        _tipsTitle.Font = Ui.TitleFont;
+        _tipsTitle.ForeColor = Ui.Text;
+        _tipsTitle.Height = 44;
+        _tipsTitle.TextAlign = ContentAlignment.MiddleLeft;
+        _tipsTitle.UseMnemonic = false;
+
+        _tipsLead.Text = "Help (?) giải thích các nút trên thanh bài thi. Không phải hướng dẫn từng bước. Chế độ Thi không trợ giúp: ẩn bóng đèn hướng dẫn.";
+        _tipsLead.Dock = DockStyle.Top;
+        _tipsLead.ForeColor = Ui.Muted;
+        _tipsLead.UseMnemonic = false;
+        Ui.BindWrap(_tipsLead, 10);
+
+        _tipsList.Dock = DockStyle.Fill;
+        _tipsList.View = System.Windows.Forms.View.Details;
+        _tipsList.FullRowSelect = true;
+        _tipsList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+        _tipsList.BorderStyle = BorderStyle.None;
+        _tipsList.Columns.Add("Mục", 160);
+        _tipsList.Columns.Add("Mô tả", 420);
+        _tipsList.Columns.Add("Phím", 80);
+        foreach (var row in new[]
+        {
+            ("Help ?", "Xem mẹo giao diện. Không mở hướng dẫn bài.", "Alt+F"),
+            ("AA", "Đổi cỡ chữ đề bài và hướng dẫn (nếu đang mở).", "Alt+T"),
+            ("Gắn thanh", "Top, Bottom hoặc Un-dock.", "Alt+D"),
+            ("Tổng hợp", "Danh sách nhiệm vụ của đề đang làm.", "Alt+L"),
+            ("Lưu", "Lưu bài để làm tiếp sau.", "Alt+S"),
+            ("Chấm", "Chấm đề hiện tại — Luyện tập; Thi ẩn điểm đến khi nộp.", "Alt+G"),
+            ("Trước / Sau", "Chuyển nhiệm vụ trong cùng một nhóm Objective.", "Alt+B / Alt+N"),
+            ("Hướng dẫn", "Bật/tắt trợ giúp từng bước. Chỉ Luyện tập; Thi không trợ giúp.", "Alt+H"),
+        })
+        {
+            _tipsList.Items.Add(new ListViewItem([row.Item1, row.Item2, row.Item3]));
+        }
+
+        _tipsClose.Click += (_, _) => ShowTips(false);
+        var foot = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 48,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = Color.White,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+        foot.Controls.Add(_tipsClose);
+
+        _tips.Controls.Add(_tipsList);
+        _tips.Controls.Add(foot);
+        _tips.Controls.Add(_tipsLead);
+        _tips.Controls.Add(_tipsTitle);
+        _tips.Resize += (_, _) =>
+        {
+            if (_tipsList.Columns.Count >= 2)
+            {
+                _tipsList.Columns[1].Width = Math.Max(200, _tips.ClientSize.Width - 280);
+            }
+        };
     }
 
     void BuildSummaryPane()
@@ -671,11 +764,11 @@ sealed class MainForm : Form
             BackColor = Color.White,
             Padding = new Padding(0, 8, 0, 0),
         };
-        _summaryCancel.BackColor = Ui.DockBlue;
-        _summaryGo.BackColor = Color.FromArgb(140, 190, 245);
+        _summaryCancel.BackColor = Ui.Primary;
+        _summaryGo.BackColor = Color.FromArgb(156, 200, 236);
         _summaryGo.ForeColor = Color.White;
-        _summarySave.BackColor = Ui.DockBlue;
-        _summaryFinish.BackColor = Ui.DockBlue;
+        _summarySave.BackColor = Ui.Primary;
+        _summaryFinish.BackColor = Ui.Primary;
         _summaryCancel.Click += (_, _) => ShowSummary(false);
         _summaryGo.Click += (_, _) => JumpSelectedSummary();
         _summarySave.Click += (_, _) =>
@@ -814,14 +907,32 @@ sealed class MainForm : Form
         _summaryTitle.ForeColor = Ui.Text;
         _summaryTitle.UseMnemonic = false;
 
+        _summaryGroup.Dock = DockStyle.Top;
+        _summaryGroup.Height = 36;
+        _summaryGroup.BackColor = Ui.Primary;
+        _summaryGroup.ForeColor = Color.White;
+        _summaryGroup.Font = Ui.HeadFont;
+        _summaryGroup.TextAlign = ContentAlignment.MiddleLeft;
+        _summaryGroup.Padding = new Padding(12, 0, 12, 0);
+        _summaryGroup.UseMnemonic = false;
+
         _summary.Controls.Add(_summarySplit);
         _summary.Controls.Add(actions);
         _summary.Controls.Add(searchRow);
         _summary.Controls.Add(meta);
+        _summary.Controls.Add(_summaryGroup);
         _summary.Controls.Add(_summaryTitle);
     }
 
     bool HelpOpen => _helpVisible && ExamSession.Mode != "testing";
+
+    void CycleTypeSize()
+    {
+        _helpScale = (_helpScale + 1) % 3;
+        ApplyHelpFonts();
+        RenderBrief();
+        RenderHelp();
+    }
 
     void ToggleHelp()
     {
@@ -830,12 +941,29 @@ sealed class MainForm : Form
             return;
         }
 
+        _tipsOpen = false;
         _helpVisible = !_helpVisible;
         if (_helpVisible)
         {
             var elapsed = Math.Max(0, (int)(DateTime.UtcNow - ExamSession.OpenedUtc).TotalMilliseconds);
             _ = ExamHub.TrackAsync("hint", new { elapsed_ms = elapsed, source = "dock" });
         }
+        RelayoutExam();
+    }
+
+    void ShowTips(bool open)
+    {
+        _tipsOpen = open;
+        if (open)
+        {
+            _summaryOpen = false;
+        }
+
+        RelayoutExamOverlay(open);
+    }
+
+    void RelayoutExam()
+    {
         if (_docking)
         {
             ApplyDock(waitForWord: true);
@@ -846,17 +974,8 @@ sealed class MainForm : Form
         }
     }
 
-    void ShowSummary(bool open)
+    void RelayoutExamOverlay(bool open)
     {
-        _summaryOpen = open;
-        if (open)
-        {
-            _summaryTitle.Text = (ExamSession.ProjectTitle ?? "Danh sách kỹ năng") + " — Tổng hợp";
-            _summarySearch.Text = "";
-            _summaryCheck.Visible = ExamSession.Mode != "testing";
-            FillSummary();
-        }
-
         if (_docking)
         {
             if (open)
@@ -877,6 +996,22 @@ sealed class MainForm : Form
         {
             ApplyExamChrome();
         }
+    }
+
+    void ShowSummary(bool open)
+    {
+        _summaryOpen = open;
+        if (open)
+        {
+            _tipsOpen = false;
+            _summaryTitle.Text = (ExamSession.ProjectTitle ?? "Danh sách kỹ năng") + " — Tổng hợp";
+            _summaryGroup.Text = "  " + (ExamSession.ProjectTitle ?? "Bài thi");
+            _summarySearch.Text = "";
+            _summaryCheck.Visible = ExamSession.Mode != "testing";
+            FillSummary();
+        }
+
+        RelayoutExamOverlay(open);
     }
 
     void FillSummary()
@@ -1026,6 +1161,9 @@ sealed class MainForm : Form
             _tasks.Items[i].Selected = true;
             _tasks.EnsureVisible(i);
             _taskIndex = i;
+            _objTab = i;
+            HighlightObjectiveTabs();
+            RenderBrief();
             RenderHelp();
         }
 
@@ -1049,23 +1187,156 @@ sealed class MainForm : Form
         _helpBody.Font = new Font("Segoe UI", bodyPt);
     }
 
+    void FillObjectiveTabs()
+    {
+        _objTabs.SuspendLayout();
+        _objTabs.Controls.Clear();
+        _objTabs.Controls.Add(ObjectiveTab("Tổng quan", -1));
+        var n = _tasks.Items.Count;
+        for (var i = 0; i < n; i++)
+        {
+            _objTabs.Controls.Add(ObjectiveTab("Nhiệm vụ " + (i + 1), i));
+        }
+
+        _objTabs.ResumeLayout();
+        HighlightObjectiveTabs();
+    }
+
+    Button ObjectiveTab(string text, int index)
+    {
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = true,
+            Height = 28,
+            MinimumSize = new Size(88, 28),
+            FlatStyle = FlatStyle.Flat,
+            Margin = new Padding(0, 0, 4, 2),
+            Padding = new Padding(10, 0, 10, 0),
+            Tag = index,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            Font = Ui.SmallFont,
+            ForeColor = Color.White,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Click += (_, _) => SelectObjectiveTab(index);
+        return btn;
+    }
+
+    void SelectObjectiveTab(int index)
+    {
+        _objTab = index;
+        if (index >= 0 && _tasks.Items.Count > 0)
+        {
+            var i = Math.Clamp(index, 0, _tasks.Items.Count - 1);
+            _taskIndex = i;
+            if (_tasks.SelectedIndices.Count != 1 || _tasks.SelectedIndices[0] != i)
+            {
+                _tasks.SelectedIndexChanged -= OnTaskSelected;
+                _tasks.SelectedIndices.Clear();
+                _tasks.Items[i].Selected = true;
+                _tasks.EnsureVisible(i);
+                _tasks.SelectedIndexChanged += OnTaskSelected;
+            }
+        }
+
+        HighlightObjectiveTabs();
+        RenderBrief();
+        RenderHelp();
+    }
+
+    void OnTaskSelected(object? sender, EventArgs e)
+    {
+        if (_tasks.SelectedIndices.Count == 0)
+        {
+            return;
+        }
+
+        _taskIndex = _tasks.SelectedIndices[0];
+        _objTab = _taskIndex;
+        HighlightObjectiveTabs();
+        RenderBrief();
+        RenderHelp();
+    }
+
+    void HighlightObjectiveTabs()
+    {
+        foreach (Control child in _objTabs.Controls)
+        {
+            if (child is not Button btn || btn.Tag is not int idx)
+            {
+                continue;
+            }
+
+            var on = idx == _objTab;
+            btn.BackColor = on ? Color.FromArgb(45, 45, 48) : Color.FromArgb(110, 116, 124);
+            btn.FlatAppearance.MouseOverBackColor = on
+                ? Color.FromArgb(32, 32, 36)
+                : Color.FromArgb(90, 96, 104);
+        }
+    }
+
+    void RenderBrief()
+    {
+        var title = ExamSession.Rubric?.Title;
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            title = ExamSession.ProjectTitle ?? "Bài MOS";
+        }
+
+        _examTitle.Text = title;
+        if (_objTab < 0)
+        {
+            _taskPrompt.Font = new Font("Segoe UI", _compact && _docking ? 9.5f : 11f, FontStyle.Regular);
+            _taskPrompt.Text = ObjectiveOverview();
+            return;
+        }
+
+        var criteria = ExamSession.Rubric?.Criteria;
+        if (criteria is { Count: > 0 })
+        {
+            var i = Math.Clamp(_objTab, 0, criteria.Count - 1);
+            var item = criteria[i];
+            _taskPrompt.Font = new Font("Segoe UI", _compact && _docking ? 9.5f : 11f, FontStyle.Bold);
+            _taskPrompt.Text = Ui.StripMarks(string.IsNullOrWhiteSpace(item.Prompt) ? item.Id : item.Prompt);
+            return;
+        }
+
+        if (_tasks.Items.Count > 0)
+        {
+            var i = Math.Clamp(_objTab, 0, _tasks.Items.Count - 1);
+            _taskPrompt.Font = new Font("Segoe UI", _compact && _docking ? 9.5f : 11f, FontStyle.Bold);
+            _taskPrompt.Text = _tasks.Items[i].Text;
+            return;
+        }
+
+        _taskPrompt.Text = ObjectiveOverview();
+    }
+
+    string ObjectiveOverview() =>
+        ExamHub.OverviewText(ExamSession.Rubric, ExamSession.ProjectTitle, _tasks.Items.Count);
+
     void RenderHelp()
     {
         var bodyPt = (_docking && _compact)
             ? 8.5f
             : _helpScale switch { 2 => 12f, 1 => 10.5f, _ => 9.5f };
         var criteria = ExamSession.Rubric?.Criteria;
+        if (_objTab < 0)
+        {
+            SetHelpBody(["Chọn Nhiệm vụ 1 để xem hướng dẫn từng bước trên Microsoft Office đã cài trên máy."], bodyPt);
+            return;
+        }
+
         if (criteria is not { Count: > 0 })
         {
-            _taskPrompt.Text = ExamSession.ProjectTitle ?? "Bài MOS";
             SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
             return;
         }
 
         _taskIndex = Math.Clamp(_taskIndex, 0, criteria.Count - 1);
         var item = criteria[_taskIndex];
-        var prompt = string.IsNullOrWhiteSpace(item.Prompt) ? item.Id : item.Prompt;
-        _taskPrompt.Text = Ui.StripMarks(prompt);
         if (item.HelpSteps is { Count: > 0 })
         {
             SetHelpBody(item.HelpSteps, bodyPt);
@@ -1098,18 +1369,8 @@ sealed class MainForm : Form
 
     void StepTask(int delta)
     {
-        if (_tasks.Items.Count == 0)
-        {
-            return;
-        }
-
-        var i = _tasks.SelectedIndices.Count > 0 ? _tasks.SelectedIndices[0] : 0;
-        i = Math.Clamp(i + delta, 0, _tasks.Items.Count - 1);
-        _tasks.SelectedIndices.Clear();
-        _tasks.Items[i].Selected = true;
-        _tasks.EnsureVisible(i);
-        _taskIndex = i;
-        RenderHelp();
+        var last = Math.Max(-1, _tasks.Items.Count - 1);
+        SelectObjectiveTab(Math.Clamp(_objTab + delta, -1, last));
     }
 
     void MoveDock(string state)
@@ -1157,33 +1418,46 @@ sealed class MainForm : Form
         {
             if (item.Tag is string state)
             {
-                item.BackColor = state == _state ? Ui.DockBlue : Color.White;
+                item.BackColor = state == _state ? Ui.Primary : Color.White;
                 item.ForeColor = state == _state ? Color.White : Ui.Text;
+            }
+            else if (item.Text == "Un-dock")
+            {
+                item.BackColor = !_docking ? Ui.Primary : Color.White;
+                item.ForeColor = !_docking ? Color.White : Ui.Text;
             }
         }
 
-        Ui.SetIconActive(_dockPin, _pinned);
-        _dockPin.BackColor = _pinned ? Ui.DockBlue : Color.FromArgb(148, 163, 184);
-        Ui.DockTips.SetToolTip(_dockHint, HelpOpen ? "Ẩn hướng dẫn" : "Hiện hướng dẫn");
-        Ui.DockTips.SetToolTip(_dockTasks, "Hiện danh sách nhiệm vụ");
+        foreach (var btn in DockButtons())
+        {
+            btn.BackColor = Ui.Primary;
+        }
+
+        Ui.DockTips.SetToolTip(_dockHelp, "Help — mẹo giao diện, không mở hướng dẫn bài");
+        Ui.DockTips.SetToolTip(_dockAaa, "Đổi cỡ chữ đề bài và hướng dẫn");
+        Ui.DockTips.SetToolTip(_dockHint, ExamSession.Mode == "testing"
+            ? "Thi không trợ giúp — hướng dẫn từng bước đã tắt"
+            : HelpOpen ? "Ẩn hướng dẫn bài" : "Hiện hướng dẫn bài");
+        Ui.DockTips.SetToolTip(_dockTasks, "Tổng hợp nhiệm vụ");
         Ui.DockTips.SetToolTip(_dockSave, "Lưu và thoát bài");
-        Ui.DockTips.SetToolTip(_dockShare, "Bỏ qua chấm, sang nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockBack, "Nhiệm vụ trước, không chấm");
-        Ui.DockTips.SetToolTip(_dockNext, "Sang nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockPos, "Gắn thanh bài thi sang vị trí khác");
-        Ui.DockTips.SetToolTip(_dockMenu, "Menu tùy chọn thêm");
+        Ui.DockTips.SetToolTip(_dockBack, "Nhiệm vụ trước");
+        Ui.DockTips.SetToolTip(_dockNext, "Nhiệm vụ sau");
+        Ui.DockTips.SetToolTip(_dockPos, "Gắn thanh bài thi: Top, Bottom hoặc Un-dock");
     }
 
     void ApplyExamChrome()
     {
-        var showSummary = _summaryOpen;
-        var showTasks = !showSummary && (!_compact || !_docking);
-        var showHelp = !showSummary && HelpOpen;
-        _exam.Padding = showTasks || showSummary ? new Padding(12, 8, 12, 0) : Padding.Empty;
-        _exam.BackColor = showTasks || showSummary ? Color.White : Color.FromArgb(245, 247, 249);
+        var showTips = _tipsOpen;
+        var showSummary = _summaryOpen && !showTips;
+        var showTasks = !showSummary && !showTips && (!_compact || !_docking);
+        var showBrief = !showSummary && !showTips;
+        var showHelp = !showSummary && !showTips && HelpOpen;
+        _exam.Padding = showTasks || showSummary || showTips ? new Padding(12, 8, 12, 0) : Padding.Empty;
+        _exam.BackColor = showTasks || showSummary || showTips ? Color.White : Color.FromArgb(245, 247, 249);
+        _tips.Visible = showTips;
         _summary.Visible = showSummary;
         _dockChrome.Visible = !showSummary;
-        _navGrip.Visible = !showSummary && _docking && _compact;
+        _navGrip.Visible = !showSummary && !showTips && _docking && _compact;
         if (_docking && _compact && !showSummary)
         {
             OrientNav();
@@ -1209,11 +1483,21 @@ sealed class MainForm : Form
         }
         ApplyHelpFonts();
         _tasks.Visible = showTasks;
-        _examTitle.Visible = showTasks;
+        _examTitle.Visible = showBrief;
+        _examTitle.Font = new Font("Segoe UI", _compact && _docking ? 12f : 16f, FontStyle.Regular);
         _examMeta.Visible = showTasks;
         _examStatus.Visible = showTasks;
+        _objTabs.Visible = showBrief;
+        _taskPrompt.Visible = showBrief;
         _dockTasks.Visible = true;
+        _dockHelp.Visible = true;
+        _dockAaa.Visible = true;
         _dockHint.Visible = ExamSession.Mode != "testing";
+        _dockCheck.Visible = false;
+        _dockPin.Visible = false;
+        _dockMenu.Visible = false;
+        _dockShare.Visible = false;
+        RenderBrief();
         RenderHelp();
         HighlightDockIcons();
         if (_tasks.Visible && _tasks.Columns.Count >= 1)
@@ -1290,13 +1574,82 @@ sealed class MainForm : Form
             return;
         }
 
-        foreach (var project in _items)
+        foreach (var group in ExamHub.GroupByObjective(_items))
         {
-            _tests.Controls.Add(TestCard(project));
+            _tests.Controls.Add(group.Projects.Count == 1
+                ? TestCard(group.Projects[0])
+                : ObjectiveGroupCard(group));
         }
+        Ui.FitCards(_tests);
     }
 
-    Panel TestCard(MosProject project)
+    Panel ObjectiveGroupCard(ProjectGroup group)
+    {
+        var box = new Panel
+        {
+            Width = Math.Max(640, _tests.ClientSize.Width - 24),
+            BackColor = Color.White,
+            Margin = new Padding(0, 0, 0, 12),
+            Tag = "card",
+            Padding = new Padding(0, 0, 0, 6),
+        };
+        var body = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            WrapContents = false,
+            FlowDirection = FlowDirection.TopDown,
+            BackColor = Color.White,
+            Padding = new Padding(0, 4, 0, 4),
+            Visible = true,
+        };
+        foreach (var project in group.Projects)
+        {
+            var card = TestCard(project, nested: true);
+            body.Controls.Add(card);
+        }
+
+        var head = new Button
+        {
+            Text = "  " + group.Title,
+            Dock = DockStyle.Top,
+            Height = 40,
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Ui.Primary,
+            ForeColor = Color.White,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Font = Ui.HeadFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+        };
+        head.FlatAppearance.BorderSize = 0;
+        head.FlatAppearance.MouseOverBackColor = Ui.PrimaryDark;
+        head.Click += (_, _) =>
+        {
+            body.Visible = !body.Visible;
+            FitGroupCard(box, head, body);
+        };
+        box.Controls.Add(body);
+        box.Controls.Add(head);
+        FitGroupCard(box, head, body);
+        return box;
+    }
+
+    static void FitGroupCard(Panel box, Control head, FlowLayoutPanel body)
+    {
+        var inner = 0;
+        if (body.Visible)
+        {
+            foreach (Control child in body.Controls)
+            {
+                inner += child.Height + child.Margin.Vertical;
+            }
+        }
+
+        box.Height = head.Height + (body.Visible ? inner + body.Padding.Vertical + 10 : 0);
+    }
+
+    Panel TestCard(MosProject project, bool nested = false)
     {
         var mins = Math.Max(1, project.TimeLimitSec / 60);
         var actions = new FlowLayoutPanel
@@ -1317,8 +1670,13 @@ sealed class MainForm : Form
             project.Title,
             (string.IsNullOrWhiteSpace(project.Skill) ? Ui.AppName(project.Program) : project.Skill) + " · " + mins + " phút",
             actions);
-        card.Width = Math.Max(640, _tests.ClientSize.Width - 24);
-        Ui.FitCards(_tests);
+        card.Width = Math.Max(nested ? 520 : 640, _tests.ClientSize.Width - (nested ? 48 : 24));
+        card.Margin = nested ? new Padding(0, 0, 0, 4) : new Padding(0, 0, 0, 14);
+        if (!nested)
+        {
+            Ui.FitCards(_tests);
+        }
+
         return card;
     }
 
@@ -1435,11 +1793,10 @@ sealed class MainForm : Form
 
     void ShowExamUi()
     {
-        _examTitle.Text = ExamSession.ProjectTitle ?? "Bài MOS";
+        _examTitle.Text = ExamSession.Rubric?.Title ?? ExamSession.ProjectTitle ?? "Bài MOS";
         _examMeta.Text = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
             + (ExamSession.Mode == "testing" ? " · điểm ẩn đến khi nộp" : " · có hướng dẫn và kiểm tra nhiệm vụ");
         var train = ExamSession.Mode != "testing";
-        _dockCheck.Visible = train;
         _dockHint.Visible = train;
         _helpVisible = false;
         ExamSession.OpenedUtc = DateTime.UtcNow;
@@ -1448,9 +1805,10 @@ sealed class MainForm : Form
         ActionEvidence.Begin(ExamSession.AttemptId);
         WordActionProbe.Reset();
         _taskIndex = 0;
+        _objTab = -1;
         _examStatus.Text = train
-            ? "Thử tự làm trước. Bóng đèn: gợi ý khi cần. Danh sách: tổng hợp. Đĩa: lưu và thoát."
-            : "Danh sách nhiệm vụ. Đĩa: lưu và thoát. Nộp bài trong menu hoặc Nộp bài.";
+            ? "Help (?): mẹo giao diện. Bóng đèn: hướng dẫn bài. Danh sách: tổng hợp. Đĩa: lưu."
+            : "Thi không trợ giúp — không có hướng dẫn từng bước. Help (?) vẫn mở mẹo giao diện.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
             ? criteria.Select(c => (c.Id, Ui.StripMarks(string.IsNullOrWhiteSpace(c.Prompt) ? c.Id : c.Prompt))).ToList()
@@ -1467,11 +1825,8 @@ sealed class MainForm : Form
             }
         }
 
-        if (_tasks.Items.Count > 0)
-        {
-            _tasks.Items[0].Selected = true;
-        }
-
+        FillObjectiveTabs();
+        RenderBrief();
         RenderHelp();
 
         if (_tasks.Columns.Count >= 1)
@@ -1579,6 +1934,9 @@ sealed class MainForm : Form
         _tasks.Items[i].Selected = true;
         _tasks.EnsureVisible(i);
         _taskIndex = i;
+        _objTab = i;
+        HighlightObjectiveTabs();
+        RenderBrief();
         RenderHelp();
         ApplyDock(waitForWord: false);
         Application.DoEvents();
@@ -1871,7 +2229,7 @@ sealed class MainForm : Form
             return;
         }
 
-        if (_summaryOpen)
+        if (_summaryOpen || _tipsOpen)
         {
             ApplyExamChrome();
             return;
@@ -1924,9 +2282,77 @@ sealed class MainForm : Form
         {
             dock = LayoutMath.GrowForHelp(dock, work, _state);
         }
+        else if (_compact)
+        {
+            dock = LayoutMath.GrowForPrompt(dock, work, _state);
+        }
 
         dock = LayoutMath.PinToWork(dock, work, _state);
         return (dock, LayoutMath.WordBeside(work, dock, _state));
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (_view != HubPage.Exam)
+        {
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        if (keyData == (Keys.Alt | Keys.F))
+        {
+            ShowTips(!_tipsOpen);
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.T))
+        {
+            CycleTypeSize();
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.D))
+        {
+            _dockMenuStrip.Show(_dockPos, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.L))
+        {
+            ShowSummary(!_summaryOpen);
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.S))
+        {
+            SaveAndHome();
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.G))
+        {
+            _ = CheckTasks();
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.B))
+        {
+            StepTask(-1);
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.N))
+        {
+            StepTask(1);
+            return true;
+        }
+
+        if (keyData == (Keys.Alt | Keys.H))
+        {
+            ToggleHelp();
+            return true;
+        }
+
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     const uint SwpNoactivate = 0x0010;
