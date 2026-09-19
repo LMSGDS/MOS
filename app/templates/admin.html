@@ -13,7 +13,7 @@
     · {{ a.teacher or "—" }} · mức {{ a.risk }} — {{ a.summary }}
   </p>
   {% endfor %}
-  {% elif user.role in ['admin', 'leadership'] %}
+  {% elif user.role == 'admin' %}
   <p class="hint" style="margin-top:16px">Chưa có cảnh báo sư phạm trong 24 giờ. Xem <a href="/quan-tri/su-pham">chỉ số lớp</a>.</p>
   {% endif %}
   <div class="program-grid" style="margin-top:12px">

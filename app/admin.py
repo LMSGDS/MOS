@@ -45,7 +45,7 @@ def _staff(user: dict | None) -> bool:
 
 
 def _leaders(user: dict | None) -> bool:
-    return bool(user and user.get("role") in ("admin", "leadership"))
+    return bool(user and user.get("role") == "admin")
 
 
 def _jsonish(value):
@@ -231,7 +231,7 @@ def admin_create_student(
             password=password,
             role=(
                 "teacher"
-                if role == "teacher" and user.get("role") in ("admin", "leadership")
+                if role == "teacher" and user.get("role") == "admin"
                 else "student"
             ),
             student_code=student_code,

@@ -64,7 +64,7 @@ def test_hint_and_first_attempt_metrics(client):
     assert any(int(r.get("students") or 0) >= 1 for r in firsts)
 
 
-def test_pedagogy_page_is_leadership_only(client):
+def test_pedagogy_page_is_admin_only(client):
     teacher = _token(client, "giaovien")
     denied = client.get(
         "/api/v1/insights/pedagogy",

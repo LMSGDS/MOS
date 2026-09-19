@@ -1,5 +1,5 @@
 -- MOS-KulKul PostgreSQL schema
--- Hệ thống -> BGH/Tổ bộ môn -> Giáo viên -> Lớp -> Học sinh -> Lịch sử bài làm
+-- Hệ thống -> admin -> Giáo viên -> Lớp -> Học sinh -> Lịch sử bài làm
 
 CREATE TABLE IF NOT EXISTS orgs (
   id            SERIAL PRIMARY KEY,

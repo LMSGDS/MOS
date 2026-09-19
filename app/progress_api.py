@@ -158,7 +158,7 @@ async def v1_staff_heartbeat(request: Request):
 def v1_pedagogy(request: Request, hours: int = 24):
     user = bearer_user(request)
     row = _require_user(user)
-    if row.get("role") not in ("admin", "leadership"):
+    if row.get("role") != "admin":
         raise HTTPException(status_code=403, detail="forbidden")
     hours = max(1, min(int(hours or 24), 168))
     return {
