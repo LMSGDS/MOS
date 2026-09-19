@@ -18,6 +18,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.admin import router as admin_router
 from app.auth import authenticate
 from app.client_v1 import router as client_v1_router
+from app.gitinfo import git_revision
 from app.hooks import router as hooks_router
 from app.kulkul_layout import Rect, compute, grow_for_help, measure
 from app.progress_api import router as progress_router
@@ -129,7 +130,28 @@ def healthz():
         postgres = True
     except Exception:
         postgres = False
-    return {"ok": True, "service": "mos", "postgres": postgres}
+    installer_dir = ROOT / "data" / "installers"
+    present = []
+    if installer_dir.is_dir():
+        for name in (
+            "MOS-KulKul-Setup-Windows-Full.exe",
+            "MOS-KulKul-Setup-Windows.exe",
+            "MOS-KulKul-Setup-Windows-Full.zip",
+            "MOS-KulKul-Setup-Windows.zip",
+            "MOS-KulKul-Setup-macOS.zip",
+        ):
+            path = installer_dir / name
+            if path.is_file() and path.stat().st_size > 0:
+                present.append({"name": name, "size": path.stat().st_size})
+    return {
+        "ok": True,
+        "service": "mos",
+        "postgres": postgres,
+        "version": app_version(),
+        "git": git_revision(),
+        "installers": present,
+        "transport": "https",
+    }
 
 
 def _is_dock(request: Request) -> bool:

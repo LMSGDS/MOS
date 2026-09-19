@@ -9,7 +9,9 @@ cd "$ROOT"
 
 GIT_ARGS=()
 if [[ -n "${MOS_GITHUB_TOKEN:-}" ]]; then
-  GIT_ARGS=(-c "http.extraheader=AUTHORIZATION: bearer ${MOS_GITHUB_TOKEN}")
+  # Git HTTPS wants Basic x-access-token, not Bearer (Bearer → invalid credentials).
+  BASIC="$(printf 'x-access-token:%s' "$MOS_GITHUB_TOKEN" | base64 -w0 2>/dev/null || printf 'x-access-token:%s' "$MOS_GITHUB_TOKEN" | base64 | tr -d '\n')"
+  GIT_ARGS=(-c "http.extraheader=AUTHORIZATION: basic ${BASIC}")
 fi
 
 origin_url() {

@@ -13,6 +13,16 @@ from app.main import app
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def test_healthz_reports_git_revision():
+    client = TestClient(app)
+    body = client.get("/healthz").json()
+    assert body["ok"] is True
+    assert body["transport"] == "https"
+    assert body["git"]["sha"]
+    assert len(str(body["git"]["sha"])) >= 7
+    assert isinstance(body["installers"], list)
+
+
 def test_ssh_connect_refuses_to_run():
     import subprocess
 
@@ -137,6 +147,9 @@ def test_github_sync_downloads_installers_over_https():
     assert "scp " not in sync.lower()
     assert "sshpass" not in sync.lower()
     assert "sync-installers.sh" in git_sync
+    assert "x-access-token:" in git_sync
+    assert "AUTHORIZATION: basic" in git_sync
+    assert "AUTHORIZATION: bearer" not in git_sync.lower()
     assert "-GDS.exe" not in main
     hooks = (root / "app" / "hooks.py").read_text(encoding="utf-8")
     assert "timeout=300" in hooks
