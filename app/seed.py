@@ -100,6 +100,7 @@ def seed() -> None:
                         VALUES (%s, %s, 'student', %s, 1, %s)
                         ON CONFLICT (username) DO UPDATE SET
                           name = EXCLUDED.name,
+                          password_hash = EXCLUDED.password_hash,
                           student_code = COALESCE(EXCLUDED.student_code, users.student_code)
                         RETURNING id
                         """,

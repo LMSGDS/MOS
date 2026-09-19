@@ -445,8 +445,14 @@ def v1_me(request: Request):
 
 @router.get("/projects")
 def v1_projects(request: Request, program: str | None = None):
-    bearer_user(request)
+    user = bearer_user(request)
+    row = _require_user(user)
     prog = normalize(program) if program else None
+    allowed = None
+    if row.get("role") == "student":
+        from app.assign import student_project_ids
+
+        allowed = student_project_ids(row["id"])
     with cursor() as cur:
         if prog:
             cur.execute(
@@ -464,6 +470,8 @@ def v1_projects(request: Request, program: str | None = None):
                 """
             )
         rows = cur.fetchall()
+    if allowed is not None:
+        rows = [r for r in rows if r["id"] in allowed]
     return {"ok": True, "projects": rows}
 
 
@@ -544,6 +552,19 @@ async def v1_start_attempt(request: Request):
     if mode not in ("training", "testing"):
         mode = "training"
     row = _require_user(user)
+    from app.assign import assignment_for, client_ip, ip_allowed, student_project_ids
+
+    if row.get("role") == "student":
+        allowed = student_project_ids(row["id"])
+        if allowed and project_id not in allowed:
+            raise HTTPException(status_code=403, detail="not_assigned")
+    cfg = assignment_for(row["id"], project_id)
+    if cfg:
+        if cfg.get("mode") == "testing":
+            mode = "testing"
+        allow = cfg.get("ip_allow") or ""
+        if allow and not ip_allowed(client_ip(request), allow):
+            raise HTTPException(status_code=403, detail="lan_only")
     with cursor() as cur:
         cur.execute("SELECT id FROM projects WHERE id = %s", (project_id,))
         if not cur.fetchone():
@@ -589,6 +610,8 @@ async def v1_start_attempt(request: Request):
         "project_version_id": version["id"] if version else None,
         "rubric_version": version["rubric_version"] if version else None,
         "abandoned": closed,
+        "time_limit_sec": (cfg or {}).get("time_limit_sec") if cfg else None,
+        "lan_locked": bool(cfg and cfg.get("ip_allow")),
     }
 
 
@@ -966,13 +989,26 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
     )
     store_q_matrix(attempt_id, scored)
     _notify_live({**attempt, "status": "submitted"}, row_user, payload, "submit")
+    unlocked = []
+    try:
+        from app.assign import apply_adaptive
+
+        unlocked = apply_adaptive(row_user["id"], attempt.get("project_id"), payload.get("score"))
+    except Exception:
+        unlocked = []
     try:
         from app.lti import passback_if_launch
 
         passback_if_launch(row_user["id"], payload.get("score"), payload.get("max_score") or 100)
     except Exception:
         pass
-    return {"ok": True, "submission_id": submission_id, "score": payload, "duration_sec": duration}
+    return {
+        "ok": True,
+        "submission_id": submission_id,
+        "score": payload,
+        "duration_sec": duration,
+        "unlocked": unlocked,
+    }
 
 
 @router.post("/attempts/{attempt_id}/state")

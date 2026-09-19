@@ -5,6 +5,53 @@
   <h1>Cơ sở dữ liệu bài tập</h1>
   <p class="lead">20 đề Word Objective 1–6 được giao cho lớp, theo dõi số học sinh đã làm và điểm trung bình.</p>
   {% include "admin_nav.html" %}
+
+  <h2 style="margin-top:16px;font-size:18px">Cỗ máy giao bài</h2>
+  <p class="hint">Không đăng file Word. Kích hoạt module MOS: luyện tập / thi, khoá LAN phòng máy, luật UDL tự mở bài bổ trợ.</p>
+  <form method="post" action="/quan-tri/bai-tap" class="grid" style="margin:12px 0;gap:8px">
+    <label>Lớp
+      <select name="class_id" required>
+        {% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Bài
+      <select name="project_id" required>
+        {% for ex in exercises %}<option value="{{ ex.id }}">{{ ex.title }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Chế độ
+      <select name="mode">
+        <option value="training">Luyện tập — có gợi ý, không tính giờ</option>
+        <option value="testing">Thi — khoá gợi ý, tính giờ</option>
+      </select>
+    </label>
+    <label>Giới hạn giây (thi) <input name="time_limit_sec" type="number" min="0" placeholder="1800" /></label>
+    <label><input type="checkbox" name="lan_only" value="1" /> Chỉ mạng LAN phòng máy ({{ lan_default }})</label>
+    <label>UDL: nếu dưới <input name="unlock_below" type="number" step="1" placeholder="50" /> điểm, mở bài
+      <select name="unlock_project_id">
+        <option value="">— không —</option>
+        {% for ex in exercises %}<option value="{{ ex.id }}">{{ ex.title }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit">Giao / cập nhật</button>
+  </form>
+  <table class="grid">
+    <thead><tr><th>Lớp</th><th>Bài</th><th>Mode</th><th>LAN</th><th>Luật UDL</th></tr></thead>
+    <tbody>
+      {% for a in configured %}
+      <tr>
+        <td>{{ a.class_name }}</td>
+        <td>{{ a.title }}</td>
+        <td>{{ a.mode }}</td>
+        <td>{% if a.ip_allow %}Có{% else %}Không{% endif %}</td>
+        <td>{% if a.unlock_project_id %}&lt; {{ a.unlock_below }} → {{ a.unlock_project_id }}{% else %}—{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Chưa cấu hình điều kiện.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
   <table class="grid">
     <thead>
       <tr>

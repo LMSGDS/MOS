@@ -398,3 +398,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_lti_sub
   ON users (lti_issuer, lti_sub)
   WHERE lti_issuer IS NOT NULL AND lti_sub IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_lti_launches_user ON lti_launches(user_id, created_at DESC);
+
+-- Command Center: roster join-code, assignment LAN/adaptive, telemetry indexes
+ALTER TABLE classes ADD COLUMN IF NOT EXISTS join_code TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_classes_join_code ON classes(join_code) WHERE join_code IS NOT NULL AND join_code <> '';
+
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS time_limit_sec INTEGER;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS ip_allow TEXT NOT NULL DEFAULT '';
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS unlock_below DOUBLE PRECISION;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS unlock_project_id TEXT;
+
+CREATE TABLE IF NOT EXISTS adaptive_rules (
+  id                 SERIAL PRIMARY KEY,
+  class_id           INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  source_project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  below_score        DOUBLE PRECISION NOT NULL DEFAULT 50,
+  unlock_project_id  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  created_by         INTEGER REFERENCES users(id),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (class_id, source_project_id, unlock_project_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_ts ON telemetry(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_attempt_ts ON telemetry(attempt_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_attempts_updated ON attempts(updated_at DESC);

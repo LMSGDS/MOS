@@ -5,10 +5,21 @@ from datetime import datetime, timezone
 
 from app.db import cursor
 
-STUCK_SEC = 8 * 60
+IDLE_SEC = 3 * 60
+STUCK_SEC = 5 * 60
 WRONG_TOOL_MIN = 2
 GAP_RED = 75.0
 BANK_REVIEW = 90.0
+
+_TEACH = (
+    ("mail merge", "Hãy dành 15 phút tiết sau để ôn Tab Mailings > Edit Recipient List."),
+    ("mailings", "Hãy dành 15 phút tiết sau để ôn Tab Mailings > Start Mail Merge."),
+    ("footnote", "Hãy dành 15 phút tiết sau để ôn Tab References > Insert Footnote."),
+    ("header", "Hãy dành 15 phút tiết sau để ôn Tab Insert > Header & Footer."),
+    ("navigate", "Hãy dành 15 phút tiết sau để ôn kỹ năng Định vị (Go To / Navigation Pane)."),
+    ("định vị", "Hãy dành 15 phút tiết sau để ôn kỹ năng Định vị — tìm đúng tab trước khi làm mẫu."),
+    ("cấu hình", "Hãy dành 15 phút tiết sau để ôn bước Cấu hình tham số (Options / Dialog) sau khi đã đúng công cụ."),
+)
 
 
 def _idle_sec(updated_at) -> int:
@@ -60,16 +71,21 @@ def skill_gaps(class_id: int = 0) -> list[dict]:
         fails = int(row["fails"] or 0)
         fail_pct = round(100.0 * fails / n, 1) if n else 0.0
         heat = "red" if fail_pct >= GAP_RED else "amber" if fail_pct >= 50 else "green"
+        skill = str(row.get("skill") or "")
+        action = ""
+        if heat in {"red", "amber"}:
+            action = f"{fail_pct:.0f}% học sinh sai «{skill}» — nên ôn lại chuyên đề này trên lớp."
+            blob = f"{skill} {row.get('title') or ''}".lower()
+            for needle, tip in _TEACH:
+                if needle in blob:
+                    action = f"{fail_pct:.0f}% sai «{skill}». {tip}"
+                    break
         out.append(
             {
                 **row,
                 "fail_pct": fail_pct,
                 "heat": heat,
-                "action": (
-                    f"{fail_pct:.0f}% học sinh sai «{row['skill']}» — nên ôn lại chuyên đề này trên lớp."
-                    if heat == "red"
-                    else ""
-                ),
+                "action": action,
             }
         )
     return out
@@ -181,6 +197,13 @@ def annotate_sessions(rows: list[dict]) -> list[dict]:
                     "label": f"Kẹt {minutes} phút — giáo viên nên tới hỗ trợ",
                 }
             )
+        elif str(row.get("status") or "") == "IN_PROGRESS" and idle >= IDLE_SEC:
+            alerts.append(
+                {
+                    "code": "idle",
+                    "label": "Không tương tác quá 3 phút — xao nhãng hoặc mất kết nối",
+                }
+            )
         if tools.get(sid, 0) >= WRONG_TOOL_MIN:
             alerts.append(
                 {
@@ -188,7 +211,46 @@ def annotate_sessions(rows: list[dict]) -> list[dict]:
                     "label": "Liên tục chọn sai công cụ (Q-Matrix)",
                 }
             )
+        color = "green"
+        if str(row.get("status") or "") == "SUBMITTED":
+            color = "green"
+        elif any(a["code"] == "stuck" or a["code"] == "wrong_tool" for a in alerts):
+            color = "red"
+        elif any(a["code"] == "idle" for a in alerts):
+            color = "yellow"
         row["idle_sec"] = idle
         row["alerts"] = alerts
         row["alert"] = bool(alerts)
+        row["color"] = color
     return items
+
+
+def class_radar(class_id: int = 0) -> list[dict]:
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+              p.program,
+              ROUND(AVG(COALESCE(a.verified_score, a.score))::numeric, 1) AS score,
+              COUNT(*) AS n
+            FROM attempts a
+            JOIN projects p ON p.id = a.project_id
+            WHERE a.status IN ('submitted', 'graded')
+              AND (%s = 0 OR a.class_id = %s)
+            GROUP BY p.program
+            """,
+            (class_id, class_id),
+        )
+        by_prog = {r["program"]: r for r in cur.fetchall()}
+    axes = []
+    for program, label in (("word", "Word"), ("excel", "Excel"), ("powerpoint", "PowerPoint")):
+        row = by_prog.get(program) or {}
+        axes.append(
+            {
+                "program": program,
+                "label": label,
+                "score": float(row.get("score") or 0),
+                "n": int(row.get("n") or 0),
+            }
+        )
+    return axes

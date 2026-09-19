@@ -4,13 +4,22 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from app.accounts import create_account, list_classes
+from app.accounts import create_account
+from app.assign import LAN_DEFAULT, configure_assignment, list_configured
 from app.db import cursor
-from app.insights import annotate_sessions, bank_reliability, skill_gaps
+from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
+from app.roster import (
+    assign_teacher,
+    bulk_reset,
+    classes_for,
+    import_csv,
+    list_teachers,
+    rotate_join_code,
+)
 from app.pedagogy import (
     class_first_attempt_fail,
     class_hint_dependency,
@@ -201,7 +210,10 @@ def admin_students(request: Request):
             {
                 "nav": "students",
                 "roster": list_roster(),
-                "classes": list_classes(),
+                "classes": classes_for(user),
+                "teachers": list_teachers() if user.get("role") == "admin" else [],
+                "imported": request.query_params.get("nhap"),
+                "reset_n": request.query_params.get("reset"),
                 "error": request.query_params.get("loi"),
             },
         ),
@@ -238,6 +250,74 @@ def admin_create_student(
             class_id=cid,
         )
     except ValueError:
+        return RedirectResponse("/quan-tri/hoc-sinh?loi=1", status_code=303)
+    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+
+
+@router.post("/quan-tri/hoc-sinh/nhap")
+async def admin_import_roster(
+    request: Request,
+    class_id: str = Form(""),
+    file: UploadFile = File(...),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    raw = await file.read()
+    text = raw.decode("utf-8-sig", errors="replace")
+    cid = int(class_id) if str(class_id).isdigit() else None
+    result = import_csv(text, class_id=cid)
+    lines = ["username,password,name,student_code"]
+    for acc in result.get("accounts") or []:
+        lines.append(
+            f"{acc['username']},{acc['password']},{acc.get('name') or ''},{acc.get('student_code') or ''}"
+        )
+    request.session["roster_csv"] = "\n".join(lines)
+    return RedirectResponse(f"/quan-tri/hoc-sinh?nhap={result['created']}", status_code=303)
+
+
+@router.get("/quan-tri/hoc-sinh/mat-khau.csv")
+def admin_roster_csv(request: Request):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    body = request.session.pop("roster_csv", "username,password\n")
+    return PlainTextResponse(body, media_type="text/csv; charset=utf-8")
+
+
+@router.post("/quan-tri/hoc-sinh/reset")
+def admin_bulk_reset(request: Request, class_id: str = Form(...)):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else 0
+    creds = bulk_reset(cid) if cid else []
+    lines = ["username,password,name,student_code"]
+    for acc in creds:
+        lines.append(f"{acc['username']},{acc['password']},{acc.get('name') or ''},{acc.get('student_code') or ''}")
+    request.session["roster_csv"] = "\n".join(lines)
+    return RedirectResponse(f"/quan-tri/hoc-sinh?reset={len(creds)}", status_code=303)
+
+
+@router.post("/quan-tri/lop/ma")
+def admin_join_code(request: Request, class_id: str = Form(...)):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else 0
+    if cid:
+        rotate_join_code(cid)
+    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+
+
+@router.post("/quan-tri/lop/giao-vien")
+def admin_set_teacher(request: Request, class_id: str = Form(...), teacher_id: str = Form(...)):
+    user = _session_user(request)
+    if not user or user.get("role") != "admin":
+        return RedirectResponse("/quan-tri", status_code=303)
+    try:
+        assign_teacher(int(class_id), int(teacher_id))
+    except (ValueError, TypeError):
         return RedirectResponse("/quan-tri/hoc-sinh?loi=1", status_code=303)
     return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
 
@@ -312,7 +392,7 @@ def admin_live(request: Request):
         return RedirectResponse("/dang-nhap", status_code=303)
     if not _staff(user):
         return RedirectResponse("/tien-do", status_code=303)
-    classes = list_classes()
+    classes = classes_for(user)
     raw = request.query_params.get("lop") or "0"
     class_id = int(raw) if str(raw).isdigit() else 0
     return TEMPLATES.TemplateResponse(
@@ -348,9 +428,10 @@ def admin_gaps(request: Request):
             user,
             {
                 "nav": "gaps",
-                "classes": list_classes(),
+                "classes": classes_for(user),
                 "class_id": class_id,
                 "gaps": skill_gaps(class_id),
+                "radar": class_radar(class_id),
             },
         ),
     )
@@ -466,8 +547,51 @@ def admin_exercises(request: Request):
     return TEMPLATES.TemplateResponse(
         request,
         "admin_exercises.html",
-        _ctx(request, user, {"nav": "exercises", "exercises": list_exercises()}),
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "exercises",
+                "exercises": list_exercises(),
+                "classes": classes_for(user),
+                "configured": list_configured(),
+                "lan_default": LAN_DEFAULT,
+            },
+        ),
     )
+
+
+@router.post("/quan-tri/bai-tap")
+def admin_configure_assignment(
+    request: Request,
+    class_id: str = Form(...),
+    project_id: str = Form(...),
+    mode: str = Form("training"),
+    time_limit_sec: str = Form(""),
+    lan_only: str = Form(""),
+    unlock_below: str = Form(""),
+    unlock_project_id: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else 0
+    limit = int(time_limit_sec) if str(time_limit_sec).isdigit() else None
+    below = float(unlock_below) if unlock_below else None
+    with cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE username = %s", (user.get("username"),))
+        row = cur.fetchone()
+    configure_assignment(
+        cid,
+        project_id,
+        assigned_by=row["id"] if row else None,
+        mode=mode,
+        time_limit_sec=limit,
+        ip_allow=LAN_DEFAULT if lan_only else "",
+        unlock_below=below,
+        unlock_project_id=unlock_project_id or None,
+    )
+    return RedirectResponse("/quan-tri/bai-tap", status_code=303)
 
 
 @router.get("/tien-do", response_class=HTMLResponse)
@@ -497,6 +621,7 @@ def my_progress(request: Request):
                 "nav": "mine",
                 "evaluation": evaluation,
                 "adaptive": adaptive_cards(user_id),
+                "join_error": request.query_params.get("lop"),
                 "exercises": list_student_exercises(user_id, "word"),
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),

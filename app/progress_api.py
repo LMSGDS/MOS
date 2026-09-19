@@ -7,7 +7,7 @@ from app.accounts import create_account
 from app.client_v1 import _require_user, _staff
 from app.db import cursor
 from app.adaptive import adaptive_cards
-from app.insights import bank_reliability, program_radar, skill_gaps
+from app.insights import bank_reliability, class_radar, program_radar, skill_gaps
 from app.pedagogy import (
     class_first_attempt_fail,
     class_hint_dependency,
@@ -127,6 +127,27 @@ async def v1_assign(request: Request, class_id: int):
         if not cur.fetchone():
             raise HTTPException(status_code=404, detail="class")
     count = assign_class_projects(class_id, [str(i) for i in ids], assigned_by=row["id"])
+    from app.assign import configure_assignment
+
+    mode = str(body.get("mode") or "training")
+    ip_allow = str(body.get("ip_allow") or "")
+    if body.get("lan_only"):
+        from app.assign import LAN_DEFAULT
+
+        ip_allow = LAN_DEFAULT
+    below = body.get("unlock_below")
+    unlock = body.get("unlock_project_id")
+    for pid in ids:
+        configure_assignment(
+            class_id,
+            str(pid),
+            assigned_by=row["id"],
+            mode=mode,
+            time_limit_sec=body.get("time_limit_sec"),
+            ip_allow=ip_allow,
+            unlock_below=float(below) if below not in (None, "") else None,
+            unlock_project_id=str(unlock) if unlock else None,
+        )
     return {"ok": True, "assigned": count, "class_id": class_id}
 
 
@@ -179,7 +200,7 @@ def v1_skill_gaps(request: Request, class_id: int = 0):
     row = _require_user(user)
     if not _staff(row):
         raise HTTPException(status_code=403, detail="forbidden")
-    return {"ok": True, "gaps": skill_gaps(class_id)}
+    return {"ok": True, "gaps": skill_gaps(class_id), "radar": class_radar(class_id)}
 
 
 @router.get("/insights/bank")

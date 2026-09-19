@@ -3,8 +3,22 @@
 {% block body %}
 <section class="card hero admin-wide">
   <h1>Bản đồ lỗ hổng kiến thức</h1>
-  <p class="lead">Telemetry Q-Matrix từ MOS-KulKul — Tổ chuyên môn điều chỉnh giáo án theo dữ liệu, không dạy dàn trải.</p>
+  <p class="lead">Bản đồ tri thức lớp — heatmap Q-Matrix + radar Word/Excel/PPT. Hệ thống đề xuất phút ôn, không xuất Excel vô hồn.</p>
   {% include "admin_nav.html" %}
+  {% set axes = radar|default([]) %}
+  {% if axes %}
+  <h2 style="margin-top:16px;font-size:18px">Radar lớp (Word · Excel · PPT)</h2>
+  <svg class="q-radar" viewBox="0 0 240 210" width="240" height="210" aria-label="Radar lớp">
+    {% set w = ((axes[0].score if axes|length > 0 else 0) or 0) / 100 %}
+    {% set e = ((axes[1].score if axes|length > 1 else 0) or 0) / 100 %}
+    {% set p = ((axes[2].score if axes|length > 2 else 0) or 0) / 100 %}
+    <polygon points="120,36 188,164 52,164" fill="none" stroke="#cbd5e1" />
+    <polygon points="120,{{ 100 - 64 * w }} {{ 120 + 68 * e }},{{ 100 + 64 * e }} {{ 120 - 68 * p }},{{ 100 + 64 * p }}" fill="rgba(0,142,226,0.28)" stroke="#008EE2" />
+    <text x="120" y="18" text-anchor="middle" font-size="12">Word {{ axes[0].score if axes|length > 0 else 0 }}</text>
+    <text x="230" y="188" text-anchor="end" font-size="12">Excel {{ axes[1].score if axes|length > 1 else 0 }}</text>
+    <text x="10" y="188" text-anchor="start" font-size="12">PPT {{ axes[2].score if axes|length > 2 else 0 }}</text>
+  </svg>
+  {% endif %}
   <form method="get" action="/quan-tri/lo-hong" class="live-filter">
     <label>Lớp
       <select name="lop" onchange="this.form.submit()">
