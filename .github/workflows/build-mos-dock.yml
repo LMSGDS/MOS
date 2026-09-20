@@ -27,12 +27,12 @@ jobs:
           if (-not (Test-Path dist-win\MOS-KulKul.exe)) { throw "MOS-KulKul.exe missing after publish" }
           Get-ChildItem dist-win | Format-Table Name, Length
       - name: Compile full Inno Setup installer
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           path: desktop/installer/windows/mosdock.iss
           options: /DDist="${{ github.workspace }}\dist-win"
       - name: Compile small web stub installer
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.9
         with:
           path: desktop/installer/windows/mosdock-web.iss
       - name: Check stub is small and full payload exists
