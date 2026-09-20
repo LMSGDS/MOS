@@ -1,0 +1,39 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-3-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 3.3 — Filter and sort table data",
+  "program": "excel",
+  "objective": "3.3",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E33-F01",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 100,
+      "prompt": "Lọc bonus lớn hơn 2500.",
+      "predicate": {
+        "type": "filter_contains",
+        "text": "2500"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Bonuses**.",
+        "Filter cột bonus **greater than 2500**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

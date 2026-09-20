@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.3 — Format worksheets and workbooks",
+  "program": "excel",
+  "objective": "1.3",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E13-S01",
+      "objective": "1.3",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đổi tên sheet thành Period1.",
+      "predicate": {
+        "type": "sheet_named",
+        "name": "Period1"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đổi tên **JanFeb** thành **Period1**.",
+        "Đổi các sheet còn lại Period2–6.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E13-P01",
+      "objective": "1.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Period1 in ngang Landscape.",
+      "predicate": {
+        "type": "print_orient",
+        "name": "landscape"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Page Layout** > **Orientation**.",
+        "Chọn **Landscape**.",
+        "Xem Print Preview."
+      ]
+    },
+    {
+      "id": "E13-H01",
+      "objective": "1.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Header có tên sheet.",
+      "predicate": {
+        "type": "header_contains",
+        "text": "&A"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Header & Footer**.",
+        "Giữa trang: **Sheet Name**.",
+        "Trái **Date**, phải **Page Number**."
+      ]
+    }
+  ]
+}

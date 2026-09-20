@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-2-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 2.3 — Define and reference named ranges",
+  "program": "excel",
+  "objective": "2.3",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E23-T01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đổi Table1 thành MonthlySales.",
+      "predicate": {
+        "type": "table_named",
+        "name": "MonthlySales"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Monthly**.",
+        "Đổi tên bảng thành **MonthlySales**.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E23-N01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Đặt tên vùng QuarterlySales.",
+      "predicate": {
+        "type": "defined_name",
+        "name": "QuarterlySales"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Quarterly**.",
+        "Chọn B2:E5.",
+        "**Formulas** > **Define Name** **QuarterlySales**."
+      ]
+    },
+    {
+      "id": "E23-F01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "MAX(QuarterlySales) ở H2.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "MAX"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Ô **H2**.",
+        "Gõ =MAX(QuarterlySales).",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

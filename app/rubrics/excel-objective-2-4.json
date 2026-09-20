@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-2-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 2.4 — Summarize data visually",
+  "program": "excel",
+  "objective": "2.4",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E24-C01",
+      "objective": "2.4",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Conditional formatting trên Extended Price.",
+      "predicate": {
+        "type": "xlsx_cf_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Cột **Extended Price**.",
+        "**Home** > **Conditional Formatting**.",
+        "Icon set + data bars + > $100 vàng."
+      ]
+    },
+    {
+      "id": "E24-S01",
+      "objective": "2.4",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Chèn sparkline.",
+      "predicate": {
+        "type": "xlsx_spark_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Sparklines**.",
+        "Column trên JanFeb, Line trên MarApr.",
+        "Áp style sách."
+      ]
+    }
+  ]
+}

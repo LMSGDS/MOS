@@ -95,6 +95,21 @@ def test_projects_download_attempt_telemetry_submit(client):
     assert "powerpoint-objective-1-1" in ppt_ids
     assert "powerpoint-objective-2-1" in ppt_ids
     assert "powerpoint-objective-5-3" in ppt_ids
+    excel = client.get("/api/v1/projects", headers=headers, params={"program": "excel"}).json()
+    excel_ids = [p["id"] for p in excel["projects"]]
+    assert "excel-objective-1-1" in excel_ids
+    assert "excel-objective-4-2" in excel_ids
+    assert "excel-objective-5-3" in excel_ids
+    xlsx = client.get("/api/v1/projects/excel-objective-1-1/file", headers=headers)
+    assert xlsx.status_code == 200
+    assert xlsx.content[:2] == b"PK"
+    extra = client.get(
+        "/api/v1/projects/excel-objective-1-1/file",
+        headers=headers,
+        params={"kind": "extra", "name": "Excel_1-1_ContactList.txt"},
+    )
+    assert extra.status_code == 200
+    assert b"FirstName" in extra.content or extra.content[:2] != b"PK"
     deck = client.get("/api/v1/projects/powerpoint-objective-1-1/file", headers=headers)
     assert deck.status_code == 200
     assert deck.content[:2] == b"PK"

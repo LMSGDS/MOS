@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-EXTRA_SUFFIXES = {".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".3mf"}
+EXTRA_SUFFIXES = {".docx", ".xlsx", ".jpg", ".jpeg", ".png", ".3mf", ".csv", ".txt", ".xls", ".xltm"}
 
 
 def project_extra_files(file_path: str | Path | None) -> list[Path]:

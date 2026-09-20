@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-5-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 5.1 — Create charts",
+  "program": "excel",
+  "objective": "5.1",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E51-C01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Tạo pie và clustered bar.",
+      "predicate": {
+        "type": "xlsx_chart_min",
+        "min": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Seattle**: pie 2D.",
+        "Sheet **October Sales**: clustered bar.",
+        "Không gồm hàng Total."
+      ]
+    },
+    {
+      "id": "E51-S01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Chuyển chart sang sheet Fall Sales Chart.",
+      "predicate": {
+        "type": "sheet_named",
+        "name": "Fall Sales Chart"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Fall Sales**.",
+        "**Move Chart** > **New sheet**.",
+        "Đặt tên **Fall Sales Chart**."
+      ]
+    }
+  ]
+}

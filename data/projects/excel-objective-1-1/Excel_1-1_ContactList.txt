@@ -1,0 +1,156 @@
+FirstName	LastName	Company	Job Title	E-Mail Address
+Alboni	Ezio	A. Datum Corporation	Chief Executive Officer	ezio@adatum.com
+Dehenne	Denis	A. Datum Corporation	Planning & Design Manager	denis@adatum.com
+Faerch	Sten	A. Datum Corporation	Sales & Customer Service Manager	sten@adatum.com
+Flood	Kathie	A. Datum Corporation	Customer Representative	kathie@adatum.com
+Gottfried	Jenny	A. Datum Corporation	Course Designer	jenny@adatum.com
+Masters	Steve	A. Datum Corporation	Marketing Manager	steve@adatum.com
+North	Mary	A. Datum Corporation	Content Development Manager	mary@adatum.com
+Olecka	Aneta	A. Datum Corporation	Marketing Associate	aneta@adatum.com
+Ovesen	Michael	A. Datum Corporation	Customer Representative	michael@adatum.com
+Peng	Yun-Feng	A. Datum Corporation	Course Designer	yun-feng@adatum.com
+Rivas	Gretchen	A. Datum Corporation	Content Developer	gretchen@adatum.com
+Uttecht	Robert	A. Datum Corporation	Content Developer	robert@adatum.com
+Ahs	David	Adventure Works	Sales Assistant	david@adventure-works.com
+Corets	Eva	Adventure Works	Manager	eva@adventure-works.com
+Delaney	Aidan	Adventure Works	Sales Assistant	aidan@adventure-works.com
+Smith	Denise	Adventure Works	Owner/Operator	denise@adventure-works.com
+Smith	Jeff	Adventure Works	Owner/Operator	jeff@adventure-works.com
+Thorell	Iben	Adventure Works	Assistant Manager	iben@adventure-works.com
+Wheeler	Wendy	Adventure Works	Sales Assistant	wendy@adventure-works.com
+Adams	Terry	Consolidated Messenger	Human Resources Director	terry@consolidatedmessenger.com
+Carter	Adam	Consolidated Messenger	President	adam@consolidatedmessenger.com
+Carey	Richard	Consolidated Messenger	Personnel Manager	richard@consolidatedmessenger.com
+Freehafer	Nancy	Consolidated Messenger	Sales & Marketing Manager	nancy@consolidatedmessenger.com
+Gabel	Ron	Consolidated Messenger	Warehouse Manager	ron@consolidatedmessenger.com
+Hance	Jim	Consolidated Messenger	Packager	jim@consolidatedmessenger.com
+Kelly	Bob	Consolidated Messenger	Delivery Driver	bob@consolidatedmessenger.com
+Lysaker	Jenny	Consolidated Messenger	Delivery Driver	jenny@consolidatedmessenger.com
+Moore	Bobby	Consolidated Messenger	Warehouse Clerk	bobby@consolidatedmessenger.com
+Wacker	Roland	Consolidated Messenger	Vice President	roland@consolidatedmessenger.com
+Kotas	Jan	Consolidated Messenger	Administrative Assistant	jan@consolidatedmessenger.com
+Chow	Ray	Consolidated Messenger	Administrative Assistant	ray@consolidatedmessenger.com
+Krieger	Doris	Consolidated Messenger	Controller	doris@consolidatedmessenger.com
+Silva	Edmund	Consolidated Messenger	Accountant	edmund@consolidatedmessenger.com
+Ciccu	Alice	Consolidated Messenger	Accountant	alice@consolidatedmessenger.com
+Smith	John	Consolidated Messenger	Facilities Manager	john@consolidatedmessenger.com
+Langhorn	Carl	Consolidated Messenger	Sanitation Engineer	carl@consolidatedmessenger.com
+So	David	Consolidated Messenger	Loading Dock Specialist	david@consolidatedmessenger.com
+Lan	Andrew	Consolidated Messenger	Loading Dock Specialist	andrew@conolidatedmessenger.com
+Counts	Robin	Consolidated Messenger	Retail Manager	robin@consolidatedmessenger.com
+Coleman	Pat	Consolidated Messenger	Sales Representative	pat@consolidatedmessenger.com
+Stevens	Max	Consolidated Messenger	Sales Representative	max@consolidatedmessenger.com
+Dickson	Holly	Consolidated Messenger	Sales Representative	holly@consolidatedmessenger.com
+Aalling	Lene	"Contoso, Ltd"	Lead Purchaser	lene@contoso.com
+Acevedo	Humberto	"Contoso, Ltd"	Chief Executive Officer	humberto@contoso.com
+Barr	Adam	"Contoso, Ltd"	Sales Representative	adam@contoso.com
+Barbariol	Angela	"Contoso, Ltd"	Marketing Assistant	angela@contoso.com
+Beasley	Shaun	"Contoso, Ltd"	Warehouse Manager	shaun@contoso.com
+Cazzaniga	Luisa	"Contoso, Ltd"	Sales Manager	luisa@contoso.com
+Chudzik	Terri	"Contoso, Ltd"	Purchaser	terri@contoso.com
+Cox	Brian	"Contoso, Ltd"	Sales Representative	brian@contoso.com
+Dempsey	Molly	"Contoso, Ltd"	Purchaser	molly@contoso.com
+Desai	Prashanth	"Contoso, Ltd"	Marketing Manager	prashanth@contoso.com
+Gilchrist	Beth	"Contoso, Ltd"	Executive Assistant	beth@contoso.com
+LaMee	Brian	"Contoso, Ltd"	Production Manager	brian@contoso.com
+Lee	Oliver	"Contoso, Ltd"	Warehouse Employee	oliver@contoso.com
+Makovec	Tina	"Contoso, Ltd"	Production Assistant	tina@contoso.com
+Mollerup	Jonathan	"Contoso, Ltd"	Quality Inspector	jonathan@contoso.com
+Nay	Lorraine	"Contoso, Ltd"	Lead Designer	lorraine@contoso.com
+Ola	Preeda	"Contoso, Ltd"	Bookkeeper	preeda@contoso.com
+Ribaute	Delphine	"Contoso, Ltd"	Warehouse Employee	delphine@contoso.com
+van	Eaton	"Contoso, Ltd"	Sales Representative	james@contoso.com
+Wojciechowska	Agnieszka	"Contoso, Ltd"	Designer	agnieszka @contoso.com
+Wu	Qiong	"Contoso, Ltd"	Quality Control Manager	qiong@contoso.com
+Hauser	Andreas	Fourth Coffee	Head Chef	andreas@fourthcoffee.com
+Jacobsen	Lola	Fourth Coffee	Owner	lola@fourthcoffee.com
+Johnston	Tamara	Fourth Coffee	Food Buyer	tamara@fourthcoffee.com
+Koch	Reed	Fourth Coffee	Sales & Marketing Manager	reed@fourthcoffee.com
+Laszlo	Rebecca	Fourth Coffee	Assistant Chef	rebecca@fourthcoffee.com
+Martins	Felipe	Fourth Coffee	Sales Assistant	felipe@fourthcoffee.com
+Nkya	Elly	Fourth Coffee	Supplies Buyer	elly@fourthcoffee.com
+Oliveira	Susana	Fourth Coffee	Service Staff Manager	susana@fourthcoffee.com
+Harris	Keith	Lucerne Publishing	Chief Executive Officer	keith@lucernepublishing.com
+Penor	Lori	Lucerne Publishing	Administrative Assistant	lori@lucernepublishing.com
+Kelly	Madeleine	Lucerne Publishing	Chief Financial Officer	madeleine@lucernepublishing.com
+Evans	John	Lucerne Publishing	Acquisitions Editor	john@lucernepublishing.com
+Lew	Judy	Lucerne Publishing	Project Editor	judy@lucernepublishing.com
+Chia	Jeff	Lucerne Publishing	Proofreader	jeff@lucernepublishing.com
+Liu	David	Lucerne Publishing	Distributor	davidj@lucernepublishing.com
+Martínez	Frank	Lucerne Publishing	Advertising Representative	frank@lucernepublishing.com
+Rasmussen	Morten	Lucerne Publishing	DTP	morten@lucernepublshing.com
+Shrader	Jill	Lucerne Publishing	Sales Representative	jill@lucernepublishing.com
+Steiner	Dominik	Lucerne Publishing	Production Manager	dominik@lucernepublishing.com
+Strande	Amy	Lucerne Publishing	Copy Editor	amy@lucernepublishing.com
+Los	Jeremy	Lucerne Publishing	Administrative Assistant	jeremy@lucernepublishing.com
+Sutton	Brad	Lucerne Publishing	Controller	brads@lucernepublishing.com
+Dubois	Marie	Lucerne Publishing	Accounting Manager	marie@lucernepublishing.com
+Martin	Mindy	Lucerne Publishing	Bookkeeper	mindy@lucernepublishing.com
+Thorpe	Steven	Lucerne Publishing	Accountant	steven@lucernepublishing.com
+Durrer	Daniel	Lucerne Publishing	Risk Manager	daniel@durrer@lucernepublishing.com
+Toubro	Louise	Lucerne Publishing	Legal Director	louise@lucernepublishing.com
+Earls	Terry	Lucerne Publishing	Attorney	terry@lucernepublishing.com
+Francis	Cat	Lucerne Publishing	Legal Secretary	cat@lucernepublishing.com
+Miller	Lisa	Lucerne Publishing	Editorial Manager	lisa@lucernepublishing.com
+Valverde	Eva	Lucerne Publishing	Graphics Specialist	eva@lucernepublishing.com
+Tupy	Richard	Lucerne Publishing	IT Specialist	richard@lucernepublishing.com
+Mitchell	Linda	Lucerne Publishing	Sales & Marketing Manager	linda@lucernepublishing.com
+Fluegel	Jay	Lucerne Publishing	Distributor	jay@lucernepublishing.com
+Fetty	J.R.	Lucerne Publishing	Sales Representative	jr@lucernepublishing.com
+Abolrous	Sam	Lucerne Publishing	Warehouse Manager	sam@lucernepublishing.com
+Hamilton	David	Lucerne Publishing	Materials and Supplies Clerk	david@lucernepublishing.com
+Phillips	Carol	Lucerne Publishing	Warehouse Assistant	carol@lucernepublishing.com
+Barnett	Dave	Lucerne Publishing	Shipping and Receiving Clerk	dave@lucernepublishing.com
+Houston	Peter	Lucerne Publishing	Human Resources Director	peter@lucernepublishing.com
+Purcell	Sean	Lucerne Publishing	Personnel Manager	sean@lucernepublishing.com
+Bosworth	Jeanne	Lucerne Publishing	Receptionist	jeanne@lucernepublishing.com
+Joseph	Brad	Lucerne Publishing	Facilities Manager	bradj@lucernepublishing.com
+Akers	Kim	The Garden Company	Head Buyer	Kim@gardenco.msn.com
+Anderson	Nancy	The Garden Company	Sales Assistant	Nancy@gardenco.msn.com
+Berg	Karen	The Garden Company	Owner	Karen@gardenco.msn.com
+Carpenter	Chase	The Garden Company	Sales Manager	Chase@gardenco.msn.com
+DeGrasse	Kirk	The Garden Company	Gardener	Kirk@gardenco.msn.com
+Emanuel	Michael	The Garden Company	Sales Assistant	Michael@gardenco.msn.com
+Friske	Karen	The Garden Company	Buyer	Karen@gardenco.msn.com
+Katyal	Sandeep	The Garden Company	Gardener	Sandeep@gardenco.msn.com
+Ortiz	David	The Garden Company	Executive Assistant	David@gardenco.msn.com
+Smith	Ben	The Garden Company	Head Gardener	Ben@gardenco.msn.com
+Berry	Jo	Wide World Importers	Visual Merchandiser	jo@wideworldimporters.com
+Chen	Jacky	Wide World Importers	Sales Representative	jacky@wideworldimporters.com
+Danner	Ryan	Wide World Importers	Human Resource Director	ryan@wideworldimporters.com
+Dockter	Blaine	Wide World Importers	Stock Room Assistant	blaine@wideworldimporters.com
+Duncan	Bart	Wide World Importers	Sales Representative	bart@wideworldimporters.com
+Dyck	Shelley	Wide World Importers	Buyer	shelley@wideworldimporters.com
+Keller	Lukas	Wide World Importers	Stock Room Assistant	lukas@wideworldimporters.com
+Guzik	Greg	Wide World Importers	Sales Representative	greg@wideworldimporters.com
+Ruth	Andy	Wide World Importers	Visual Merchandiser	andy@wideworldimporters.com
+Stiller	Florian	Wide World Importers	Chief Executive Officer	florian@wideworldimporters.com
+Sun	Nate	Wide World Importers	Chief Financial Officer	nate@wideworldimporters.com
+Sells	Chris	Wide World Importers	Administrative Assistant	chris@wideworldimporters.com
+Andersen	Mary	Wide World Importers	Administrative Assistant	marykay@wideworldimporters.com
+Healy	Joe	Wide World Importers	Controller	joe@wideworldimporters.com
+Huff	Arlene	Wide World Importers	Accountant	arlene@wideworldimporters.com
+Beekman	Dick	Wide World Importers	Accountant	dick@wideworldimporters.com
+Railson	Stuart	Wide World Importers	Personnel Manager	stuart@wideworldimporters.com
+Ismert	Erik	Wide World Importers	Benefits Manager	erik@wideworldimporters.com
+Birkby	Dana	Wide World Importers	Travel Manager	dana@wideworldimporters.com
+Rollin	Kelly	Wide World Importers	Sales & Marketing Director	kelly@wideworldimporters.com
+Cavallo	Carlos	Wide World Importers	Buyer	carlos@wideworldimporters.com
+Seubert	Roxanne	Wide World Importers	Warehouse Manager	roxanne@wideworldimporters.com
+Kock	Paul	Wide World Importers	Shipping and Receiving Clerk	paul@wideworldimporters.com
+Alexander	David	Wingtip Toys	Chief Financial Officer	david@wingtiptoys.com
+Dixon	Andrew	Wingtip Toys	Quality Manager	andrew@wingtiptoys.com
+Dunker	Andrea	Wingtip Toys	Sales Associate	andrea@wingtiptoys.com
+Emory	John	Wingtip Toys	Assembly Plant Manager	john@wingtiptoys.com
+Hassall	Mark	Wingtip Toys	Product Planner	mark@wingtiptoys.com
+Miller	Ben	Wingtip Toys	Designer	ben@wingtiptoys.com
+Moon	Christie	Wingtip Toys	"Marketing Manager, North America"	christie@wingtiptoys.com
+O'Donnell	Claire	Wingtip Toys	Marketing Associate	claire@wingtiptoys.com
+Tucker	Lance	Wingtip Toys	"Sales Manager, North America"	lance@wingtiptoys.com
+Weber	Martin	Wingtip Toys	Sales Associate	martin@wingtiptoys.com
+West	Paul	Wingtip Toys	General Manager	paul@wingtiptoys.com
+Alverca	Luis	Wingtip Toys	"Plant Manager, Mexico"	luis@wingtiptoys.com
+Garcia	Cesar	Wingtip Toys	"Quality Manager, Mexico"	cesar@wingtiptoys.com
+Dupont-Roc	Patrice	Wingtip Toys	"Sales Manager, EMEA, France"	patrice@wingtiptoys.com
+Valle	Esther	Wingtip Toys	"Marketing Manager, EMEA, France"	esther@wingtiptoys.com
+Rapier	Simon	Wingtip Toys	"Manager, France"	simon@wingtiptoys.com

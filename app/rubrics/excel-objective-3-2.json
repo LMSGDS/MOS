@@ -1,0 +1,86 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-3-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 3.2 — Modify tables",
+  "program": "excel",
+  "objective": "3.2",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E32-R01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Thêm nhân viên Raina.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Raina"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chèn hàng bảng giữa Quentin và Steve.",
+        "Gõ **Raina**.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E32-T01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Thêm Total row.",
+      "predicate": {
+        "type": "table_has_total"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Table Design** > **Total Row**.",
+        "Đổi nhãn thành **Average**.",
+        "Average từng tháng."
+      ]
+    },
+    {
+      "id": "E32-C01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Cột Dec có trong bảng.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Dec"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chèn cột **Dec** giữa Nov và Year.",
+        "Xóa cột Year.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

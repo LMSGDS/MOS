@@ -124,6 +124,7 @@ def seed() -> None:
                 )
         word_projects = []
         ppt_projects = []
+        excel_projects = []
         for rubric_path in sorted(RUBRIC_DIR.glob("word-objective-*.json")):
             rubric = load_rubric(rubric_path)
             pid = rubric.get("project_id") or rubric_path.stem
@@ -180,7 +181,35 @@ def seed() -> None:
                     "source_sha256": sha256_file(file_path) if file_path.is_file() else None,
                 }
             )
-        projects = word_projects + ppt_projects + [
+        for rubric_path in sorted(RUBRIC_DIR.glob("excel-objective-*.json")):
+            rubric = load_rubric(rubric_path)
+            pid = rubric.get("project_id") or rubric_path.stem
+            tail = pid.removeprefix("excel-objective-")
+            filename = f"Excel_{tail}.xlsx"
+            file_path = PROJECTS_DIR / pid / filename
+            prompts = [c.get("prompt") for c in rubric.get("criteria") or [] if c.get("prompt")]
+            steps = [
+                f"Mở {filename} trên Microsoft Excel đã cài trên máy (không dùng Office Online).",
+                *prompts,
+                "Lưu bài. Trong luyện tập chọn Kiểm tra nhiệm vụ.",
+            ]
+            excel_projects.append(
+                {
+                    "id": pid,
+                    "title": rubric.get("title") or pid,
+                    "program": "excel",
+                    "skill_domain": rubric.get("title") or pid,
+                    "objective": str(rubric.get("objective") or tail),
+                    "sort_order": _sort_order(tail),
+                    "filename": filename,
+                    "file_path": str(file_path),
+                    "rubric_version": rubric.get("rubric_version") or "1.0.0",
+                    "steps": steps,
+                    "rubric": rubric,
+                    "source_sha256": sha256_file(file_path) if file_path.is_file() else None,
+                }
+            )
+        projects = word_projects + excel_projects + ppt_projects + [
             {
                 "id": "word-mail-merge",
                 "title": "Word — Mail Merge thư mời",
@@ -280,10 +309,11 @@ def seed() -> None:
                 ),
             )
         word_ids = [p["id"] for p in word_projects]
+        excel_ids = [p["id"] for p in excel_projects]
         ppt_ids = [p["id"] for p in ppt_projects]
         teacher_id = teacher["id"] if teacher else None
-    if teacher_id and (word_ids or ppt_ids):
-        assign_class_projects(1, word_ids + ppt_ids, assigned_by=teacher_id)
+    if teacher_id and (word_ids or excel_ids or ppt_ids):
+        assign_class_projects(1, word_ids + excel_ids + ppt_ids, assigned_by=teacher_id)
     from app.bank import seed_bank
 
     seed_bank()

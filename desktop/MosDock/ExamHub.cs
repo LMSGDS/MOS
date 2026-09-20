@@ -318,6 +318,7 @@ static class ExamHub
 
             var hits = Directory.GetFiles(dir, "*_results.docx")
                 .Concat(Directory.GetFiles(dir, "*_results.pptx"))
+                .Concat(Directory.GetFiles(dir, "*_results.xlsx"))
                 .ToArray();
             if (hits.Length > 0)
             {
@@ -779,7 +780,7 @@ static class ExamHub
     public static string ObjectiveMajor(string? projectId)
     {
         var id = projectId ?? "";
-        var prefixes = new[] { "word-objective-", "powerpoint-objective-" };
+        var prefixes = new[] { "word-objective-", "powerpoint-objective-", "excel-objective-" };
         var prefix = prefixes.FirstOrDefault(p => id.StartsWith(p, StringComparison.OrdinalIgnoreCase));
         if (prefix is null)
         {

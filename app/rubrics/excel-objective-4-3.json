@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-4-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 4.3 — Format and modify text",
+  "program": "excel",
+  "objective": "4.3",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E43-L01",
+      "objective": "4.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "LEFT lấy 2–3 chữ họ tác giả.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "LEFT"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Cột File By.",
+        "Dùng **LEFT** trên AuthorLast.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E43-M01",
+      "objective": "4.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "MID lấy AccountID giữa.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "MID"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Cột AuthorID.",
+        "Dùng **MID**.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E43-C01",
+      "objective": "4.3",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Câu Biography bằng CONCAT.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "was published by"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Cột Biography.",
+        "**CONCAT** hoặc **TEXTJOIN**.",
+        "Kết thúc bằng dấu chấm."
+      ]
+    }
+  ]
+}

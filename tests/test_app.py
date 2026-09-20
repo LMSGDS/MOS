@@ -211,7 +211,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.21.2" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.21.3" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "/api/v1/progress/adaptive" in (root / "HomeRadar.cs").read_text(encoding="utf-8")
@@ -245,7 +245,7 @@ def test_windows_sources_include_action_demo():
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
     assert "LockedFile.ReadAllBytes" in portal
-    assert 'MyAppVersion "1.21.2"' in (
+    assert 'MyAppVersion "1.21.3"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
@@ -315,6 +315,7 @@ def test_objective_group_key_from_project_id():
     ).read_text(encoding="utf-8")
     assert 'word-objective-' in hub
     assert 'powerpoint-objective-' in hub
+    assert 'excel-objective-' in hub
     assert 'return dash > 0 ? tail[..dash] : tail' in hub
     assert 'Objective {key} · {items.Count} đề' in hub
     assert 'kind=extra&name=' in hub

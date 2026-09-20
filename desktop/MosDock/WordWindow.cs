@@ -365,7 +365,7 @@ static class WordWindow
         EnumWindows((hWnd, _) =>
         {
             GetWindowThreadProcessId(hWnd, out var pid);
-            if (!pids.Contains((int)pid) || !IsWindowVisible(hWnd) || GetWindow(hWnd, GW_OWNER) != IntPtr.Zero)
+            if (!pids.Contains(pid) || !IsWindowVisible(hWnd) || GetWindow(hWnd, GW_OWNER) != IntPtr.Zero)
             {
                 return true;
             }
@@ -439,16 +439,13 @@ static class WordWindow
     static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
     [DllImport("user32.dll")]
-    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
     [DllImport("user32.dll")]
     static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
 
     [DllImport("user32.dll")]
     static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);

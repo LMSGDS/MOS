@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-3-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 3.1 — Create and format tables",
+  "program": "excel",
+  "objective": "3.1",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E31-S01",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Bảng dùng Table Style Medium 16.",
+      "predicate": {
+        "type": "table_style",
+        "name": "TableStyleMedium16"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **2019 Sales**.",
+        "Convert range thành Table.",
+        "Style **Medium 16**."
+      ]
+    },
+    {
+      "id": "E31-S02",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Bảng dùng Table Style Medium 19.",
+      "predicate": {
+        "type": "table_style",
+        "name": "TableStyleMedium19"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **2020 Sales**.",
+        "Đổi style **Medium 19**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

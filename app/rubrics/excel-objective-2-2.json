@@ -1,0 +1,39 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-2-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 2.2 — Format cells and ranges",
+  "program": "excel",
+  "objective": "2.2",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E22-M01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 100,
+      "prompt": "Merge A13:C14 trên Employees.",
+      "predicate": {
+        "type": "xlsx_merged_min",
+        "min": 16
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Employees**.",
+        "Chọn **A13:C14**.",
+        "**Home** > **Merge & Center**."
+      ]
+    }
+  ]
+}

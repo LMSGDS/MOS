@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from app.qmatrix import attach as attach_qmatrix
+from app.excel_xml import extract_xlsx_facts
 from app.ppt_xml import extract_ppt_facts
 from app.word_xml import extract_word_facts, norm, same
 
@@ -169,7 +170,8 @@ def _core_property(facts: dict, criterion: dict) -> dict:
 
 
 def _comments_absent(facts: dict, criterion: dict) -> dict:
-    if int(facts.get("comment_count") or 0) == 0:
+    leftover = int(facts.get("comment_count") or 0)
+    if leftover == 0 and not (facts.get("comments") or []):
         return _result(criterion, "pass", "comments_removed")
     return _result(criterion, "fail", "comments_remain")
 
@@ -612,6 +614,139 @@ def _scheme_color(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "scheme_color_missing")
 
 
+def _list_has(facts: dict, field: str, needle: str) -> bool:
+    needle = norm(needle)
+    return bool(needle) and any(needle.casefold() in norm(str(v)).casefold() for v in facts.get(field) or [])
+
+
+def _sheet_named(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "sheet_names", needle):
+        return _result(criterion, "pass", "sheet_present")
+    return _result(criterion, "fail", "sheet_missing")
+
+
+def _sheet_count(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    got = len(facts.get("sheet_names") or [])
+    if pred.get("min") is not None and got >= int(pred["min"]):
+        return _result(criterion, "pass", "sheet_count_ok")
+    return _result(criterion, "fail", "sheet_count_low")
+
+
+def _table_named(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "table_names", needle):
+        return _result(criterion, "pass", "table_present")
+    return _result(criterion, "fail", "table_missing")
+
+
+def _table_style_named(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "table_styles", needle):
+        return _result(criterion, "pass", "table_style_present")
+    return _result(criterion, "fail", "table_style_missing")
+
+
+def _table_has_total(facts: dict, criterion: dict) -> dict:
+    if facts.get("table_totals"):
+        return _result(criterion, "pass", "table_total_present")
+    return _result(criterion, "fail", "table_total_missing")
+
+
+def _defined_name(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "defined_names", needle):
+        return _result(criterion, "pass", "name_present")
+    return _result(criterion, "fail", "name_missing")
+
+
+def _formula_func(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("name") or "").upper()
+    funcs = [str(f).upper() for f in facts.get("formula_funcs") or []]
+    if needle and any(needle == f or needle in f for f in funcs):
+        return _result(criterion, "pass", "formula_func_present")
+    return _result(criterion, "fail", "formula_func_missing")
+
+
+def _formula_contains(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("text") or "").casefold()
+    blob = " ".join(facts.get("formulas") or []).casefold()
+    if needle and needle in blob:
+        return _result(criterion, "pass", "formula_present")
+    return _result(criterion, "fail", "formula_missing")
+
+
+def _freeze_named(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "freeze_cells", needle) or (not needle and facts.get("freeze_cells")):
+        return _result(criterion, "pass", "freeze_present")
+    return _result(criterion, "fail", "freeze_missing")
+
+
+def _print_orient(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("name") or "landscape").casefold()
+    if any(needle in str(v).casefold() for v in facts.get("print_orient") or []):
+        return _result(criterion, "pass", "orient_present")
+    return _result(criterion, "fail", "orient_missing")
+
+
+def _hidden_sheet(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or ""
+    if _list_has(facts, "hidden_sheets", needle) or (not needle and facts.get("hidden_sheets")):
+        return _result(criterion, "pass", "sheet_hidden")
+    return _result(criterion, "fail", "sheet_visible")
+
+
+def _xlsx_count(facts: dict, criterion: dict, field: str, reason: str) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    got = int(facts.get(field) or 0)
+    if got >= minimum:
+        return _result(criterion, "pass", reason)
+    return _result(criterion, "fail", reason + "_low")
+
+
+def _chart_title(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("name") or (criterion.get("predicate") or {}).get("text") or ""
+    if _list_has(facts, "chart_titles", needle):
+        return _result(criterion, "pass", "chart_title_present")
+    return _result(criterion, "fail", "chart_title_missing")
+
+
+def _filter_contains(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("text") or ""
+    if _list_has(facts, "filter_ops", needle):
+        return _result(criterion, "pass", "filter_present")
+    return _result(criterion, "fail", "filter_missing")
+
+
+def _print_area(facts: dict, criterion: dict) -> dict:
+    if facts.get("print_areas"):
+        return _result(criterion, "pass", "print_area_present")
+    return _result(criterion, "fail", "print_area_missing")
+
+
+def _xlsx_decorative(facts: dict, criterion: dict) -> dict:
+    if facts.get("decorative"):
+        return _result(criterion, "pass", "decorative")
+    return _result(criterion, "fail", "decorative_missing")
+
+
+def _alt_text_xlsx(facts: dict, criterion: dict) -> dict:
+    needle = (criterion.get("predicate") or {}).get("text") or ""
+    if _list_has(facts, "alt_texts", needle) or (not needle and facts.get("alt_texts")):
+        return _result(criterion, "pass", "alt_text_present")
+    return _result(criterion, "fail", "alt_text_missing")
+
+
+def _keywords_contain(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("text") or "").casefold()
+    blob = ((facts.get("core_properties") or {}).get("keywords") or facts.get("keywords") or "").casefold()
+    if needle and needle in blob:
+        return _result(criterion, "pass", "keywords_present")
+    return _result(criterion, "fail", "keywords_missing")
+
+
 def _hidden_slide(facts: dict, criterion: dict) -> dict:
     want = int((criterion.get("predicate") or {}).get("index") or 0)
     hidden = facts.get("hidden_slides") or []
@@ -874,6 +1009,27 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
             "section_named": _section_named,
             "hidden_slide": _hidden_slide,
             "scheme_color": _scheme_color,
+            "sheet_named": _sheet_named,
+            "sheet_count": _sheet_count,
+            "table_named": _table_named,
+            "table_style": _table_style_named,
+            "table_has_total": _table_has_total,
+            "defined_name": _defined_name,
+            "formula_func": _formula_func,
+            "formula_contains": _formula_contains,
+            "freeze_named": _freeze_named,
+            "print_orient": _print_orient,
+            "hidden_sheet": _hidden_sheet,
+            "xlsx_chart_min": lambda f, c: _xlsx_count(f, c, "chart_count", "xlsx_chart"),
+            "xlsx_spark_min": lambda f, c: _xlsx_count(f, c, "sparkline_count", "xlsx_spark"),
+            "xlsx_cf_min": lambda f, c: _xlsx_count(f, c, "cf_count", "xlsx_cf"),
+            "xlsx_merged_min": lambda f, c: _xlsx_count(f, c, "merged", "xlsx_merged"),
+            "chart_title": _chart_title,
+            "filter_contains": _filter_contains,
+            "print_area": _print_area,
+            "xlsx_decorative": _xlsx_decorative,
+            "xlsx_alt_text": _alt_text_xlsx,
+            "keywords_contain": _keywords_contain,
         }
         handler = dispatch.get(pred)
         if handler:
@@ -918,6 +1074,8 @@ def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | N
         facts = extract_word_facts(Path(""))
     elif suffix == ".pptx":
         facts = extract_ppt_facts(Path(path))
+    elif suffix in {".xlsx", ".xlsm"}:
+        facts = extract_xlsx_facts(Path(path))
     else:
         facts = extract_word_facts(Path(path))
     return evaluate_facts(facts, rubric, evidence)

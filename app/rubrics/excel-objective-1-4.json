@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.4 — Customize options and views",
+  "program": "excel",
+  "objective": "1.4",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E14-F01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Freeze hàng 1–9 trên My Monthly Budget.",
+      "predicate": {
+        "type": "freeze_named",
+        "name": "A13"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **My Monthly Budget**.",
+        "**View** > **Freeze Panes**.",
+        "Đóng băng tới hàng 9 (ô **A13**)."
+      ]
+    },
+    {
+      "id": "E14-H01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Ẩn sheet By Product-Customer Filtered.",
+      "predicate": {
+        "type": "hidden_sheet",
+        "name": "By Product-Customer Filtered"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chuột phải sheet **By Product-Customer Filtered**.",
+        "**Hide**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

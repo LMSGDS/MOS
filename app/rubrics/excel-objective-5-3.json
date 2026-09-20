@@ -1,0 +1,38 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-5-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 5.3 — Format charts",
+  "program": "excel",
+  "objective": "5.3",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E53-D01",
+      "objective": "5.3",
+      "kind": "artifact",
+      "weight": 100,
+      "prompt": "Đánh dấu ảnh phổi là decorative.",
+      "predicate": {
+        "type": "xlsx_decorative"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn ảnh phổi.",
+        "**Format Picture** > **Alt Text**.",
+        "Bật **Mark as decorative**."
+      ]
+    }
+  ]
+}
