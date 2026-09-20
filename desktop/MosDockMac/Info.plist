@@ -9,9 +9,9 @@
   <key>CFBundleIdentifier</key>
   <string>vn.edu.gds.mosdock</string>
   <key>CFBundleVersion</key>
-  <string>1.21.4</string>
+  <string>1.21.5</string>
   <key>CFBundleShortVersionString</key>
-  <string>1.21.4</string>
+  <string>1.21.5</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleIconFile</key>

@@ -1,3 +1,5 @@
+using System.IO.Compression;
+
 namespace MosDock;
 
 /// <summary>
@@ -39,6 +41,13 @@ static class LockedFile
         }
 
         throw last ?? new IOException(path);
+    }
+
+    /// <summary>ZipFile.OpenRead dùng FileShare.Read nên vỡ khi Office đang giữ tệp.</summary>
+    public static ZipArchive OpenZip(string path)
+    {
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
     }
 
     public static void Copy(string source, string dest, int tries = 10)

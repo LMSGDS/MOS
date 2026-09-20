@@ -211,7 +211,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.21.4" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.21.5" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "/api/v1/progress/adaptive" in (root / "HomeRadar.cs").read_text(encoding="utf-8")
@@ -245,7 +245,7 @@ def test_windows_sources_include_action_demo():
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
     assert "LockedFile.ReadAllBytes" in portal
-    assert 'MyAppVersion "1.21.4"' in (
+    assert 'MyAppVersion "1.21.5"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
@@ -592,3 +592,19 @@ def test_dock_numeric_json_reads_tolerate_null():
         assert ".TryGetDouble(" not in text, src.name
         assert ".GetDouble()" not in text, src.name
         assert ".GetInt32()" not in text, src.name
+
+
+def test_dock_reads_office_files_with_share_readwrite():
+    # Word/Excel/PowerPoint keep the exam file open; File.Copy and
+    # ZipFile.OpenRead use FileShare.Read and fail with a sharing violation.
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    for src in root.glob("*.cs"):
+        text = src.read_text(encoding="utf-8")
+        assert "ZipFile.OpenRead(" not in text, src.name
+        if src.name != "LockedFile.cs":
+            assert "File.Copy(" not in text, src.name
+    hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
+    assert "LockedFile.Copy(path, snap)" in hub
+    assert "LockedFile.IsSharing(ex)" in hub
