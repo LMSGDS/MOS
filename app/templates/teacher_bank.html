@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Kho đề đã xuất bản{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
+  <div class="admin-panel">
+    <h1>Kho đề xuất bản</h1>
+    <p class="lead">Chỉ đọc đề Super Admin đã Publish. Không sửa Q-Matrix. Giao cho lớp hoặc báo lỗi về Tổ trưởng.</p>
+    {% if saved %}<p class="success">Đã gửi.</p>{% endif %}
+    <h2 style="font-size:18px">Đề thi / ôn luyện</h2>
+    <table class="grid">
+      <thead><tr><th>Đề</th><th>Loại</th><th>Môn</th><th>Cấu trúc</th><th>Giao lớp</th></tr></thead>
+      <tbody>
+        {% for e in exams %}
+        <tr>
+          <td>{{ e.title }}</td>
+          <td>{{ e.exam_type }}</td>
+          <td>{{ e.program }}</td>
+          <td>{{ e.counts.projects }} project · {{ e.counts.tasks }} task {% if e.counts.ok %}✓{% else %}!{% endif %}</td>
+          <td>
+            <form method="post" action="/quan-tri/kho-de/giao" class="inline-row">
+              <input type="hidden" name="exam_id" value="{{ e.id }}" />
+              <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+              <button class="btn btn-primary" type="submit">Giao</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">Chưa có đề Published.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2 style="font-size:18px;margin-top:24px">Bài luyện tập đã xuất bản</h2>
+    <table class="grid">
+      <thead><tr><th>Nhiệm vụ</th><th>Objective</th><th>Trọng số</th></tr></thead>
+      <tbody>
+        {% for t in tasks %}
+        <tr><td>{{ t.instruction_text }}</td><td>{{ t.objective_code or "—" }}</td><td>{{ t.default_weight }}</td></tr>
+        {% else %}
+        <tr><td colspan="3">Chưa có task Published.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <h2 style="font-size:18px;margin-top:24px">Báo lỗi đề</h2>
+    <form method="post" action="/quan-tri/kho-de/bao-loi" class="grid" style="max-width:520px">
+      <label>Đề
+        <select name="exam_id">
+          {% for e in exams %}<option value="{{ e.id }}">{{ e.title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Chi tiết <input name="detail" required placeholder="File gốc hỏng / câu hỏi tối nghĩa" /></label>
+      <button class="btn btn-outline" type="submit">Gửi Tổ trưởng</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

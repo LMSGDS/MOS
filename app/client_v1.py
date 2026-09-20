@@ -603,6 +603,12 @@ async def v1_start_attempt(request: Request):
     }
     record_attempt_event(started, event="start")
     _notify_live(started, row, None, "start")
+    from app.bank import session_for_project
+
+    bank = session_for_project(project_id, mode)
+    limit = (cfg or {}).get("time_limit_sec") if cfg else None
+    if limit is None and bank.get("duration_minutes"):
+        limit = int(bank["duration_minutes"]) * 60
     return {
         "ok": True,
         "attempt_id": attempt_id,
@@ -611,8 +617,9 @@ async def v1_start_attempt(request: Request):
         "project_version_id": version["id"] if version else None,
         "rubric_version": version["rubric_version"] if version else None,
         "abandoned": closed,
-        "time_limit_sec": (cfg or {}).get("time_limit_sec") if cfg else None,
+        "time_limit_sec": limit,
         "lan_locked": bool(cfg and cfg.get("ip_allow")),
+        "bank": bank,
     }
 
 

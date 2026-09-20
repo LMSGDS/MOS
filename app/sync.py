@@ -5,6 +5,7 @@ import hashlib
 from datetime import datetime, timezone
 
 from app.db import cursor
+from app.bank import record_task_results
 
 
 def parse_ts(value) -> datetime | None:
@@ -173,4 +174,5 @@ def store_q_matrix(attempt_id: str, scored: dict | None) -> int:
                 """,
                 (attempt_id, attempt_id),
             )
+    record_task_results(attempt_id, scored)
     return written

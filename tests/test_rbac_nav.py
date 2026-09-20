@@ -37,7 +37,11 @@ def test_teacher_menu_hides_system_tools(pg):
     assert lti.status_code == 303
     bank = teacher.get("/quan-tri/ngan-hang", follow_redirects=False)
     assert bank.status_code == 303
-    assert bank.headers["location"] == "/quan-tri/bai-tap"
+    assert bank.headers["location"] == "/quan-tri/kho-de"
+    catalog = teacher.get("/quan-tri/kho-de")
+    assert catalog.status_code == 200
+    assert "Kho đề xuất bản" in catalog.text
+    assert "Q-Matrix" not in catalog.text or "Không sửa Q-Matrix" in catalog.text
     grades = teacher.get("/quan-tri/so-diem")
     assert grades.status_code == 200
     assert "Sổ điểm" in grades.text

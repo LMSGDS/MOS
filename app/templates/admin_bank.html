@@ -1,42 +1,296 @@
 {% extends "base.html" %}
-{% block title %}Độ tin cậy ngân hàng đề{% endblock %}
+{% block title %}Ngân hàng bài tập &amp; đề thi{% endblock %}
 {% block body %}
 <section class="card hero admin-wide">
   {% include "admin_nav.html" %}
-  <h1>Ngân hàng đề &amp; chuẩn Q-Matrix</h1>
-  <p class="lead">Nguồn sự thật duy nhất: giáo viên chỉ chọn đề đã xuất bản, không tự sửa thước đo. Cột &lt;50% là chỉ số độ khó (IRT-lite). Đề đỏ cần rà soát trước khi giao thi.</p>
-  <p class="hint">Trạng thái: Published / Locked — lịch sử bài cũ giữ nguyên khi có bản Word/Excel mới.</p>
-  <table class="grid">
-    <thead>
-      <tr>
-        <th>Mã</th>
-        <th>Đề</th>
-        <th>Chuyên đề</th>
-        <th>Số nộp</th>
-        <th>Số lớp</th>
-        <th>Điểm TB</th>
-        <th>&lt; 50</th>
-        <th>&lt; 70</th>
-        <th>Kết luận</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for b in bank %}
-      <tr class="{% if b.review %}heat-red{% endif %}">
-        <td>{{ b.exam_id }}</td>
-        <td>{{ b.title }}</td>
-        <td>{{ b.skill }}</td>
-        <td>{{ b.submits }}</td>
-        <td>{{ b.classes }}</td>
-        <td>{{ b.avg_score if b.avg_score is not none else "—" }}</td>
-        <td>{{ "%.0f"|format(b.low_pct) }}%</td>
-        <td>{{ "%.0f"|format(b.below70_pct) }}%</td>
-        <td>{% if b.review %}<strong>{{ b.verdict }}</strong>{% else %}{{ b.verdict }}{% endif %}</td>
-      </tr>
+  <div class="admin-panel">
+    <h1>Ngân hàng đề &amp; chuẩn Q-Matrix</h1>
+    <p class="lead">Ontology 3 tầng MOS 2019: Objective Domains → Project Blocks → Atomic Tasks. Giáo viên chỉ đọc đề Published. Thang Certiport 1000, qua môn 700.</p>
+    {% if saved %}<p class="success">Đã lưu.</p>{% endif %}
+    {% if error %}<p class="alert">Không thực hiện được ({{ error }}). Đề Published không sửa trực tiếp — tạo bản nháp / sinh đề mới.</p>{% endif %}
+    <nav class="admin-tabs" role="tablist">
+      <a href="/quan-tri/ngan-hang?tab=cay&amp;mon={{ subject }}" role="tab" {% if tab == 'cay' %}aria-selected="true"{% endif %}>Cây kiến thức</a>
+      <a href="/quan-tri/ngan-hang?tab=lap-rap" role="tab" {% if tab == 'lap-rap' %}aria-selected="true"{% endif %}>Lắp ráp đề thi</a>
+      <a href="/quan-tri/ngan-hang?tab=q-matrix{% if task %}&amp;task={{ task.id }}{% endif %}" role="tab" {% if tab == 'q-matrix' %}aria-selected="true"{% endif %}>Q-Matrix</a>
+      <a href="/quan-tri/ngan-hang?tab=do-tin-cay" role="tab" {% if tab == 'do-tin-cay' %}aria-selected="true"{% endif %}>Độ tin cậy</a>
+    </nav>
+
+    <div {% if tab != 'cay' %}hidden{% endif %}>
+      <form method="get" action="/quan-tri/ngan-hang" class="live-filter">
+        <input type="hidden" name="tab" value="cay" />
+        <label>Môn
+          <select name="mon" onchange="this.form.submit()">
+            {% for s in subjects %}<option value="{{ s.id }}" {% if subject == s.id %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label><input type="checkbox" name="mo-coi" value="1" {% if orphans %}checked{% endif %} onchange="this.form.submit()" /> Kho mồ côi</label>
+      </form>
+      <div class="bank-split">
+        <aside class="bank-tree" aria-label="Cây mục tiêu">
+          {% for root in tree %}
+          <details open>
+            <summary><strong>{{ root.code }}</strong> {{ root.title }} <span class="badge">{{ root.task_n }}</span></summary>
+            {% for obj in root.children %}
+            <details {% if objective_id == obj.id %}open{% endif %}>
+              <summary>{{ obj.code }} {{ obj.title }} <span class="badge">{{ obj.task_n }}</span></summary>
+              <ul>
+                {% for leaf in obj.children %}
+                <li>
+                  <a href="/quan-tri/ngan-hang?tab=cay&amp;mon={{ subject }}&amp;obj={{ leaf.id }}" {% if objective_id == leaf.id %}aria-current="page"{% endif %}>
+                    {{ leaf.code }} {{ leaf.title }} <span class="badge">{{ leaf.task_n }}</span>
+                  </a>
+                </li>
+                {% endfor %}
+              </ul>
+            </details>
+            {% endfor %}
+          </details>
+          {% endfor %}
+        </aside>
+        <div>
+          <h2 style="font-size:18px">Atomic Tasks</h2>
+          <p class="hint">Practice_Mode: gợi ý 3 tầng, không đếm ngược. File luyện tập lưu trên server (không MinIO).</p>
+          <table class="grid">
+            <thead><tr><th>Nhiệm vụ</th><th>Objective</th><th>Trọng số</th><th>Trạng thái</th><th>Dự án</th><th></th></tr></thead>
+            <tbody>
+              {% for t in tasks %}
+              <tr>
+                <td><a href="/quan-tri/ngan-hang?tab=q-matrix&amp;task={{ t.id }}">{{ t.instruction_text }}</a></td>
+                <td>{{ t.objective_code or "—" }}</td>
+                <td>{{ t.default_weight }}</td>
+                <td>{{ t.status }}</td>
+                <td>{% if t.in_project %}Có{% else %}Mồ côi{% endif %}</td>
+                <td>
+                  {% if t.status == 'draft' %}
+                  <form method="post" action="/quan-tri/ngan-hang/task/{{ t.id }}/trang-thai"><input type="hidden" name="status" value="published" /><button class="btn btn-outline" type="submit">Publish</button></form>
+                  {% elif t.status == 'published' %}
+                  <form method="post" action="/quan-tri/ngan-hang/task/{{ t.id }}/trang-thai"><input type="hidden" name="status" value="archived" /><button class="btn btn-ghost" type="submit">Archive</button></form>
+                  {% endif %}
+                  <form method="post" action="/quan-tri/ngan-hang/task/{{ t.id }}/tep" enctype="multipart/form-data" class="inline-row">
+                    <input type="file" name="tep" accept=".docx,.xlsx,.pptx" />
+                    <button class="btn btn-outline" type="submit">Upload</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6">Chọn nhánh Objective hoặc bật kho mồ côi.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <h3 style="font-size:16px;margin-top:20px">Thêm task nháp</h3>
+          <form method="post" action="/quan-tri/ngan-hang/task" class="grid" style="max-width:640px">
+            <label>Objective
+              <select name="objective_id" required>
+                {% for o in leaves %}<option value="{{ o.id }}" {% if o.id == objective_id %}selected{% endif %}>{{ o.subject }} {{ o.code }} {{ o.title }}</option>{% endfor %}
+              </select>
+            </label>
+            <label>Nội dung nhiệm vụ <input name="instruction" required placeholder="Áp dụng style Intense Quote cho đoạn 2" /></label>
+            <label>Trọng số
+              <select name="weight"><option value="1">Dễ (1)</option><option value="2">Trung bình (2)</option><option value="3">Khó (3)</option></select>
+            </label>
+            <button class="btn btn-primary" type="submit">Tạo bản nháp</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div {% if tab != 'lap-rap' %}hidden{% endif %}>
+      <div class="assembler-toolbar">
+        <form method="get" action="/quan-tri/ngan-hang" class="live-filter">
+          <input type="hidden" name="tab" value="lap-rap" />
+          <label>Đề
+            <select name="de" onchange="this.form.submit()">
+              <option value="">— chọn —</option>
+              {% for e in exams %}<option value="{{ e.id }}" {% if exam and exam.id == e.id %}selected{% endif %}>{{ e.title }} ({{ e.status }})</option>{% endfor %}
+            </select>
+          </label>
+        </form>
+        <form method="post" action="/quan-tri/ngan-hang/sinh-de" class="inline-row">
+          <select name="program"><option value="word">Word</option><option value="excel">Excel</option><option value="powerpoint">PowerPoint</option></select>
+          <input name="title" placeholder="Đề thi thử xáo trộn" />
+          <button class="btn btn-outline" type="submit">Sinh đề 7 project</button>
+        </form>
+      </div>
+      {% set cnt = exam.counts if exam else {'projects': 0, 'tasks': 0, 'ok': false} %}
+      <p class="validator {% if cnt.ok %}ok{% else %}bad{% endif %}">
+        Cấu trúc Certiport: {{ cnt.projects }} project (cần 5–7) · {{ cnt.tasks }} task (cần 25–35)
+        {% if cnt.ok %} — đủ chuẩn, có thể Publish.{% else %} — Publish bị khóa.{% endif %}
+      </p>
+      <div class="bank-split">
+        <aside>
+          <h2 style="font-size:16px">Kho dự án</h2>
+          <ul class="project-bank" id="project-bank">
+            {% for p in projects %}
+            <li draggable="true" data-id="{{ p.id }}" data-tasks="{{ p.task_n }}">{{ p.name }} <span class="badge">{{ p.task_n }} task</span></li>
+            {% endfor %}
+          </ul>
+        </aside>
+        <div>
+          <form method="post" action="/quan-tri/ngan-hang/de" id="exam-form">
+            <input type="hidden" name="exam_id" value="{{ exam.id if exam else '' }}" />
+            <input type="hidden" name="project_ids" id="project-ids" value="{% if exam %}{% for p in exam.projects %}{{ p.id }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}" />
+            <label>Tên đề <input name="title" required value="{{ exam.title if exam else '' }}" placeholder="Đề thi thử Word MO-100 số 1" /></label>
+            <label>Loại
+              <select name="exam_type">
+                <option value="CERTIFICATION_MOCK" {% if exam and exam.exam_type == 'CERTIFICATION_MOCK' %}selected{% endif %}>Thi thử Certiport (50 phút, khóa gợi ý)</option>
+                <option value="PRACTICE_EXAM" {% if exam and exam.exam_type == 'PRACTICE_EXAM' %}selected{% endif %}>Ôn luyện (có gợi ý)</option>
+              </select>
+            </label>
+            <label>Môn
+              <select name="program">
+                <option value="word" {% if exam and exam.program == 'word' %}selected{% endif %}>Word</option>
+                <option value="excel" {% if exam and exam.program == 'excel' %}selected{% endif %}>Excel</option>
+                <option value="powerpoint" {% if exam and exam.program == 'powerpoint' %}selected{% endif %}>PowerPoint</option>
+              </select>
+            </label>
+            <h2 style="font-size:16px">Khung đề (kéo thả)</h2>
+            <ol class="exam-canvas" id="exam-canvas">
+              {% if exam %}
+              {% for p in exam.projects %}
+              <li data-id="{{ p.id }}">{{ p.project_order }}. {{ p.name }} <span class="badge">{{ p.task_n }} task</span></li>
+              {% endfor %}
+              {% endif %}
+            </ol>
+            <p class="hint">Thi: 50 phút server, Force Submit, IP phòng máy, UI chia đôi Certiport, Mark for Review. Không sửa đề Published.</p>
+            <button class="btn btn-primary" type="submit">Lưu bản nháp</button>
+          </form>
+          <form method="post" action="/quan-tri/ngan-hang/du-an" class="grid" style="max-width:480px;margin-top:16px">
+            <h3 style="font-size:15px;margin:0">Tạo khối dự án nháp</h3>
+            <label>Tên project <input name="name" required placeholder="Kế hoạch Kinh doanh Startup" /></label>
+            <label>Môn
+              <select name="program">
+                <option value="word">Word</option>
+                <option value="excel">Excel</option>
+                <option value="powerpoint">PowerPoint</option>
+              </select>
+            </label>
+            <label>Ngữ cảnh <input name="scenario" placeholder="File gốc Startup_Plan.docx" /></label>
+            <button class="btn btn-outline" type="submit">Tạo Project Block</button>
+          </form>
+          {% if exam %}
+          <form method="post" action="/quan-tri/ngan-hang/de/{{ exam.id }}/trang-thai" class="inline-row" style="margin-top:12px">
+            {% if exam.status == 'draft' %}
+            <input type="hidden" name="status" value="published" />
+            <button class="btn btn-primary" type="submit" {% if not cnt.ok %}disabled{% endif %}>Xuất bản</button>
+            {% elif exam.status == 'published' %}
+            <input type="hidden" name="status" value="archived" />
+            <button class="btn btn-ghost" type="submit">Archive / khóa</button>
+            {% endif %}
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div {% if tab != 'q-matrix' %}hidden{% endif %}>
+      <p class="hint">Multi-path: Ribbon / Ctrl+C / chuột phải đều hợp lệ. Luyện tập có điểm thành phần; thi = zero partial. File XML (final state) hoặc telemetry (valid_paths).</p>
+      <form method="get" action="/quan-tri/ngan-hang" class="live-filter">
+        <input type="hidden" name="tab" value="q-matrix" />
+        <label>Task
+          <select name="task" onchange="this.form.submit()">
+            <option value="">— chọn —</option>
+            {% for t in all_tasks %}<option value="{{ t.id }}" {% if task and task.id == t.id %}selected{% endif %}>{{ t.instruction_text[:80] }}</option>{% endfor %}
+          </select>
+        </label>
+      </form>
+      {% if task %}
+      {% set rules = task.q_matrix_rules if task.q_matrix_rules is mapping else {} %}
+      <form method="post" action="/quan-tri/ngan-hang/task" class="grid" style="max-width:720px">
+        <input type="hidden" name="task_id" value="{{ task.id }}" />
+        <input type="hidden" name="objective_id" value="{{ task.objective_id }}" />
+        <p>Objective {{ task.subject }} {{ task.objective_code }} · hash {{ task.version_hash }} · {{ task.status }}</p>
+        <label>Nội dung <input name="instruction" required value="{{ task.instruction_text }}" /></label>
+        <label>Trọng số
+          <select name="weight">
+            <option value="1" {% if task.default_weight == 1 %}selected{% endif %}>Dễ (1)</option>
+            <option value="2" {% if task.default_weight == 2 %}selected{% endif %}>Trung bình (2)</option>
+            <option value="3" {% if task.default_weight == 3 %}selected{% endif %}>Khó (3)</option>
+          </select>
+        </label>
+        <label>Định vị (Navigation) <input name="locate" value="{{ rules.locate or '' }}" placeholder="Tab Insert / nhóm Tables" /></label>
+        <label>Công cụ (Tool) <input name="tool" value="{{ rules.tool or '' }}" placeholder="Insert Table" /></label>
+        <label>Cấu hình (Config) <input name="configure" value="{{ rules.configure or '' }}" placeholder="5 cột, 2 dòng, AutoFit" /></label>
+        <label>Valid_Paths (phẩy) <input name="valid_paths" value="{{ (rules.valid_paths or [])|join(', ') }}" placeholder="Ribbon_Copy, Shortcut_CtrlC, ContextMenu_Copy" /></label>
+        <label>Gợi ý 1 — định vị <input name="hint1" value="{{ (rules.hint_tiers or [''])[0] if rules.hint_tiers else '' }}" /></label>
+        <label>Gợi ý 2 — thao tác <input name="hint2" value="{{ (rules.hint_tiers[1] if rules.hint_tiers and rules.hint_tiers|length > 1 else '') }}" /></label>
+        <label>Gợi ý 3 — giải pháp <input name="hint3" value="{{ (rules.hint_tiers[2] if rules.hint_tiers and rules.hint_tiers|length > 2 else '') }}" /></label>
+        <button class="btn btn-primary" type="submit" {% if task.status != 'draft' %}disabled{% endif %}>Lưu kịch bản nháp</button>
+      </form>
+      <form method="post" action="/quan-tri/ngan-hang/task/{{ task.id }}/gan" class="inline-row" style="margin-top:12px">
+        <label>Gắn vào Project Block
+          <select name="project_id">
+            {% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+          </select>
+        </label>
+        <button class="btn btn-outline" type="submit">Tái sử dụng task</button>
+      </form>
       {% else %}
-      <tr><td colspan="9">Chưa có bài nộp để đánh giá đề.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      <p class="hint">Chọn task ở cây kiến thức rồi mở tab này.</p>
+      {% endif %}
+    </div>
+
+    <div {% if tab != 'do-tin-cay' %}hidden{% endif %}>
+      <h2 style="font-size:18px">Độ tin cậy ngân hàng đề</h2>
+      <p class="hint">IRT-lite: đề nhiều lớp nộp dưới 50% bị gắn cờ rà soát. Giáo viên không sửa đề — chỉ báo lỗi.</p>
+      <table class="grid">
+        <thead><tr><th>Mã</th><th>Đề</th><th>Chuyên đề</th><th>Nộp</th><th>&lt;50</th><th>Kết luận</th></tr></thead>
+        <tbody>
+          {% for b in bank %}
+          <tr class="{% if b.review %}heat-red{% endif %}">
+            <td>{{ b.exam_id }}</td><td>{{ b.title }}</td><td>{{ b.skill }}</td>
+            <td>{{ b.submits }}</td><td>{{ "%.0f"|format(b.low_pct) }}%</td>
+            <td>{% if b.review %}<strong>{{ b.verdict }}</strong>{% else %}{{ b.verdict }}{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6">Chưa có bài nộp.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h2 style="font-size:18px;margin-top:24px">Báo lỗi từ giáo viên</h2>
+      <table class="grid">
+        <thead><tr><th>Thời điểm</th><th>Người gửi</th><th>Đề</th><th>Chi tiết</th></tr></thead>
+        <tbody>
+          {% for f in flags %}
+          <tr><td>{{ f.created_at }}</td><td>{{ f.reporter or "—" }}</td><td>{{ f.exam_title or f.exam_id or "—" }}</td><td>{{ f.detail }}</td></tr>
+          {% else %}
+          <tr><td colspan="4">Chưa có góp ý.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </section>
+<script>
+(function () {
+  var bank = document.getElementById("project-bank");
+  var canvas = document.getElementById("exam-canvas");
+  var hidden = document.getElementById("project-ids");
+  if (!bank || !canvas || !hidden) return;
+  function ids() {
+    return Array.prototype.map.call(canvas.querySelectorAll("li[data-id]"), function (li) { return li.getAttribute("data-id"); });
+  }
+  function sync() { hidden.value = ids().join(","); }
+  bank.querySelectorAll("li").forEach(function (li) {
+    li.addEventListener("dragstart", function (e) {
+      e.dataTransfer.setData("text/plain", li.getAttribute("data-id") + "|" + li.textContent);
+    });
+  });
+  canvas.addEventListener("dragover", function (e) { e.preventDefault(); });
+  canvas.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var raw = e.dataTransfer.getData("text/plain").split("|");
+    var id = raw[0];
+    if (!id || ids().indexOf(id) >= 0) return;
+    var item = document.createElement("li");
+    item.setAttribute("data-id", id);
+    item.textContent = raw.slice(1).join("|");
+    canvas.appendChild(item);
+    sync();
+  });
+  canvas.addEventListener("dblclick", function (e) {
+    var li = e.target.closest("li");
+    if (li) { li.remove(); sync(); }
+  });
+})();
+</script>
 {% endblock %}

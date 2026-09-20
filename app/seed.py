@@ -254,6 +254,9 @@ def seed() -> None:
         teacher_id = teacher["id"] if teacher else None
     if teacher_id and word_ids:
         assign_class_projects(1, word_ids, assigned_by=teacher_id)
+    from app.bank import seed_bank
+
+    seed_bank()
     backfill_all()
     print("seeded")
 

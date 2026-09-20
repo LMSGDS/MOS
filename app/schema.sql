@@ -429,3 +429,105 @@ CREATE TABLE IF NOT EXISTS adaptive_rules (
 CREATE INDEX IF NOT EXISTS idx_telemetry_ts ON telemetry(ts DESC);
 CREATE INDEX IF NOT EXISTS idx_telemetry_attempt_ts ON telemetry(attempt_id, ts DESC);
 CREATE INDEX IF NOT EXISTS idx_attempts_updated ON attempts(updated_at DESC);
+
+-- Ngân hàng đề 3 tầng: Objective → Project → Task → Exam (không đụng bảng projects cũ)
+CREATE TABLE IF NOT EXISTS objective_domains (
+  id            TEXT PRIMARY KEY,
+  subject       TEXT NOT NULL CHECK (subject IN ('MO-100', 'MO-200', 'MO-300')),
+  code          TEXT NOT NULL,
+  title         TEXT NOT NULL DEFAULT '',
+  description   TEXT NOT NULL DEFAULT '',
+  parent_id     TEXT REFERENCES objective_domains(id) ON DELETE CASCADE,
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (subject, code)
+);
+
+CREATE TABLE IF NOT EXISTS bank_tasks (
+  id                TEXT PRIMARY KEY,
+  objective_id      TEXT REFERENCES objective_domains(id) ON DELETE SET NULL,
+  instruction_text  TEXT NOT NULL DEFAULT '',
+  q_matrix_rules    JSONB NOT NULL DEFAULT '{}'::jsonb,
+  default_weight    INTEGER NOT NULL DEFAULT 1,
+  status            TEXT NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'published', 'archived')),
+  source_project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  resource_file     TEXT NOT NULL DEFAULT '',
+  file_sha256       TEXT,
+  created_by        INTEGER REFERENCES users(id),
+  is_global         BOOLEAN NOT NULL DEFAULT TRUE,
+  version_hash      TEXT NOT NULL DEFAULT '',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bank_projects (
+  id                    TEXT PRIMARY KEY,
+  name                  TEXT NOT NULL,
+  scenario_description  TEXT NOT NULL DEFAULT '',
+  resource_file_url     TEXT NOT NULL DEFAULT '',
+  program               TEXT NOT NULL DEFAULT 'word'
+                        CHECK (program IN ('word', 'excel', 'powerpoint')),
+  source_project_id     TEXT REFERENCES projects(id) ON DELETE SET NULL,
+  status                TEXT NOT NULL DEFAULT 'draft'
+                        CHECK (status IN ('draft', 'published', 'archived')),
+  created_by            INTEGER REFERENCES users(id),
+  is_global             BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bank_project_tasks (
+  project_id      TEXT NOT NULL REFERENCES bank_projects(id) ON DELETE CASCADE,
+  task_id         TEXT NOT NULL REFERENCES bank_tasks(id) ON DELETE CASCADE,
+  sequence_order  INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (project_id, task_id)
+);
+
+CREATE TABLE IF NOT EXISTS bank_exams (
+  id                TEXT PRIMARY KEY,
+  title             TEXT NOT NULL,
+  exam_type         TEXT NOT NULL DEFAULT 'PRACTICE_EXAM'
+                    CHECK (exam_type IN ('PRACTICE_EXAM', 'CERTIFICATION_MOCK')),
+  duration_minutes  INTEGER NOT NULL DEFAULT 50,
+  program           TEXT NOT NULL DEFAULT 'word',
+  status            TEXT NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'published', 'archived')),
+  parent_exam_id    TEXT REFERENCES bank_exams(id) ON DELETE SET NULL,
+  version           INTEGER NOT NULL DEFAULT 1,
+  created_by        INTEGER REFERENCES users(id),
+  is_global         BOOLEAN NOT NULL DEFAULT TRUE,
+  version_hash      TEXT NOT NULL DEFAULT '',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS bank_exam_projects (
+  exam_id         TEXT NOT NULL REFERENCES bank_exams(id) ON DELETE CASCADE,
+  project_id      TEXT NOT NULL REFERENCES bank_projects(id) ON DELETE CASCADE,
+  project_order   INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (exam_id, project_id)
+);
+
+CREATE TABLE IF NOT EXISTS exam_issue_flags (
+  id            BIGSERIAL PRIMARY KEY,
+  exam_id       TEXT REFERENCES bank_exams(id) ON DELETE CASCADE,
+  task_id       TEXT REFERENCES bank_tasks(id) ON DELETE SET NULL,
+  reporter_id   INTEGER REFERENCES users(id),
+  detail        TEXT NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS student_task_results (
+  id            BIGSERIAL PRIMARY KEY,
+  student_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  task_id       TEXT NOT NULL REFERENCES bank_tasks(id) ON DELETE CASCADE,
+  attempt_id    TEXT REFERENCES attempts(id) ON DELETE SET NULL,
+  is_correct    BOOLEAN NOT NULL DEFAULT FALSE,
+  raw_earned    DOUBLE PRECISION NOT NULL DEFAULT 0,
+  raw_possible  DOUBLE PRECISION NOT NULL DEFAULT 0,
+  scaled_1000   INTEGER,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS exam_id TEXT REFERENCES bank_exams(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_bank_tasks_objective ON bank_tasks(objective_id);
+CREATE INDEX IF NOT EXISTS idx_bank_tasks_status ON bank_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_student_task_results ON student_task_results(student_id, task_id);
+CREATE INDEX IF NOT EXISTS idx_exam_flags ON exam_issue_flags(created_at DESC);

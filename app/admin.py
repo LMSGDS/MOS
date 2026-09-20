@@ -13,6 +13,26 @@ from app.assign import LAN_DEFAULT, configure_assignment, list_configured
 from app.db import cursor
 from app.roles import is_admin, is_staff, persona
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
+from app.bank import (
+    attach_task,
+    auto_generate_exam,
+    flag_issue,
+    get_exam,
+    get_task,
+    knowledge_tree,
+    leaf_objectives,
+    list_exams,
+    list_flags,
+    list_projects,
+    list_subjects,
+    list_tasks,
+    save_exam,
+    save_project,
+    save_task,
+    set_exam_status,
+    set_task_status,
+    store_practice_file,
+)
 from app.superadmin import (
     adoption_series,
     client_version,
@@ -92,7 +112,7 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul15",
+        "asset_v": "kulkul16",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,
@@ -661,6 +681,14 @@ def admin_gaps(request: Request):
     )
 
 
+BANK_TABS = ("cay", "lap-rap", "q-matrix", "do-tin-cay")
+
+
+def _bank_tab(value: str | None) -> str:
+    tab = (value or "cay").strip()
+    return tab if tab in BANK_TABS else "cay"
+
+
 @router.get("/quan-tri/ngan-hang", response_class=HTMLResponse)
 def admin_bank(request: Request):
     user = _session_user(request)
@@ -669,12 +697,254 @@ def admin_bank(request: Request):
     if not _staff(user):
         return RedirectResponse("/tien-do", status_code=303)
     if not _leaders(user):
-        return RedirectResponse("/quan-tri/bai-tap", status_code=303)
+        return RedirectResponse("/quan-tri/kho-de", status_code=303)
+    tab = _bank_tab(request.query_params.get("tab"))
+    subject = (request.query_params.get("mon") or "MO-100").strip()
+    objective_id = (request.query_params.get("obj") or "").strip()
+    exam_id = (request.query_params.get("de") or "").strip()
+    task_id = (request.query_params.get("task") or "").strip()
+    orphans = request.query_params.get("mo-coi") == "1"
+    exam = get_exam(exam_id) if exam_id else None
+    if not exam:
+        exams = list_exams()
+        exam = get_exam(exams[0]["id"]) if exams else None
     return TEMPLATES.TemplateResponse(
         request,
         "admin_bank.html",
-        _ctx(request, user, {"nav": "bank", "bank": bank_reliability()}),
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "bank",
+                "tab": tab,
+                "subjects": list_subjects(),
+                "subject": subject,
+                "tree": knowledge_tree(subject),
+                "objective_id": objective_id,
+                "tasks": list_tasks(objective_id=objective_id, orphans=orphans) if objective_id or orphans else [],
+                "all_tasks": list_tasks()[:200],
+                "orphans": orphans,
+                "orphan_tasks": list_tasks(orphans=True),
+                "leaves": leaf_objectives(),
+                "projects": list_projects(),
+                "exams": list_exams(),
+                "exam": exam,
+                "task": get_task(task_id) if task_id else None,
+                "bank": bank_reliability(),
+                "flags": list_flags(),
+                "saved": request.query_params.get("ok"),
+                "error": request.query_params.get("loi"),
+            },
+        ),
     )
+
+
+@router.post("/quan-tri/ngan-hang/task")
+def admin_bank_save_task(
+    request: Request,
+    task_id: str = Form(""),
+    objective_id: str = Form(...),
+    instruction: str = Form(...),
+    weight: str = Form("1"),
+    valid_paths: str = Form(""),
+    locate: str = Form(""),
+    tool: str = Form(""),
+    configure: str = Form(""),
+    hint1: str = Form(""),
+    hint2: str = Form(""),
+    hint3: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    paths = [p.strip() for p in valid_paths.replace(";", ",").split(",") if p.strip()]
+    try:
+        tid = save_task(
+            task_id=task_id or None,
+            objective_id=objective_id,
+            instruction=instruction,
+            weight=int(weight) if str(weight).isdigit() else 1,
+            valid_paths=paths,
+            locate=locate,
+            tool=tool,
+            configure=configure,
+            hint1=hint1,
+            hint2=hint2,
+            hint3=hint3,
+            user_id=user.get("id"),
+        )
+    except ValueError:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=q-matrix&loi=published", status_code=303)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=q-matrix&task={tid}&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/task/{task_id}/trang-thai")
+def admin_bank_task_status(request: Request, task_id: str, status: str = Form(...)):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    try:
+        set_task_status(task_id, status)
+    except ValueError:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=cay&loi=1", status_code=303)
+    return RedirectResponse("/quan-tri/ngan-hang?tab=cay&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/task/{task_id}/tep")
+async def admin_bank_upload(request: Request, task_id: str, tep: UploadFile = File(...)):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    data = await tep.read()
+    if not data or len(data) > 12 * 1024 * 1024:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=cay&loi=file", status_code=303)
+    store_practice_file(task_id, tep.filename or "starter.docx", data)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=cay&ok=file&task={task_id}", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/de")
+def admin_bank_save_exam(
+    request: Request,
+    exam_id: str = Form(""),
+    title: str = Form(...),
+    exam_type: str = Form("CERTIFICATION_MOCK"),
+    program: str = Form("word"),
+    project_ids: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    ids = [p.strip() for p in project_ids.split(",") if p.strip()]
+    try:
+        eid = save_exam(
+            exam_id=exam_id or None,
+            title=title,
+            exam_type=exam_type,
+            program=program,
+            project_ids=ids,
+            user_id=user.get("id"),
+        )
+    except ValueError:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=lap-rap&loi=published", status_code=303)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=lap-rap&de={eid}&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/de/{exam_id}/trang-thai")
+def admin_bank_exam_status(request: Request, exam_id: str, status: str = Form(...)):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    try:
+        set_exam_status(exam_id, status)
+    except ValueError as exc:
+        return RedirectResponse(f"/quan-tri/ngan-hang?tab=lap-rap&de={exam_id}&loi={exc}", status_code=303)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=lap-rap&de={exam_id}&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/du-an")
+def admin_bank_save_project(
+    request: Request,
+    name: str = Form(...),
+    program: str = Form("word"),
+    scenario: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    pid = save_project(name=name, program=program, scenario=scenario, user_id=user.get("id"))
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=lap-rap&ok=du-an&bp={pid}", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/task/{task_id}/gan")
+def admin_bank_attach_task(request: Request, task_id: str, project_id: str = Form(...)):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    attach_task(project_id, task_id)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=q-matrix&task={task_id}&ok=gan", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/sinh-de")
+def admin_bank_autogen(request: Request, program: str = Form("word"), title: str = Form("")):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    label = title.strip() or f"Đề thi thử {program} xáo trộn"
+    try:
+        eid = auto_generate_exam(program=program, title=label, user_id=user.get("id"))
+    except ValueError:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=lap-rap&loi=projects", status_code=303)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=lap-rap&de={eid}&ok=sinh", status_code=303)
+
+
+@router.get("/quan-tri/kho-de", response_class=HTMLResponse)
+def teacher_bank(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    return TEMPLATES.TemplateResponse(
+        request,
+        "teacher_bank.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "catalog",
+                "exams": list_exams(published_only=True),
+                "tasks": list_tasks(published_only=True)[:80],
+                "classes": classes_for(user),
+                "saved": request.query_params.get("ok"),
+            },
+        ),
+    )
+
+
+@router.post("/quan-tri/kho-de/bao-loi")
+def teacher_flag_issue(
+    request: Request,
+    exam_id: str = Form(""),
+    detail: str = Form(...),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    flag_issue(exam_id=exam_id, reporter_id=user.get("id"), detail=detail)
+    dest = "/quan-tri/ngan-hang?tab=do-tin-cay&ok=flag" if _leaders(user) else "/quan-tri/kho-de?ok=flag"
+    return RedirectResponse(dest, status_code=303)
+
+
+@router.post("/quan-tri/kho-de/giao")
+def teacher_assign_exam(
+    request: Request,
+    exam_id: str = Form(...),
+    class_id: str = Form(...),
+    lan_only: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    exam = get_exam(exam_id)
+    if not exam or exam.get("status") != "published":
+        return RedirectResponse("/quan-tri/kho-de?loi=1", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else 0
+    mock = exam.get("exam_type") == "CERTIFICATION_MOCK"
+    ip_allow = (get_setting("exam_ip_allow") or LAN_DEFAULT) if lan_only == "1" or mock else ""
+    for block in exam.get("projects") or []:
+        src = block.get("source_project_id")
+        if not src:
+            continue
+        configure_assignment(
+            cid,
+            src,
+            assigned_by=user.get("id"),
+            mode="testing" if mock else "training",
+            time_limit_sec=(exam.get("duration_minutes") or 50) * 60 if mock else None,
+            ip_allow=ip_allow,
+            exam_id=exam["id"],
+        )
+    return RedirectResponse("/quan-tri/bai-tap?ok=exam", status_code=303)
 
 
 @router.get("/quan-tri/phan-cap", response_class=HTMLResponse)
