@@ -3,68 +3,206 @@
 {% block body %}
 <section class="card hero admin-wide">
   {% include "admin_nav.html" %}
-  <h1>Học sinh và liên kết lớp</h1>
-  <p class="lead">Tài khoản học sinh / giáo viên lưu trên PostgreSQL máy chủ. MOS-KulKul và web cùng đăng nhập HTTPS — bài làm, điểm, telemetry đẩy lên CSDL.</p>
-  {% if error %}
-  <p class="alert" role="alert">Không tạo được tài khoản (trùng tên hoặc thiếu thông tin).</p>
-  {% endif %}
-  {% if imported %}
-  <p class="alert">Đã nhập {{ imported }} học sinh. <a href="/quan-tri/hoc-sinh/mat-khau.csv">Tải CSV mật khẩu</a></p>
-  {% endif %}
-  {% if reset_n %}
-  <p class="alert">Đã reset {{ reset_n }} mật khẩu. <a href="/quan-tri/hoc-sinh/mat-khau.csv">Tải CSV mật khẩu mới</a></p>
-  {% endif %}
+  <div class="admin-panel">
+    <h1>Học sinh và liên kết lớp</h1>
+    <p class="lead">Quản lý tài khoản học sinh, nhập danh sách theo lớp và cài đặt phòng máy. MOS-KulKul và trang web dùng cùng tài khoản — tiến độ cập nhật khi các em luyện tập.</p>
+    {% if error %}
+    <p class="alert" role="alert">Không lưu được thông tin (trùng tên đăng nhập, thiếu dữ liệu, hoặc không có quyền).</p>
+    {% endif %}
+    {% if created %}
+    <p class="success">Đã tạo tài khoản.</p>
+    {% endif %}
+    {% if updated %}
+    <p class="success">Đã lưu thông tin học sinh.</p>
+    {% endif %}
+    {% if removed == '1' %}
+    <p class="success">Đã xóa tài khoản học sinh.</p>
+    {% elif removed == 'giu' %}
+    <p class="notice">Đã gỡ học sinh khỏi lớp. Tài khoản được giữ lại vì đã có lịch sử bài làm.</p>
+    {% endif %}
+    {% if imported %}
+    <p class="success">Đã nhập {{ imported }} học sinh. <a href="/quan-tri/hoc-sinh/mat-khau.csv">Tải CSV mật khẩu</a></p>
+    {% endif %}
+    {% if reset_n %}
+    <p class="success">Đã cấp mật khẩu mới cho {{ reset_n }} tài khoản. <a href="/quan-tri/hoc-sinh/mat-khau.csv">Tải CSV mật khẩu mới</a></p>
+    {% endif %}
 
-  <h2 style="margin-top:16px;font-size:18px">One-click import CSV</h2>
-  <p class="hint">Cột: Họ tên, Mã HS, Tài khoản (tuỳ chọn). Form nhà trường — không cần tạo từng em.</p>
-  <form method="post" action="/quan-tri/hoc-sinh/nhap" enctype="multipart/form-data" class="live-filter">
-    <label>Lớp
-      <select name="class_id">
-        <option value="">Chưa xếp lớp</option>
-        {% for c in classes %}
-        <option value="{{ c.id }}">{{ c.name }} · mã {{ c.join_code or "—" }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>File CSV <input type="file" name="file" accept=".csv,text/csv" required /></label>
-    <button type="submit">Nhập hàng loạt</button>
-  </form>
+    <nav class="admin-tabs" role="tablist" aria-label="Phân hệ học sinh">
+      <a href="/quan-tri/hoc-sinh?tab=danh-sach{% if q %}&amp;q={{ q }}{% endif %}{% if lop %}&amp;lop={{ lop }}{% endif %}{% if muc %}&amp;muc={{ muc }}{% endif %}" role="tab" {% if tab == 'danh-sach' %}aria-selected="true"{% endif %}>Danh sách Học sinh</a>
+      <a href="/quan-tri/hoc-sinh?tab=nhap" role="tab" {% if tab == 'nhap' %}aria-selected="true"{% endif %}>Nhập liệu hàng loạt</a>
+      <a href="/quan-tri/hoc-sinh?tab=phong-may" role="tab" {% if tab == 'phong-may' %}aria-selected="true"{% endif %}>Quản lý Phòng máy</a>
+    </nav>
 
-  <h2 style="margin-top:20px;font-size:18px">Mã vào lớp / Reset phòng máy</h2>
-  <table class="grid">
-    <thead><tr><th>Lớp</th><th>Giáo viên</th><th>Join code</th><th></th></tr></thead>
-    <tbody>
-      {% for c in classes %}
-      <tr>
-        <td>{{ c.name }}</td>
-        <td>{{ c.teacher or "—" }}</td>
-        <td><code>{{ c.join_code or "—" }}</code></td>
-        <td>
-          <form method="post" action="/quan-tri/lop/ma" style="display:inline">
-            <input type="hidden" name="class_id" value="{{ c.id }}" />
-            <button type="submit">Đổi mã</button>
-          </form>
-          <form method="post" action="/quan-tri/hoc-sinh/reset" style="display:inline">
-            <input type="hidden" name="class_id" value="{{ c.id }}" />
-            <button type="submit">Reset mật khẩu lớp</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if user.role == 'admin' and teachers %}
-  <form method="post" action="/quan-tri/lop/giao-vien" class="live-filter">
-    <label>Phân công giáo viên
-      <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
-    </label>
-    <select name="teacher_id">{% for t in teachers %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select>
-    <button type="submit">Gán lớp</button>
-  </form>
-  {% endif %}
-  <p class="hint">Phòng máy quên mật khẩu: reset hàng loạt rồi phát CSV. Trường có Canvas: học sinh vào bằng LTI — không tự xây SSO Google.</p>
-  <form method="post" action="/quan-tri/hoc-sinh" class="grid" style="margin:16px 0;gap:8px">
-    <p class="lead" style="margin:0">Thêm tài khoản lên PostgreSQL</p>
+    <div class="tab-panel" role="tabpanel" {% if tab != 'danh-sach' %}hidden{% endif %}>
+      <div class="roster-toolbar">
+        <form method="get" action="/quan-tri/hoc-sinh" class="roster-toolbar__filters">
+          <input type="hidden" name="tab" value="danh-sach" />
+          <label>Tìm kiếm
+            <input type="search" name="q" value="{{ q }}" placeholder="Tên, mã HS, tài khoản" />
+          </label>
+          <label>Lớp
+            <select name="lop" onchange="this.form.submit()">
+              <option value="">Tất cả lớp</option>
+              {% for c in classes %}
+              <option value="{{ c.id }}" {% if lop == (c.id|string) %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Trạng thái
+            <select name="muc" onchange="this.form.submit()">
+              <option value="">Tất cả</option>
+              {% for key, label in levels.items() %}
+              <option value="{{ key }}" {% if muc == key %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="submit" class="btn btn-outline">Lọc</button>
+        </form>
+        <div class="roster-toolbar__actions">
+          <button type="button" class="btn btn-outline" data-open-add>+ Thêm thủ công</button>
+          <a class="btn btn-primary" href="/quan-tri/hoc-sinh/bao-cao.csv?q={{ q }}&amp;lop={{ lop }}&amp;muc={{ muc }}">Xuất báo cáo</a>
+        </div>
+      </div>
+      <p class="hint roster-count">{{ roster_total }} học sinh{% if pages > 1 %} · trang {{ page }}/{{ pages }}{% endif %}</p>
+      <div class="table-wrap">
+        <table class="grid roster-grid">
+          <thead>
+            <tr>
+              <th>Trạng thái</th>
+              <th>Mã HS</th><th>Họ tên</th><th>Tài khoản</th><th>Lớp</th>
+              <th>Tiến độ</th><th>Hoàn thành</th><th>Điểm TB</th><th>Tiến bộ</th><th>Đánh giá</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in roster %}
+            <tr>
+              <td>
+                <span class="presence {% if s.online %}is-on{% else %}is-off{% endif %}">{{ s.presence }}</span>
+                {% if s.flag_inactive %}
+                <span class="flag-alert" title="Chưa đăng nhập quá 7 ngày">Cờ đỏ</span>
+                {% endif %}
+              </td>
+              <td>{{ s.student_code or "—" }}</td>
+              <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
+              <td>{{ s.username }}</td>
+              <td>{{ s.class_name or "Chưa xếp lớp" }}</td>
+              <td>
+                <div class="bar"><span style="width:{{ [s.completion_pct or 0, 100]|min }}%"></span></div>
+                {{ "%.0f"|format(s.completion_pct or 0) }}%
+              </td>
+              <td>{{ s.exercises_completed or 0 }}/{{ s.exercises_assigned or 0 }}</td>
+              <td>{{ "%.0f"|format(s.overall_score or 0) }}</td>
+              <td>{{ "%+.0f"|format(s.avg_growth or 0) }}</td>
+              <td><span class="badge badge-{{ s.level or 'chua_bat_dau' }}">{{ s.level_label }}</span></td>
+              <td class="row-actions">
+                <div class="row-menu">
+                  <button type="button" class="kebab" aria-haspopup="true" aria-expanded="false" aria-label="Thao tác {{ s.name }}">⋯</button>
+                  <div class="row-menu__list" hidden>
+                    <a href="/quan-tri/hoc-sinh/{{ s.id }}">Xem Q-Matrix cá nhân</a>
+                    <button type="button" data-edit
+                      data-id="{{ s.id }}"
+                      data-name="{{ s.name }}"
+                      data-code="{{ s.student_code or '' }}"
+                      data-class="{{ s.class_id or '' }}"
+                      data-username="{{ s.username }}">Sửa thông tin</button>
+                    <form method="post" action="/quan-tri/hoc-sinh/{{ s.id }}/mat-khau" data-confirm="Cấp mật khẩu mới cho {{ s.name }}? Mật khẩu hiện tại sẽ không dùng được nữa.">
+                      <button type="submit" class="menu-submit">Đổi mật khẩu cá nhân</button>
+                    </form>
+                    <form method="post" action="/quan-tri/hoc-sinh/{{ s.id }}/xoa" data-confirm="Xóa {{ s.name }} khỏi lớp? Nếu em đã có bài làm, tài khoản sẽ được giữ lại.">
+                      <button type="submit" class="menu-submit is-danger">Xóa</button>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="11">Không có học sinh khớp bộ lọc.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if pages > 1 %}
+      <nav class="pager" aria-label="Phân trang">
+        {% if page > 1 %}
+        <a class="btn btn-outline" href="/quan-tri/hoc-sinh?tab=danh-sach&amp;q={{ q }}&amp;lop={{ lop }}&amp;muc={{ muc }}&amp;trang={{ page - 1 }}">Trước</a>
+        {% endif %}
+        <span>Trang {{ page }} / {{ pages }}</span>
+        {% if page < pages %}
+        <a class="btn btn-outline" href="/quan-tri/hoc-sinh?tab=danh-sach&amp;q={{ q }}&amp;lop={{ lop }}&amp;muc={{ muc }}&amp;trang={{ page + 1 }}">Sau</a>
+        {% endif %}
+      </nav>
+      {% endif %}
+    </div>
+
+    <div class="tab-panel" role="tabpanel" {% if tab != 'nhap' %}hidden{% endif %}>
+      <h2>One-click import CSV</h2>
+      <p class="hint">Cột: Họ tên, Mã HS, Tài khoản (tuỳ chọn). Tải file mẫu để khớp form nhà trường — không cần tạo từng em.</p>
+      <form method="post" action="/quan-tri/hoc-sinh/nhap" enctype="multipart/form-data" class="import-card">
+        <label>Lớp
+          <select name="class_id">
+            <option value="">Chưa xếp lớp</option>
+            {% for c in classes %}
+            <option value="{{ c.id }}">{{ c.name }} · mã {{ c.join_code or "—" }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="import-row">
+          <label class="import-file">File CSV <input type="file" name="file" accept=".csv,text/csv" required /></label>
+          <a class="btn btn-outline" href="/quan-tri/hoc-sinh/mau.csv">Tải File Mẫu (Template)</a>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Nhập hàng loạt</button>
+      </form>
+    </div>
+
+    <div class="tab-panel" role="tabpanel" {% if tab != 'phong-may' %}hidden{% endif %}>
+      <h2>Mã vào lớp / Reset phòng máy</h2>
+      <p class="hint">Phòng máy quên mật khẩu: reset hàng loạt rồi phát CSV. Học sinh vào lớp bằng mã tham gia hoặc Canvas của trường.</p>
+      <div class="table-wrap">
+        <table class="grid lab-grid">
+          <thead><tr><th>Lớp</th><th>Giáo viên</th><th>Join code</th><th></th></tr></thead>
+          <tbody>
+            {% for c in classes %}
+            <tr>
+              <td>{{ c.name }}</td>
+              <td>{{ c.teacher or "—" }}</td>
+              <td><code>{{ c.join_code or "—" }}</code></td>
+              <td class="lab-actions">
+                <form method="post" action="/quan-tri/lop/ma">
+                  <input type="hidden" name="class_id" value="{{ c.id }}" />
+                  <button type="submit" class="btn btn-outline">Đổi mã</button>
+                </form>
+                <form method="post" action="/quan-tri/hoc-sinh/reset" data-confirm="Reset mật khẩu toàn bộ học sinh lớp {{ c.name }}? Thao tác không hoàn tác — hãy phát CSV mật khẩu mới ngay sau đó.">
+                  <input type="hidden" name="class_id" value="{{ c.id }}" />
+                  <button type="submit" class="btn btn-danger-outline">Reset mật khẩu lớp</button>
+                </form>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">Chưa có lớp.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if user.role == 'admin' and teachers %}
+      <form method="post" action="/quan-tri/lop/giao-vien" class="assign-card">
+        <label>Phân công giáo viên
+          <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+        </label>
+        <label>Giáo viên
+          <select name="teacher_id">{% for t in teachers %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Gán lớp</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<dialog id="add-student" class="mos-modal">
+  <form method="post" action="/quan-tri/hoc-sinh" class="modal-form">
+    <h2>Thêm tài khoản</h2>
+    <p class="hint">Dùng khi cần tạo một học sinh hoặc giáo viên ngoài file CSV.</p>
     <label>Tài khoản <input name="username" required autocomplete="off" /></label>
     <label>Họ tên <input name="name" required /></label>
     <label>Mật khẩu <input name="password" type="password" required /></label>
@@ -85,35 +223,109 @@
       </select>
     </label>
     {% endif %}
-    <button type="submit">Lưu vào PostgreSQL</button>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Hủy</button>
+      <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+    </div>
   </form>
-  <table class="grid">
-    <thead>
-      <tr>
-        <th>Mã HS</th><th>Họ tên</th><th>Tài khoản</th><th>Lớp</th>
-        <th>Tiến độ</th><th>Hoàn thành</th><th>Điểm TB</th><th>Tiến bộ</th><th>Đánh giá</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for s in roster %}
-      <tr>
-        <td>{{ s.student_code or "—" }}</td>
-        <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
-        <td>{{ s.username }}</td>
-        <td>{{ s.class_name or "Chưa xếp lớp" }}</td>
-        <td>
-          <div class="bar"><span style="width:{{ [s.completion_pct or 0, 100]|min }}%"></span></div>
-          {{ "%.0f"|format(s.completion_pct or 0) }}%
-        </td>
-        <td>{{ s.exercises_completed or 0 }}/{{ s.exercises_assigned or 0 }}</td>
-        <td>{{ "%.0f"|format(s.overall_score or 0) }}</td>
-        <td>{{ "%+.0f"|format(s.avg_growth or 0) }}</td>
-        <td><span class="badge badge-{{ s.level or 'chua_bat_dau' }}">{{ s.level_label }}</span></td>
-      </tr>
-      {% else %}
-      <tr><td colspan="9">Chưa có học sinh.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
+</dialog>
+
+<dialog id="edit-student" class="mos-modal">
+  <form method="post" action="/quan-tri/hoc-sinh/0/sua" class="modal-form" id="edit-student-form">
+    <h2>Sửa thông tin</h2>
+    <p class="hint" id="edit-username"></p>
+    <label>Họ tên <input name="name" required /></label>
+    <label>Mã HS <input name="student_code" /></label>
+    <label>Lớp
+      <select name="class_id">
+        <option value="">Chưa xếp lớp</option>
+        {% for c in classes %}
+        <option value="{{ c.id }}">{{ c.name }}{% if c.teacher %} · {{ c.teacher }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Mật khẩu mới <input name="password" type="password" placeholder="Để trống nếu giữ nguyên" /></label>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Hủy</button>
+      <button type="submit" class="btn btn-primary">Lưu thông tin</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="confirm-action" class="mos-modal">
+  <form method="dialog" class="modal-form">
+    <h2>Xác nhận</h2>
+    <p class="confirm-text">Bạn chắc chứ?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Hủy</button>
+      <button type="button" class="btn btn-danger-outline" data-confirm-yes>Đồng ý</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var addDlg = document.getElementById("add-student");
+  var editDlg = document.getElementById("edit-student");
+  var confirmDlg = document.getElementById("confirm-action");
+  var editForm = document.getElementById("edit-student-form");
+  var pendingForm = null;
+
+  document.querySelector("[data-open-add]") && document.querySelector("[data-open-add]").addEventListener("click", function () {
+    addDlg.showModal();
+  });
+  document.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var dlg = btn.closest("dialog");
+      if (dlg) dlg.close();
+    });
+  });
+  document.querySelectorAll(".kebab").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var menu = btn.parentElement.querySelector(".row-menu__list");
+      var open = menu.hidden;
+      document.querySelectorAll(".row-menu__list").forEach(function (m) { m.hidden = true; });
+      document.querySelectorAll(".kebab").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", String(open));
+    });
+  });
+  document.addEventListener("click", function () {
+    document.querySelectorAll(".row-menu__list").forEach(function (m) { m.hidden = true; });
+    document.querySelectorAll(".kebab").forEach(function (b) { b.setAttribute("aria-expanded", "false"); });
+  });
+  document.querySelectorAll("[data-edit]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      editForm.action = "/quan-tri/hoc-sinh/" + btn.getAttribute("data-id") + "/sua";
+      editForm.querySelector("[name=name]").value = btn.getAttribute("data-name") || "";
+      editForm.querySelector("[name=student_code]").value = btn.getAttribute("data-code") || "";
+      editForm.querySelector("[name=class_id]").value = btn.getAttribute("data-class") || "";
+      document.getElementById("edit-username").textContent = "Tài khoản: " + (btn.getAttribute("data-username") || "");
+      editDlg.showModal();
+    });
+  });
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      if (form.getAttribute("data-ok") === "1") return;
+      e.preventDefault();
+      pendingForm = form;
+      confirmDlg.querySelector(".confirm-text").textContent = form.getAttribute("data-confirm");
+      confirmDlg.showModal();
+    });
+  });
+  var yes = confirmDlg && confirmDlg.querySelector("[data-confirm-yes]");
+  if (yes) {
+    yes.addEventListener("click", function () {
+      if (!pendingForm) return;
+      pendingForm.setAttribute("data-ok", "1");
+      confirmDlg.close();
+      pendingForm.submit();
+    });
+  }
+  {% if error %}
+  addDlg.showModal();
+  {% endif %}
+})();
+</script>
 {% endblock %}

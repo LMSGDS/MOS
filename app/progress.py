@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.db import cursor
 
@@ -456,6 +456,7 @@ def student_skills(user_id: int, program: str = "word") -> list[dict]:
 def list_roster(class_id: int | None = None) -> list[dict]:
     sql = """
         SELECT u.id, u.username, u.name, u.student_code, u.role,
+               u.last_seen_at, u.last_client, u.created_at,
                c.id AS class_id, c.name AS class_name,
                e.overall_score, e.completion_pct, e.level, e.exercises_completed,
                e.exercises_assigned, e.exercises_mastered, e.avg_growth, e.summary
@@ -473,10 +474,30 @@ def list_roster(class_id: int | None = None) -> list[dict]:
     with cursor() as cur:
         cur.execute(sql, tuple(params))
         rows = cur.fetchall()
+    now = datetime.now(timezone.utc)
     out = []
     for row in rows:
         item = dict(row)
         item["level_label"] = LEVELS.get(item.get("level") or "chua_bat_dau")
+        seen = item.get("last_seen_at")
+        created = item.get("created_at")
+        if seen and getattr(seen, "tzinfo", None) is None:
+            seen = seen.replace(tzinfo=timezone.utc)
+        if created and getattr(created, "tzinfo", None) is None:
+            created = created.replace(tzinfo=timezone.utc)
+        online = bool(seen and now - seen <= timedelta(minutes=10))
+        item["online"] = online
+        stale = timedelta(days=7)
+        item["flag_inactive"] = bool(
+            (seen and now - seen > stale)
+            or (seen is None and created and now - created > stale)
+        )
+        if online and (item.get("last_client") or "") == "kulkul":
+            item["presence"] = "Đang luyện tập"
+        elif online:
+            item["presence"] = "Đang online"
+        else:
+            item["presence"] = "Đang offline"
         out.append(item)
     return out
 
