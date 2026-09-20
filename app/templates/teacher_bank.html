@@ -18,14 +18,18 @@
           <td>{{ e.program }}</td>
           <td>{{ e.counts.projects }} project · {{ e.counts.tasks }} task {% if e.counts.ok %}✓{% else %}!{% endif %}</td>
           <td>
-            <form method="post" action="/quan-tri/kho-de/giao" class="inline-row">
+            <form method="post" action="/quan-tri/kho-de/giao" class="assign-exam">
               <input type="hidden" name="exam_id" value="{{ e.id }}" />
-              <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
-              <label class="hint"><input type="checkbox" name="practice_mode" value="1" /> Practice_Mode</label>
-              <label class="hint"><input type="checkbox" name="lan_only" value="1" /> IP phòng máy</label>
-              <label class="hint">Mở <input type="datetime-local" name="opens_at" /></label>
-              <label class="hint">Đóng <input type="datetime-local" name="closes_at" /></label>
-              <button class="btn btn-primary" type="submit">Giao</button>
+              <div class="inline-row">
+                <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+                <label class="hint"><input type="checkbox" name="practice_mode" value="1" /> Practice_Mode</label>
+                <label class="hint"><input type="checkbox" name="lan_only" value="1" /> IP phòng máy</label>
+                <button class="btn btn-primary" type="submit">Giao</button>
+              </div>
+              <div class="inline-row">
+                <label class="hint">Mở <input type="datetime-local" name="opens_at" /></label>
+                <label class="hint">Đóng <input type="datetime-local" name="closes_at" /></label>
+              </div>
             </form>
           </td>
         </tr>

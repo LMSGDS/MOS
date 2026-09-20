@@ -1202,3 +1202,5 @@ body.student-app .ic-app-main { display: flex; flex-direction: column; min-heigh
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
+.assign-exam { display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
+.assign-exam .inline-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
