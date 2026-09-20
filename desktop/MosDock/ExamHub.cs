@@ -138,6 +138,7 @@ static class ExamHub
                 mode = ExamSession.Mode,
             });
             var attemptId = started.RootElement.GetProperty("attempt_id").GetString() ?? Guid.NewGuid().ToString("n");
+            ExamSession.BindBank(started.RootElement, ExamSession.Mode);
             var dir = Path.Combine(ExamSession.DataDir, "attempts", attemptId);
             Directory.CreateDirectory(dir);
             var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
@@ -176,6 +177,7 @@ static class ExamHub
         await LoadRubricAsync(chosen.Id, dir);
         ExamSession.Mode = local.Mode is "testing" ? "testing" : "training";
         ExamSession.Program = chosen.Program;
+        ExamSession.Bank = BankPayload.FromMode(ExamSession.Mode);
         BindSession(chosen, local.AttemptId, path);
         WriteMeta(dir);
         LocalExamStore.SaveCurrent(local.ProgressPct);
@@ -316,6 +318,7 @@ static class ExamHub
             await LoadRubricAsync(attempt.ProjectId, dir);
             ExamSession.Mode = attempt.Mode is "testing" ? "testing" : "training";
             ExamSession.Program = attempt.Program;
+            ExamSession.Bank = BankPayload.FromMode(ExamSession.Mode);
             BindSession(
                 string.IsNullOrWhiteSpace(chosen.Id)
                     ? new MosProject(attempt.ProjectId, attempt.Title, attempt.Program, "", filename, 1800, [], "")

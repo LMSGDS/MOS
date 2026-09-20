@@ -74,6 +74,10 @@ sealed class MainForm : Form
     readonly TextBox _detailAnalysis = new();
     readonly Label _detailHint = new();
     readonly System.Windows.Forms.Timer _keepWord = new();
+    readonly System.Windows.Forms.Timer _examClock = new() { Interval = 1000 };
+    int _clockTicks;
+    bool _forceSubmitting;
+    bool _focusPrompt;
     LocalAgent? _agent;
     string _state = "bottom";
     string _app = "word";
@@ -126,6 +130,8 @@ sealed class MainForm : Form
         BackColor = Ui.PageBg;
         Font = Ui.BodyFont;
         Ui.ApplyWindowIcon(this);
+        Deactivate += OnExamDeactivate;
+        _examClock.Tick += (_, _) => TickExamClock();
 
         BuildHeader();
         BuildHome();
@@ -235,7 +241,7 @@ sealed class MainForm : Form
 
     Button[] DockButtons() =>
     [
-        _dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint, _dockBack, _dockNext, _dockSave,
+        _dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint, _dockShare, _dockBack, _dockNext, _dockSave,
     ];
 
     void ApplyNavChrome(NavMetrics nav)
@@ -473,7 +479,7 @@ sealed class MainForm : Form
             _extraMenu.Show(_dockMenu, new Point(0, -4), ToolStripDropDownDirection.AboveRight);
         };
         _dockHint.Click += (_, _) => ToggleHelp();
-        _dockShare.Click += (_, _) => StepTask(1);
+        _dockShare.Click += (_, _) => ToggleMarkForReview();
         _dockBack.Click += (_, _) => StepTask(-1);
         _dockNext.Click += (_, _) => StepTask(1);
 
@@ -871,7 +877,7 @@ sealed class MainForm : Form
         _summaryFilter.DropDownStyle = ComboBoxStyle.DropDownList;
         _summaryFilter.Width = 148;
         _summaryFilter.Dock = DockStyle.Right;
-        _summaryFilter.Items.AddRange(["Tất cả", "Đã đạt", "Chưa đạt", "Chưa xác minh", "Chưa chấm"]);
+        _summaryFilter.Items.AddRange(["Tất cả", "Đã đạt", "Chưa đạt", "Chưa xác minh", "Chưa chấm", "Đánh dấu xem lại"]);
         _summaryFilter.SelectedIndex = 0;
         _summaryFilter.SelectedIndexChanged += (_, _) => FillSummary();
         _summarySearch.Dock = DockStyle.Fill;
@@ -924,7 +930,7 @@ sealed class MainForm : Form
         _summary.Controls.Add(_summaryTitle);
     }
 
-    bool HelpOpen => _helpVisible && ExamSession.Mode != "testing";
+    bool HelpOpen => _helpVisible && ExamSession.HintsAllowed;
 
     void CycleTypeSize()
     {
@@ -936,19 +942,44 @@ sealed class MainForm : Form
 
     void ToggleHelp()
     {
-        if (ExamSession.Mode == "testing")
+        if (!ExamSession.HintsAllowed)
         {
             return;
         }
 
         _tipsOpen = false;
-        _helpVisible = !_helpVisible;
+        ExamSession.HintTier = ExamSession.HintTier >= 3 ? 0 : ExamSession.HintTier + 1;
+        _helpVisible = ExamSession.HintTier > 0;
         if (_helpVisible)
         {
             var elapsed = Math.Max(0, (int)(DateTime.UtcNow - ExamSession.OpenedUtc).TotalMilliseconds);
-            _ = ExamHub.TrackAsync("hint", new { elapsed_ms = elapsed, source = "dock" });
+            _ = ExamHub.TrackAsync("hint", new
+            {
+                elapsed_ms = elapsed,
+                source = "dock",
+                tier = ExamSession.HintTier,
+                task_id = CurrentTaskId(),
+            });
+            if (ExamSession.HintTier == 2)
+            {
+                var work = CurrentWork();
+                var (_, word) = DockAndWord(work);
+                WordWindow.FlashRibbonHint(word);
+            }
         }
+
         RelayoutExam();
+        RenderHelp();
+    }
+
+    string CurrentTaskId()
+    {
+        if (_taskIndex >= 0 && _taskIndex < _tasks.Items.Count)
+        {
+            return _tasks.Items[_taskIndex].Tag as string ?? "";
+        }
+
+        return "";
     }
 
     void ShowTips(bool open)
@@ -1075,6 +1106,7 @@ sealed class MainForm : Form
                 "Chưa đạt" => status is "fail" or "error",
                 "Chưa xác minh" => status == "unverified",
                 "Chưa chấm" => string.IsNullOrWhiteSpace(status),
+                "Đánh dấu xem lại" => ExamSession.MarkedTasks.Contains(i),
                 _ => true,
             };
             if (!wanted)
@@ -1083,8 +1115,13 @@ sealed class MainForm : Form
             }
 
             var label = SkillReview.Label(status);
+            if (ExamSession.MarkedTasks.Contains(i))
+            {
+                label = "⚑ " + label;
+            }
+
             var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = i };
-            row.ForeColor = SkillReview.ColorOf(status);
+            row.ForeColor = ExamSession.MarkedTasks.Contains(i) ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status);
             if (i == _taskIndex)
             {
                 row.Selected = true;
@@ -1337,9 +1374,17 @@ sealed class MainForm : Form
 
         _taskIndex = Math.Clamp(_taskIndex, 0, criteria.Count - 1);
         var item = criteria[_taskIndex];
-        if (item.HelpSteps is { Count: > 0 })
+        var bankTiers = ExamSession.Bank.HintTiers(_taskIndex, ExamSession.ProjectId);
+        var steps = bankTiers.Length > 0 ? bankTiers : SkillReview.HintSteps(item).ToArray();
+        if (ExamSession.HintTier > 0 && ExamSession.HintTier <= steps.Length)
         {
-            SetHelpBody(item.HelpSteps, bodyPt);
+            var captions = new[] { "Gợi ý định vị", "Gợi ý thao tác (Ribbon)", "Giải pháp toàn phần" };
+            var cap = captions[Math.Clamp(ExamSession.HintTier - 1, 0, 2)];
+            SetHelpBody([cap + ": " + steps[ExamSession.HintTier - 1]], bodyPt);
+        }
+        else if (item.HelpSteps is { Count: > 0 } && ExamSession.HintTier == 0)
+        {
+            SetHelpBody(["Bấm Gợi ý để mở từng tầng (định vị → Ribbon → đáp án)."], bodyPt);
         }
         else
         {
@@ -1435,14 +1480,17 @@ sealed class MainForm : Form
 
         Ui.DockTips.SetToolTip(_dockHelp, "Help — mẹo giao diện, không mở hướng dẫn bài");
         Ui.DockTips.SetToolTip(_dockAaa, "Đổi cỡ chữ đề bài và hướng dẫn");
-        Ui.DockTips.SetToolTip(_dockHint, ExamSession.Mode == "testing"
+        Ui.DockTips.SetToolTip(_dockHint, !ExamSession.HintsAllowed
             ? "Thi không trợ giúp — hướng dẫn từng bước đã tắt"
-            : HelpOpen ? "Ẩn hướng dẫn bài" : "Hiện hướng dẫn bài");
+            : HelpOpen ? "Gợi ý tiếp theo (3 tầng)" : "Gợi ý định vị");
         Ui.DockTips.SetToolTip(_dockTasks, "Tổng hợp nhiệm vụ");
         Ui.DockTips.SetToolTip(_dockSave, "Lưu và thoát bài");
         Ui.DockTips.SetToolTip(_dockBack, "Nhiệm vụ trước");
         Ui.DockTips.SetToolTip(_dockNext, "Nhiệm vụ sau");
         Ui.DockTips.SetToolTip(_dockPos, "Gắn thanh bài thi: Top, Bottom hoặc Un-dock");
+        Ui.DockTips.SetToolTip(_dockShare, ExamSession.Bank.MarkForReview
+            ? "Đánh dấu xem lại (Mark for Review)"
+            : "Bỏ qua chấm, sang nhiệm vụ sau");
     }
 
     void ApplyExamChrome()
@@ -1492,11 +1540,11 @@ sealed class MainForm : Form
         _dockTasks.Visible = true;
         _dockHelp.Visible = true;
         _dockAaa.Visible = true;
-        _dockHint.Visible = ExamSession.Mode != "testing";
+        _dockHint.Visible = ExamSession.HintsAllowed;
         _dockCheck.Visible = false;
         _dockPin.Visible = false;
         _dockMenu.Visible = false;
-        _dockShare.Visible = false;
+        _dockShare.Visible = ExamSession.Bank.MarkForReview;
         RenderBrief();
         RenderHelp();
         HighlightDockIcons();
@@ -1794,21 +1842,27 @@ sealed class MainForm : Form
     void ShowExamUi()
     {
         _examTitle.Text = ExamSession.Rubric?.Title ?? ExamSession.ProjectTitle ?? "Bài MOS";
+        var caption = ExamSession.Bank.ProjectCaption(ExamSession.ProjectId);
         _examMeta.Text = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
-            + (ExamSession.Mode == "testing" ? " · điểm ẩn đến khi nộp" : " · có hướng dẫn và kiểm tra nhiệm vụ");
-        var train = ExamSession.Mode != "testing";
-        _dockHint.Visible = train;
+            + (string.IsNullOrWhiteSpace(caption) ? "" : " · " + caption)
+            + (ExamSession.HintsAllowed ? " · gợi ý 3 tầng, đồng hồ đếm tiến" : " · 50 phút, khóa gợi ý");
+        _dockHint.Visible = ExamSession.HintsAllowed;
         _helpVisible = false;
-        ExamSession.OpenedUtc = DateTime.UtcNow;
+        ExamSession.HintTier = 0;
+        if (ExamSession.Bank.ServerStartedUtc is null)
+        {
+            ExamSession.OpenedUtc = DateTime.UtcNow;
+        }
+
         _summaryOpen = false;
         ExamSession.LastCheck = [];
         ActionEvidence.Begin(ExamSession.AttemptId);
         WordActionProbe.Reset();
         _taskIndex = 0;
         _objTab = -1;
-        _examStatus.Text = train
-            ? "Help (?): mẹo giao diện. Bóng đèn: hướng dẫn bài. Danh sách: tổng hợp. Đĩa: lưu."
-            : "Thi không trợ giúp — không có hướng dẫn từng bước. Help (?) vẫn mở mẹo giao diện.";
+        _examStatus.Text = ExamSession.HintsAllowed
+            ? "Help (?): mẹo giao diện. Bóng đèn: gợi ý 3 tầng. Danh sách: tổng hợp. Đĩa: lưu."
+            : "Thi Certiport: không gợi ý. Cờ: đánh dấu xem lại. Hết giờ máy chủ tự nộp.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
             ? criteria.Select(c => (c.Id, Ui.StripMarks(string.IsNullOrWhiteSpace(c.Prompt) ? c.Id : c.Prompt))).ToList()
@@ -1835,6 +1889,9 @@ sealed class MainForm : Form
         }
 
         ShowPage(HubPage.Exam, "Bài thi");
+        _clockTicks = 0;
+        _examClock.Start();
+        TickExamClock();
     }
 
     async Task RunActionDemo()
@@ -1996,8 +2053,186 @@ sealed class MainForm : Form
 
     void SaveAndHome()
     {
+        _examClock.Stop();
         ExamHub.SaveInPlace(_app);
         ShowHome();
+    }
+
+    void ToggleMarkForReview()
+    {
+        if (!ExamSession.Bank.MarkForReview)
+        {
+            StepTask(1);
+            return;
+        }
+
+        var i = Math.Max(0, _taskIndex);
+        if (!ExamSession.MarkedTasks.Add(i))
+        {
+            ExamSession.MarkedTasks.Remove(i);
+        }
+
+        FillSummary();
+        HighlightObjectiveTabs();
+        _examStatus.Text = ExamSession.MarkedTasks.Contains(i)
+            ? "Đã đánh dấu nhiệm vụ " + (i + 1) + " để xem lại."
+            : "Bỏ đánh dấu nhiệm vụ " + (i + 1) + ".";
+    }
+
+    void TickExamClock()
+    {
+        if (_view != HubPage.Exam)
+        {
+            return;
+        }
+
+        var elapsed = DateTime.UtcNow - ExamSession.OpenedUtc;
+        if (elapsed < TimeSpan.Zero)
+        {
+            elapsed = TimeSpan.Zero;
+        }
+
+        var caption = ExamSession.Bank.ProjectCaption(ExamSession.ProjectId);
+        var prefix = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
+            + (string.IsNullOrWhiteSpace(caption) ? "" : " · " + caption);
+        if (ExamSession.Bank.ElapsedOnly || ExamSession.HintsAllowed)
+        {
+            _examMeta.Text = prefix + " · đã làm " + FormatClock(elapsed);
+        }
+        else
+        {
+            var limit = ExamSession.Bank.TimeLimitSec
+                ?? (ExamSession.Bank.DurationMinutes ?? 50) * 60;
+            var remain = ExamSession.Bank.RemainingSec
+                ?? Math.Max(0, limit - (int)elapsed.TotalSeconds);
+            remain = Math.Max(0, remain - (_clockTicks > 0 ? 0 : 0));
+            var shown = TimeSpan.FromSeconds(Math.Max(0, limit - (int)elapsed.TotalSeconds));
+            if (ExamSession.Bank.RemainingSec is int serverRemain)
+            {
+                shown = TimeSpan.FromSeconds(Math.Max(0, serverRemain - _clockTicks));
+            }
+
+            _examMeta.Text = prefix + " · còn " + FormatClock(shown);
+            if (shown <= TimeSpan.Zero && ExamSession.Bank.ForceSubmit)
+            {
+                _ = ForceSubmitExam();
+            }
+        }
+
+        _clockTicks++;
+        if (_clockTicks % 15 == 0)
+        {
+            _ = SyncExamClockAsync();
+        }
+    }
+
+    static string FormatClock(TimeSpan span)
+    {
+        var total = Math.Max(0, (int)span.TotalSeconds);
+        return $"{total / 60:00}:{total % 60:00}";
+    }
+
+    async Task SyncExamClockAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ExamSession.AttemptId))
+        {
+            return;
+        }
+
+        try
+        {
+            using var doc = await Portal.GetJsonAsync("/api/v1/attempts/" + ExamSession.AttemptId + "/clock");
+            var root = doc.RootElement;
+            if (root.TryGetProperty("remaining_sec", out var rem) && rem.TryGetInt32(out var left))
+            {
+                ExamSession.Bank.RemainingSec = left;
+                _clockTicks = 0;
+            }
+
+            if (root.TryGetProperty("force_submit", out var fs) && fs.ValueKind == JsonValueKind.True)
+            {
+                await ForceSubmitExam();
+            }
+        }
+        catch
+        {
+            // offline: keep local elapsed
+        }
+    }
+
+    async Task ForceSubmitExam()
+    {
+        if (_forceSubmitting || _view != HubPage.Exam)
+        {
+            return;
+        }
+
+        _forceSubmitting = true;
+        _examClock.Stop();
+        try
+        {
+            var (ok, msg) = await ExamHub.SubmitAsync(_app);
+            MessageBox.Show(
+                ok ? "Hết giờ — hệ thống đã thu bài.\n\n" + msg : "Hết giờ. " + msg,
+                "MOS-KulKul",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            ExamSession.ClearExam();
+            await ShowCompleted();
+        }
+        finally
+        {
+            _forceSubmitting = false;
+        }
+    }
+
+    void OnExamDeactivate(object? sender, EventArgs e)
+    {
+        if (_view != HubPage.Exam || !ExamSession.Bank.FocusLock || _forceSubmitting || _focusPrompt)
+        {
+            return;
+        }
+
+        BeginInvoke(() =>
+        {
+            if (_view != HubPage.Exam || !ExamSession.Bank.FocusLock || _focusPrompt)
+            {
+                return;
+            }
+
+            var fg = WordWindow.ForegroundWindow();
+            if (fg == Handle || WordWindow.IsOfficeOrDock(fg))
+            {
+                return;
+            }
+
+            ExamSession.FocusStrikes++;
+            _ = ExamHub.TrackAsync("focus_loss", new { n = ExamSession.FocusStrikes });
+            _focusPrompt = true;
+            try
+            {
+                if (ExamSession.FocusStrikes >= 3)
+                {
+                    MessageBox.Show(
+                        "Bạn đang vi phạm quy chế thi. Lần vi phạm thứ 3 — bài thi tự động hủy.",
+                        "MOS-KulKul",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                    _ = ForceSubmitExam();
+                    return;
+                }
+
+                MessageBox.Show(
+                    "Bạn đang vi phạm quy chế thi. Lần vi phạm thứ " + ExamSession.FocusStrikes + "/3.",
+                    "MOS-KulKul",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                _focusPrompt = false;
+            }
+        });
     }
 
     void OnPlaceRequest(string state, string? app = null, bool launch = false, string? file = null, bool compact = false)
@@ -2027,6 +2262,7 @@ sealed class MainForm : Form
         _docking = false;
         _compact = false;
         _keepWord.Stop();
+        _examClock.Stop();
         WordWindow.CancelPlace();
         _header.Visible = true;
         _body.Visible = true;
@@ -2277,6 +2513,11 @@ sealed class MainForm : Form
 
     (Rect Dock, Rect Word) DockAndWord(Rect work)
     {
+        if (ExamSession.Bank.CertiportSplit)
+        {
+            return LayoutMath.CertiportSplit(work);
+        }
+
         var (dock, _) = LayoutMath.Compute(work, _state, _compact, thickness: _navThickness);
         if (_compact && HelpOpen)
         {

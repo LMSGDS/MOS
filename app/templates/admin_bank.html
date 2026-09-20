@@ -49,7 +49,14 @@
         </aside>
         <div>
           <h2 style="font-size:18px">Atomic Tasks</h2>
-          <p class="hint">Practice_Mode: gợi ý 3 tầng, không đếm ngược. File luyện tập lưu trên server (không MinIO).</p>
+          <p class="hint">Practice_Mode: gợi ý 3 tầng, không đếm ngược. File luyện tập lưu trên server (không MinIO). Kéo-thả .docx/.xlsx/.pptx vào khung dưới — hệ thống băm SHA-256 để chặn file trùng.</p>
+          {% if error == 'dup' %}<p class="alert">File trùng (cùng hash) — không lưu bản sao.</p>{% endif %}
+          <form method="post" action="/quan-tri/ngan-hang/cay/tep" enctype="multipart/form-data" id="tree-drop" class="drop-zone" data-obj="{{ objective_id }}">
+            <input type="hidden" name="objective_id" value="{{ objective_id }}" />
+            <input type="file" name="tep" id="tree-file" accept=".docx,.xlsx,.pptx" {% if not objective_id %}disabled{% endif %} />
+            <p>{% if objective_id %}Kéo file Study Guide thả vào đây, hoặc chọn tệp.{% else %}Chọn một nhánh Objective bên trái rồi kéo file vào đây.{% endif %}</p>
+            <button class="btn btn-outline" type="submit" {% if not objective_id %}disabled{% endif %}>Upload vào Objective</button>
+          </form>
           <table class="grid">
             <thead><tr><th>Nhiệm vụ</th><th>Objective</th><th>Trọng số</th><th>Trạng thái</th><th>Dự án</th><th></th></tr></thead>
             <tbody>
@@ -133,9 +140,11 @@
       <div class="bank-split">
         <aside>
           <h2 style="font-size:16px">Kho dự án</h2>
+          <label class="hint">Tìm kiếm <input id="project-search" placeholder="Tên project" /></label>
+          <label class="hint"><input type="checkbox" id="filter-hard" /> Lọc các Project có độ khó cao</label>
           <ul class="project-bank" id="project-bank">
             {% for p in projects %}
-            <li draggable="true" data-id="{{ p.id }}" data-tasks="{{ p.task_n }}">{{ p.name }} <span class="badge">{{ p.task_n }} task</span></li>
+            <li draggable="true" data-id="{{ p.id }}" data-tasks="{{ p.task_n }}" data-hard="{{ 1 if p.high_difficulty else 0 }}" data-name="{{ p.name|lower }}">{{ p.name }} <span class="badge">{{ p.task_n }} task</span>{% if p.high_difficulty %} <span class="badge hard">Khó</span>{% endif %}</li>
             {% endfor %}
           </ul>
         </aside>
@@ -304,6 +313,35 @@
   canvas.addEventListener("dblclick", function (e) {
     var li = e.target.closest("li");
     if (li) { li.remove(); sync(); }
+  });
+  function filterBank() {
+    var q = (document.getElementById("project-search").value || "").toLowerCase();
+    var hard = document.getElementById("filter-hard").checked;
+    bank.querySelectorAll("li").forEach(function (li) {
+      var name = li.getAttribute("data-name") || "";
+      var isHard = li.getAttribute("data-hard") === "1";
+      li.hidden = (q && name.indexOf(q) < 0) || (hard && !isHard);
+    });
+  }
+  var search = document.getElementById("project-search");
+  var hard = document.getElementById("filter-hard");
+  if (search) search.addEventListener("input", filterBank);
+  if (hard) hard.addEventListener("change", filterBank);
+})();
+(function () {
+  var zone = document.getElementById("tree-drop");
+  if (!zone) return;
+  var input = document.getElementById("tree-file");
+  ["dragenter", "dragover"].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add("over"); });
+  });
+  zone.addEventListener("dragleave", function () { zone.classList.remove("over"); });
+  zone.addEventListener("drop", function (e) {
+    e.preventDefault();
+    zone.classList.remove("over");
+    if (!zone.getAttribute("data-obj") || !e.dataTransfer.files.length) return;
+    input.files = e.dataTransfer.files;
+    zone.submit();
   });
 })();
 </script>

@@ -192,6 +192,11 @@ static class Portal
             headers["X-MOS-Artifact-SHA256"] = LocalExamStore.Sha256File(filePath);
         }
 
+        if (!string.IsNullOrWhiteSpace(ExamSession.Bank.VersionHash))
+        {
+            headers["X-MOS-Bank-Hash"] = ExamSession.Bank.VersionHash;
+        }
+
         return headers;
     }
 

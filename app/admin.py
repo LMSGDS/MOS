@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse,
 from fastapi.templating import Jinja2Templates
 
 from app.accounts import create_account, remove_student, update_account
-from app.assign import LAN_DEFAULT, configure_assignment, list_configured
+from app.assign import LAN_DEFAULT, configure_assignment, list_configured, parse_window
 from app.db import cursor
 from app.roles import is_admin, is_staff, persona
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
@@ -20,6 +20,7 @@ from app.bank import (
     flag_issue,
     get_exam,
     get_task,
+    ingest_objective_file,
     knowledge_tree,
     leaf_objectives,
     list_exams,
@@ -35,6 +36,7 @@ from app.bank import (
     set_exam_status,
     set_task_status,
     store_practice_file,
+    student_certiport_card,
 )
 from app.superadmin import (
     adoption_series,
@@ -807,8 +809,34 @@ async def admin_bank_upload(request: Request, task_id: str, tep: UploadFile = Fi
     data = await tep.read()
     if not data or len(data) > 12 * 1024 * 1024:
         return RedirectResponse("/quan-tri/ngan-hang?tab=cay&loi=file", status_code=303)
-    store_practice_file(task_id, tep.filename or "starter.docx", data)
+    try:
+        store_practice_file(task_id, tep.filename or "starter.docx", data)
+    except ValueError:
+        return RedirectResponse("/quan-tri/ngan-hang?tab=cay&loi=dup", status_code=303)
     return RedirectResponse(f"/quan-tri/ngan-hang?tab=cay&ok=file&task={task_id}", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/cay/tep")
+async def admin_bank_tree_drop(
+    request: Request,
+    objective_id: str = Form(...),
+    tep: UploadFile = File(...),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    data = await tep.read()
+    if not data or len(data) > 12 * 1024 * 1024:
+        return RedirectResponse(
+            f"/quan-tri/ngan-hang?tab=cay&obj={objective_id}&loi=file", status_code=303
+        )
+    try:
+        ingest_objective_file(objective_id, tep.filename or "starter.docx", data, user_id=user.get("id"))
+    except ValueError:
+        return RedirectResponse(
+            f"/quan-tri/ngan-hang?tab=cay&obj={objective_id}&loi=dup", status_code=303
+        )
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=cay&obj={objective_id}&ok=file", status_code=303)
 
 
 @router.post("/quan-tri/ngan-hang/de")
@@ -932,6 +960,8 @@ def teacher_assign_exam(
     class_id: str = Form(...),
     lan_only: str = Form(""),
     practice_mode: str = Form(""),
+    opens_at: str = Form(""),
+    closes_at: str = Form(""),
 ):
     user = _session_user(request)
     if not user or not _staff(user):
@@ -942,6 +972,8 @@ def teacher_assign_exam(
     cid = int(class_id) if str(class_id).isdigit() else 0
     mock = exam.get("exam_type") == "CERTIFICATION_MOCK" and practice_mode != "1"
     ip_allow = (get_setting("exam_ip_allow") or LAN_DEFAULT) if lan_only == "1" or mock else ""
+    opens = parse_window(opens_at)
+    closes = parse_window(closes_at)
     for block in exam.get("projects") or []:
         src = block.get("source_project_id")
         if not src:
@@ -954,6 +986,8 @@ def teacher_assign_exam(
             time_limit_sec=(exam.get("duration_minutes") or 50) * 60 if mock else None,
             ip_allow=ip_allow,
             exam_id=exam["id"],
+            opens_at=opens,
+            closes_at=closes,
         )
     return RedirectResponse("/quan-tri/bai-tap?ok=exam", status_code=303)
 
@@ -1338,6 +1372,7 @@ def _student_page(request: Request, view: str):
                 "done": done,
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),
+                "certiport": student_certiport_card(user_id),
             },
         ),
     )

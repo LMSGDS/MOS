@@ -8,6 +8,7 @@ import hashlib
 import json
 import random
 import secrets
+from datetime import datetime, timezone
 from itertools import combinations
 from pathlib import Path
 
@@ -507,8 +508,15 @@ def store_practice_file(task_id: str, filename: str, data: bytes) -> str:
     dest_dir.mkdir(parents=True, exist_ok=True)
     safe = Path(filename).name or "starter.docx"
     dest = dest_dir / safe
-    dest.write_bytes(data)
     digest = hashlib.sha256(data).hexdigest()
+    with cursor() as cur:
+        cur.execute(
+            "SELECT id FROM bank_tasks WHERE file_sha256 = %s AND id <> %s",
+            (digest, task_id),
+        )
+        if cur.fetchone():
+            raise ValueError("duplicate")
+    dest.write_bytes(data)
     with cursor() as cur:
         cur.execute(
             "UPDATE bank_tasks SET resource_file = %s, file_sha256 = %s WHERE id = %s",
@@ -517,11 +525,32 @@ def store_practice_file(task_id: str, filename: str, data: bytes) -> str:
     return digest
 
 
+def ingest_objective_file(objective_id: str, filename: str, data: bytes, user_id: int | None = None) -> str:
+    """Kéo-thả file Study Guide vào nhánh Objective đang chọn."""
+    digest = hashlib.sha256(data).hexdigest()
+    with cursor() as cur:
+        cur.execute("SELECT id FROM bank_tasks WHERE file_sha256 = %s", (digest,))
+        hit = cur.fetchone()
+        if hit:
+            raise ValueError("duplicate")
+    safe = Path(filename).name or "starter.docx"
+    tid = save_task(
+        task_id=None,
+        objective_id=objective_id,
+        instruction=f"Bài luyện tập {safe}",
+        user_id=user_id,
+    )
+    store_practice_file(tid, safe, data)
+    return tid
+
+
 def list_projects(*, program: str = "", published_only: bool = False) -> list[dict]:
     sql = """
-        SELECT p.*, COUNT(pt.task_id) AS task_n
+        SELECT p.*, COUNT(pt.task_id) AS task_n,
+               BOOL_OR(COALESCE(t.high_difficulty, FALSE)) AS high_difficulty
         FROM bank_projects p
         LEFT JOIN bank_project_tasks pt ON pt.project_id = p.id
+        LEFT JOIN bank_tasks t ON t.id = pt.task_id
         WHERE 1=1
     """
     params: list = []
@@ -1141,7 +1170,9 @@ def hard_stop_next(student_id: int, task_id: str) -> dict | None:
     }
 
 
-def unlock_remedial(student_id: int, attempt_id: str, scaled: int | None = None) -> dict:
+def unlock_remedial(
+    student_id: int, attempt_id: str, scaled: int | None = None, *, assign: bool = True
+) -> dict:
     """Traceback Tầng 3→1: sai ≥3 task cùng Objective thì mở khóa luyện tập bổ trợ."""
     with cursor() as cur:
         cur.execute(
@@ -1173,7 +1204,7 @@ def unlock_remedial(student_id: int, attempt_id: str, scaled: int | None = None)
             if scaled_row and scaled_row.get("scaled_1000") is not None:
                 scaled = int(scaled_row["scaled_1000"])
     unlocked: list[str] = []
-    if weak and enr:
+    if weak and enr and assign:
         try:
             unlocked = assign_objective_drill(int(enr["class_id"]), weak[0]["objective_id"])
         except ValueError:
@@ -1257,3 +1288,165 @@ def exam_hash_ok(exam_id: str, client_hash: str) -> bool:
         return True
     stored = row.get("version_hash") or ""
     return not stored or stored == client_hash
+
+
+def _telemetry_events(attempt_id: str) -> list[dict]:
+    with cursor() as cur:
+        cur.execute(
+            "SELECT skill, action, detail FROM telemetry WHERE attempt_id = %s",
+            (attempt_id,),
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+    out = []
+    for row in rows:
+        detail = row.get("detail")
+        if isinstance(detail, str):
+            try:
+                detail = json.loads(detail)
+            except Exception:
+                pass
+        out.append({"skill": row.get("skill") or "", "action": row.get("action") or "", "detail": detail})
+    return out
+
+
+def is_destructive(original: Path | None, submitted: Path | None) -> bool:
+    """Xóa nội dung gốc của đề → cờ Destructive_Action."""
+    if not original or not submitted or not Path(original).is_file() or not Path(submitted).is_file():
+        return False
+    from app.scoring import extract_text
+
+    orig = extract_text(Path(original))
+    sub = extract_text(Path(submitted))
+    if len(orig) < 80:
+        return False
+    o_tokens = set(orig.lower().split())
+    s_tokens = set(sub.lower().split())
+    if not o_tokens:
+        return False
+    keep = len(o_tokens & s_tokens) / len(o_tokens)
+    return keep < 0.55 and len(sub) < 0.7 * len(orig)
+
+
+def final_state_matches(path: Path | None, final: dict) -> bool:
+    if not path or not Path(path).is_file() or not isinstance(final, dict) or not final:
+        return False
+    from app.scoring import extract_text
+
+    blob = extract_text(Path(path)).lower()
+    needles: list[str] = []
+    for key in ("contains", "contains_text", "theme", "xml", "value"):
+        val = final.get(key)
+        if isinstance(val, str) and val.strip():
+            needles.append(val.lower())
+        elif isinstance(val, list):
+            needles.extend(str(x).lower() for x in val if str(x).strip())
+    if not needles:
+        needles = [str(v).lower() for v in final.values() if isinstance(v, str) and len(str(v)) > 2]
+    return bool(needles) and all(n in blob for n in needles[:4])
+
+
+def apply_q_matrix_engine(attempt_id: str, scored: dict | None, submitted_path: Path | None = None) -> dict:
+    """Valid_Paths (telemetry) + Final State (OpenXML) + destructive penalty."""
+    data = dict(scored or {})
+    items = data.get("criteria") or data.get("results") or []
+    if not isinstance(items, list) or not items:
+        return data
+    with cursor() as cur:
+        cur.execute("SELECT id, project_id, mode FROM attempts WHERE id = %s", (attempt_id,))
+        att = cur.fetchone()
+        orig = None
+        if att:
+            cur.execute("SELECT file_path FROM projects WHERE id = %s", (att["project_id"],))
+            prow = cur.fetchone()
+            orig = Path(prow["file_path"]) if prow and prow.get("file_path") else None
+    if not att:
+        return data
+    events = _telemetry_events(attempt_id)
+    destructive = is_destructive(orig, Path(submitted_path) if submitted_path else None)
+    data["destructive_action"] = destructive
+    submit = Path(submitted_path) if submitted_path else None
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("criterion_id") or item.get("id") or "")
+        if not cid:
+            continue
+        task = get_task(f"bt-{att['project_id']}-{cid}") or get_task(cid)
+        rules = (task or {}).get("q_matrix_rules") if task else {}
+        if not isinstance(rules, dict):
+            rules = {}
+        paths = rules.get("valid_paths") or []
+        possible = float(item.get("possible") or 0)
+        if item.get("status") != "pass" and paths and telemetry_hits_path(events, paths):
+            item["status"] = "pass"
+            item["earned"] = possible or float(item.get("earned") or 0)
+            item["reason_code"] = "valid_path"
+        final = rules.get("final_state") or {}
+        if item.get("status") != "pass" and final_state_matches(submit, final if isinstance(final, dict) else {}):
+            item["status"] = "pass"
+            item["earned"] = possible or float(item.get("earned") or 0)
+            item["reason_code"] = "final_state"
+    if destructive:
+        factor = 0.5 if att["mode"] == "testing" else 0.8
+        data["destructive_penalty"] = round(1 - factor, 2)
+        for item in items:
+            if isinstance(item, dict):
+                item["earned"] = round(float(item.get("earned") or 0) * factor, 2)
+                item["destructive"] = True
+    return data
+
+
+def attempt_clock(attempt: dict) -> dict:
+    created = attempt.get("created_at") or attempt.get("started_at")
+    if isinstance(created, str):
+        try:
+            created = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        except ValueError:
+            created = None
+    if isinstance(created, datetime) and created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    elapsed = int((now - created).total_seconds()) if isinstance(created, datetime) else 0
+    bank = session_for_project(str(attempt.get("project_id") or ""), attempt.get("mode") or "training")
+    duration = None
+    if not bank.get("elapsed_only"):
+        duration = int(bank.get("duration_minutes") or EXAM_MINUTES) * 60
+        cfg_limit = attempt.get("time_limit_sec")
+        if cfg_limit:
+            duration = int(cfg_limit)
+    remaining = None if duration is None else max(0, duration - max(0, elapsed))
+    return {
+        "started_at": created.isoformat() if isinstance(created, datetime) else None,
+        "elapsed_sec": max(0, elapsed),
+        "duration_sec": duration,
+        "remaining_sec": remaining,
+        "elapsed_only": bool(bank.get("elapsed_only")),
+        "force_submit": bool(bank.get("force_submit")) and remaining == 0,
+        "focus_lock": bool(bank.get("focus_lock")),
+        "cut_score": CUT_SCORE,
+    }
+
+
+def student_certiport_card(student_id: int) -> dict:
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT attempt_id, scaled_1000
+            FROM student_task_results
+            WHERE student_id = %s AND scaled_1000 IS NOT NULL
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (student_id,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return {}
+    scaled = int(row["scaled_1000"])
+    udl = unlock_remedial(student_id, row["attempt_id"], scaled=scaled, assign=False)
+    return {
+        "scaled_1000": scaled,
+        "passed": passed(scaled),
+        "badge": "PASS" if passed(scaled) else "FAIL",
+        "udl_message": udl.get("udl_message") or "",
+        "cut_score": CUT_SCORE,
+    }
