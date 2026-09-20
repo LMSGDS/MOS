@@ -128,10 +128,11 @@ def test_admin_dashboard_staff_only(client):
     teacher.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"})
     page = teacher.get("/quan-tri")
     assert page.status_code == 200
-    assert "Trung tâm chỉ huy MOS" in page.text
+    assert "Bảng tin" in page.text
     assert "10A1" in page.text
     assert "Học sinh" in page.text
-    assert "Bằng chứng thao tác" in page.text
+    assert "Bằng chứng thao tác" not in page.text
+    assert "Cấu hình hệ thống" not in page.text
 
 
 def test_openxml_scoring_reads_sample_docx(pg):
