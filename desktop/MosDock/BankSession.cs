@@ -205,7 +205,7 @@ sealed class BankPayload
             idx = 0;
         }
 
-        return $"Project {idx + 1} of {Projects.Count}";
+        return $"Project {idx + 1} / {Projects.Count}";
     }
 
     static bool GetBool(JsonElement el, string name, bool fallback)

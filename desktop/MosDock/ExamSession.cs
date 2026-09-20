@@ -21,6 +21,8 @@ static class ExamSession
     public static BankPayload Bank { get; set; } = BankPayload.FromMode("training");
     public static int FocusStrikes { get; set; }
     public static HashSet<ReviewMark> MarkedTasks { get; } = [];
+    public static HashSet<ReviewMark> CompletedTasks { get; } = [];
+    public static HashSet<ReviewMark> ViewedTasks { get; } = [];
     public static int HintTier { get; set; }
     public static string HardStopReason { get; set; } = "";
 
@@ -77,11 +79,22 @@ static class ExamSession
         {
             FocusStrikes = 0;
             MarkedTasks.Clear();
+            CompletedTasks.Clear();
+            ViewedTasks.Clear();
         }
     }
 
     public static bool IsMarked(string? projectId, int taskIndex) =>
         MarkedTasks.Contains(new ReviewMark(projectId ?? "", taskIndex));
+
+    public static bool IsCompleted(string? projectId, int taskIndex) =>
+        CompletedTasks.Contains(new ReviewMark(projectId ?? "", taskIndex));
+
+    public static bool IsViewed(string? projectId, int taskIndex) =>
+        ViewedTasks.Contains(new ReviewMark(projectId ?? "", taskIndex));
+
+    public static void MarkViewed(string? projectId, int taskIndex) =>
+        ViewedTasks.Add(new ReviewMark(projectId ?? "", taskIndex));
 
     public static bool ToggleMark(string? projectId, int taskIndex)
     {
@@ -89,6 +102,18 @@ static class ExamSession
         if (!MarkedTasks.Add(mark))
         {
             MarkedTasks.Remove(mark);
+            return false;
+        }
+
+        return true;
+    }
+
+    public static bool ToggleComplete(string? projectId, int taskIndex)
+    {
+        var mark = new ReviewMark(projectId ?? "", taskIndex);
+        if (!CompletedTasks.Add(mark))
+        {
+            CompletedTasks.Remove(mark);
             return false;
         }
 
@@ -111,6 +136,8 @@ static class ExamSession
         FocusStrikes = 0;
         HardStopReason = "";
         MarkedTasks.Clear();
+        CompletedTasks.Clear();
+        ViewedTasks.Clear();
         ActionEvidence.Clear();
         WordActionProbe.Reset();
     }
