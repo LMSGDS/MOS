@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-2-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 2.1 — Insert slides",
+  "program": "powerpoint",
+  "objective": "2.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P21-S01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Tạo bài từ đề cương Word — ít nhất 4 slide.",
+      "predicate": {
+        "type": "slide_count",
+        "min": 4
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Home** > **New Slide** > **Slides from Outline**.",
+        "Chọn **PowerPoint_2-1a.docx**.",
+        "Giữ heading thành slide."
+      ]
+    },
+    {
+      "id": "P21-T01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Có tiêu đề Vacation Options từ outline.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Vacation Options"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở outline **PowerPoint_2-1a.docx** kèm theo.",
+        "**Home** > **New Slide** > **Slides from Outline**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

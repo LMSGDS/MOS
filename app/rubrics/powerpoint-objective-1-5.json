@@ -1,0 +1,64 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-1-5",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 1.5 — Prepare presentations for collaboration",
+  "program": "powerpoint",
+  "objective": "1.5",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P15-C01",
+      "objective": "1.5",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Đặt Status = Final sau khi inspect.",
+      "predicate": {
+        "type": "core_property",
+        "name": "status",
+        "text": "Final"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**File** > **Info** > **Properties**.",
+        "Inspect Document nếu đề yêu cầu.",
+        "Status = **Final**."
+      ]
+    },
+    {
+      "id": "P15-C02",
+      "objective": "1.5",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Gỡ Title cũ khỏi Properties.",
+      "predicate": {
+        "type": "core_empty",
+        "name": "title"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Advanced Properties.",
+        "Xóa **Title**.",
+        "Lưu."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-5-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 5.2 — Animate slide content",
+  "program": "powerpoint",
+  "objective": "5.2",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P52-A01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Gắn animation cho nội dung slide.",
+      "predicate": {
+        "type": "ppt_anim_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn đối tượng.",
+        "**Animations**.",
+        "Thêm Entrance / Emphasis."
+      ]
+    },
+    {
+      "id": "P52-A02",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Có ít nhất một hiệu ứng.",
+      "predicate": {
+        "type": "ppt_anim_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Animation Pane**.",
+        "Phải có dòng hiệu ứng.",
+        "Lưu."
+      ]
+    }
+  ]
+}

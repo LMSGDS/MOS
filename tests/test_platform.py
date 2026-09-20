@@ -90,6 +90,29 @@ def test_projects_download_attempt_telemetry_submit(client):
     blob = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers)
     assert blob.status_code == 200
     assert blob.content[:2] == b"PK"
+    ppt = client.get("/api/v1/projects", headers=headers, params={"program": "powerpoint"}).json()
+    ppt_ids = [p["id"] for p in ppt["projects"]]
+    assert "powerpoint-objective-1-1" in ppt_ids
+    assert "powerpoint-objective-2-1" in ppt_ids
+    assert "powerpoint-objective-5-3" in ppt_ids
+    deck = client.get("/api/v1/projects/powerpoint-objective-1-1/file", headers=headers)
+    assert deck.status_code == 200
+    assert deck.content[:2] == b"PK"
+    manifest = client.get("/api/v1/projects/powerpoint-objective-2-1/manifest", headers=headers).json()
+    assert "PowerPoint_2-1a.docx" in (manifest.get("extras") or [])
+    outline = client.get(
+        "/api/v1/projects/powerpoint-objective-2-1/file",
+        headers=headers,
+        params={"kind": "extra", "name": "PowerPoint_2-1a.docx"},
+    )
+    assert outline.status_code == 200
+    assert outline.content[:2] == b"PK"
+    denied_extra = client.get(
+        "/api/v1/projects/powerpoint-objective-2-1/file",
+        headers=headers,
+        params={"kind": "extra", "name": "../secret.docx"},
+    )
+    assert denied_extra.status_code == 404
     started = client.post(
         "/api/v1/attempts",
         headers=headers,

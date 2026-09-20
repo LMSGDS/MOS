@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-2-1b",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 2.1 — Insert slides from a Word outline",
+  "program": "powerpoint",
+  "objective": "2.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P21B-S01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Thêm slide Winter / Wonders.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Winter"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Home** > **New Slide**.",
+        "Chèn slide từ bài khác.",
+        "Giữ tiêu đề mùa."
+      ]
+    },
+    {
+      "id": "P21B-S02",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Bài có ít nhất 8 slide.",
+      "predicate": {
+        "type": "slide_count",
+        "min": 8
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chèn slide còn thiếu từ **New Slide**.",
+        "Không xóa **Title Slide**.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "P21B-T01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Có chữ Wonders.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Wonders"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Nhập hoặc chèn slide **Winter Wonders**.",
+        "Kiểm tra **Thumbnail**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-1-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 1.4 — Configure and present slideshows",
+  "program": "powerpoint",
+  "objective": "1.4",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P14-C01",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Tạo Custom Show tên Managers.",
+      "predicate": {
+        "type": "custom_show",
+        "name": "Managers"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Slide Show** > **Custom Slide Show**.",
+        "Bấm **New**.",
+        "Đặt tên **Managers** rồi chọn slide."
+      ]
+    },
+    {
+      "id": "P14-C02",
+      "objective": "1.4",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Custom Show Managers còn trong tệp.",
+      "predicate": {
+        "type": "custom_show",
+        "name": "Managers"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở lại **Custom Slide Show**.",
+        "Phải thấy **Managers**.",
+        "Lưu bài."
+      ]
+    }
+  ]
+}

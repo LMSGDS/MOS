@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-3-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 3.2 — Insert links",
+  "program": "powerpoint",
+  "objective": "3.2",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P32-S01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Thêm slide Summary.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Summary"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**New Slide**.",
+        "Đặt tiêu đề **Summary**.",
+        "Thêm liên kết tới slide này."
+      ]
+    },
+    {
+      "id": "P32-H01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Bài có ít nhất 9 slide (thêm Summary).",
+      "predicate": {
+        "type": "slide_count",
+        "min": 9
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm slide **Summary**.",
+        "**Insert** > **Link** tới slide đó.",
+        "Lưu."
+      ]
+    },
+    {
+      "id": "P32-G01",
+      "objective": "3.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Có section Overview.",
+      "predicate": {
+        "type": "section_named",
+        "name": "Overview"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Slide Sorter.",
+        "Add Section **Overview**.",
+        "Lưu."
+      ]
+    }
+  ]
+}

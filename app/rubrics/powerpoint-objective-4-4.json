@@ -1,0 +1,61 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-4-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 4.4 — Insert and modify 3D models",
+  "program": "powerpoint",
+  "objective": "4.4",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P44-M01",
+      "objective": "4.4",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Chèn 3D model PowerPoint_4-4.",
+      "predicate": {
+        "type": "has_3d"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **3D Models** > **This Device**.",
+        "Chọn file **PowerPoint_4-4.3mf**.",
+        "Đặt trên slide."
+      ]
+    },
+    {
+      "id": "P44-M02",
+      "objective": "4.4",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Model 3D còn trong tệp.",
+      "predicate": {
+        "type": "has_3d"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra slide **Furry Felines**.",
+        "Model **3D** phải còn.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

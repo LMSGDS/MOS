@@ -20,11 +20,16 @@ def results_file(project_id: str) -> Path | None:
     folder = FIXTURES / project_id
     if not folder.is_dir():
         return None
-    tail = project_id.removeprefix("word-objective-")
-    named = folder / f"Word_{tail}_results.docx"
-    if named.is_file():
-        return named
-    hits = sorted(folder.glob("*_results.docx"))
+    named_pairs = (
+        ("word-objective-", "Word", "docx"),
+        ("powerpoint-objective-", "PowerPoint", "pptx"),
+    )
+    for prefix, stem, ext in named_pairs:
+        if project_id.startswith(prefix):
+            named = folder / f"{stem}_{project_id.removeprefix(prefix)}_results.{ext}"
+            if named.is_file():
+                return named
+    hits = sorted(folder.glob("*_results.docx")) + sorted(folder.glob("*_results.pptx"))
     return hits[0] if hits else None
 
 ACTION_NAME = {

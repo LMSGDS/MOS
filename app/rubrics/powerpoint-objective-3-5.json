@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-3-5",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 3.5 — Order and group objects on slides",
+  "program": "powerpoint",
+  "objective": "3.5",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P35-O01",
+      "objective": "3.5",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Đưa Sleep lên trước Family.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Sleep Nature Family"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Selection Pane**.",
+        "Kéo thứ tự đối tượng.",
+        "Sleep đứng trước Family."
+      ]
+    },
+    {
+      "id": "P35-O02",
+      "objective": "3.5",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Thứ tự Sleep → Nature → Family.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Sleep Nature Family"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **Selection Pane** từ trên xuống.",
+        "Thứ tự **Sleep**, **Nature**, **Family**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

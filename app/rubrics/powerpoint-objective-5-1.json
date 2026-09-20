@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-5-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 5.1 — Apply and configure slide transitions",
+  "program": "powerpoint",
+  "objective": "5.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P51-R01",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Áp transition Cover.",
+      "predicate": {
+        "type": "transition_named",
+        "name": "cover"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn tất cả slide.",
+        "**Transitions**.",
+        "Chọn **Cover**."
+      ]
+    },
+    {
+      "id": "P51-R02",
+      "objective": "5.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Cover còn trên các slide.",
+      "predicate": {
+        "type": "transition_named",
+        "name": "cover"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở tab **Transitions**.",
+        "Phải thấy Cover.",
+        "Lưu."
+      ]
+    }
+  ]
+}

@@ -15,6 +15,7 @@ from app.auth import authenticate
 from app.db import cursor
 from app.demo_all import results_file
 from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
+from app.project_files import project_extra_files, resolve_extra
 from app.programs import normalize
 from app.progress import record_attempt_event
 from app.sync import (
@@ -31,7 +32,7 @@ from app.tokens import issue
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "data" / "results"
-MAX_UPLOAD = 20 * 1024 * 1024
+MAX_UPLOAD = 80 * 1024 * 1024
 router = APIRouter(prefix="/api/v1")
 
 
@@ -515,6 +516,7 @@ def v1_project_manifest(request: Request, project_id: str):
         "capabilities": rubric.get("capabilities") or [],
         "criteria": _public_criteria(rubric),
         "time_limit_sec": row.get("time_limit_sec") or 1800,
+        "extras": [item.name for item in project_extra_files(path)],
     }
 
 
@@ -539,6 +541,11 @@ def v1_project_file(request: Request, project_id: str, kind: str = "starter"):
             raise HTTPException(status_code=404, detail="results")
         return FileResponse(demo, filename=demo.name)
     path = Path(row["file_path"])
+    if kind == "extra":
+        extra = resolve_extra(path, request.query_params.get("name") or "")
+        if extra is None:
+            raise HTTPException(status_code=404, detail="extra")
+        return FileResponse(extra, filename=extra.name)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="file")
     return FileResponse(path, filename=row["filename"])

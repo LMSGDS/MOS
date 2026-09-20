@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-2-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 2.2 — Modify slides",
+  "program": "powerpoint",
+  "objective": "2.2",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P22-S01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Còn 9 slide sau khi sửa.",
+      "predicate": {
+        "type": "slide_count",
+        "count": 9
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Ẩn hoặc xóa slide thừa trong **Slide Sorter**.",
+        "Còn đúng **9** slide.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "P22-T01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đổi tiêu đề thành My Presentation.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "My Presentation"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn slide tiêu đề.",
+        "Sửa text box.",
+        "Gõ **My Presentation**."
+      ]
+    },
+    {
+      "id": "P22-H01",
+      "objective": "2.2",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Có chữ My Presentation trên slide.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "My Presentation"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sửa title slide.",
+        "Gõ đúng **My Presentation**.",
+        "Lưu."
+      ]
+    }
+  ]
+}

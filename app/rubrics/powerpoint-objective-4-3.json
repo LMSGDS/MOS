@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-4-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 4.3 — Insert and format SmartArt graphics",
+  "program": "powerpoint",
+  "objective": "4.3",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P43-S01",
+      "objective": "4.3",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Chuyển danh sách phòng ban thành SmartArt.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "Administration"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn bulleted list.",
+        "**Home** > **Convert to SmartArt**.",
+        "Chọn layout phù hợp."
+      ]
+    },
+    {
+      "id": "P43-S02",
+      "objective": "4.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Không còn heading Administration dạng chữ.",
+      "predicate": {
+        "type": "not_contains_text",
+        "text": "Human Resources"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Convert** hết list sang SmartArt.",
+        "**Human Resources** nằm trong SmartArt.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

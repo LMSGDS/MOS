@@ -45,6 +45,23 @@ sealed class WordFacts
     public bool Has3d { get; set; }
     public bool HasSmartArt { get; set; }
     public bool HasHdPhoto { get; set; }
+    public string ThemeName { get; set; } = "";
+    public int SlideCount { get; set; }
+    public int SlideCx { get; set; }
+    public int SlideCy { get; set; }
+    public List<string> LayoutNames { get; } = [];
+    public List<string> NotesTexts { get; } = [];
+    public List<string> Transitions { get; } = [];
+    public int AnimationCount { get; set; }
+    public int PptTableCount { get; set; }
+    public int ChartCount { get; set; }
+    public int PictureCount { get; set; }
+    public int SmartArtCount { get; set; }
+    public bool HasMedia { get; set; }
+    public List<string> SectionNames { get; } = [];
+    public List<string> CustomShows { get; } = [];
+    public List<string> SchemeColors { get; } = [];
+    public List<int> HiddenSlides { get; } = [];
 }
 
 sealed class ParaFact
@@ -778,7 +795,9 @@ static class WordGrade
         JsonRubric? rubric,
         IReadOnlyList<ActionEvent>? evidence)
     {
-        var facts = WordXml.Extract(path);
+        var facts = path.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)
+            ? PptXml.Extract(path)
+            : WordXml.Extract(path);
         var results = new List<LocalCriterion>();
         if (rubric?.Criteria is null || rubric.Criteria.Count == 0)
         {
@@ -877,6 +896,25 @@ static class WordGrade
             "revision_max" => Flag(facts.RevisionCount <= (item.Predicate.Max ?? 0), item, "Revision trong hạn.", "Còn nhiều revision."),
             "document_protection" => Flag(facts.DocumentProtection, item, "Đã Lock Tracking.", "Chưa Lock Tracking."),
             "hdphoto" => Flag(facts.HasHdPhoto, item, "Đã remove background.", "Chưa remove background."),
+            "theme_name" => Flag(WordXml.Norm(facts.ThemeName).Contains(WordXml.Norm(item.Predicate.Name), StringComparison.OrdinalIgnoreCase), item, "Theme đúng.", "Chưa đúng theme."),
+            "core_empty" => Flag(string.IsNullOrWhiteSpace(facts.Core.GetValueOrDefault(item.Predicate.Name ?? "title")), item, "Đã xóa thuộc tính.", "Thuộc tính vẫn còn."),
+            "slide_count" => SlideCount(facts, item),
+            "slide_size" => SlideSize(facts, item),
+            "layout_named" => ContainsList(facts.LayoutNames, item.Predicate.Name, item, "Đã có layout.", "Chưa thấy layout."),
+            "layout_absent" => Flag(!facts.LayoutNames.Any(n => WordXml.Norm(n).Contains(WordXml.Norm(item.Predicate.Name), StringComparison.OrdinalIgnoreCase)), item, "Đã bỏ layout.", "Layout vẫn còn."),
+            "ppt_table_min" => Flag(facts.PptTableCount >= (item.Predicate.Min ?? 1), item, "Đã có bảng.", "Chưa đủ bảng."),
+            "ppt_chart_min" => Flag(facts.ChartCount >= (item.Predicate.Min ?? 1), item, "Đã có biểu đồ.", "Chưa đủ biểu đồ."),
+            "ppt_picture_min" => Flag(facts.PictureCount >= (item.Predicate.Min ?? 1), item, "Đã có ảnh.", "Chưa đủ ảnh."),
+            "ppt_smartart_min" => Flag(facts.SmartArtCount >= (item.Predicate.Min ?? 1), item, "Đã có SmartArt.", "Chưa đủ SmartArt."),
+            "ppt_anim_min" => Flag(facts.AnimationCount >= (item.Predicate.Min ?? 1), item, "Đã có animation.", "Chưa đủ animation."),
+            "has_3d" => Flag(facts.Has3d, item, "Đã có 3D.", "Chưa có 3D."),
+            "has_media" => Flag(facts.HasMedia, item, "Đã có media.", "Chưa có media."),
+            "transition_named" => Flag(facts.Transitions.Any(t => t.Contains(item.Predicate.Name ?? "", StringComparison.OrdinalIgnoreCase)), item, "Đã có transition.", "Chưa thấy transition."),
+            "notes_contains" => ContainsList(facts.NotesTexts, item.Predicate.Text, item, "Notes đúng.", "Chưa thấy notes."),
+            "custom_show" => ContainsList(facts.CustomShows, item.Predicate.Name, item, "Đã có custom show.", "Chưa có custom show."),
+            "section_named" => ContainsList(facts.SectionNames, item.Predicate.Name, item, "Đã có section.", "Chưa có section."),
+            "scheme_color" => Flag(facts.SchemeColors.Any(c => string.Equals(c, item.Predicate.Name, StringComparison.OrdinalIgnoreCase)), item, "Đúng màu scheme.", "Chưa đúng màu."),
+            "hidden_slide" => Flag(item.Predicate.Index is int idx ? facts.HiddenSlides.Contains(idx) : facts.HiddenSlides.Count > 0, item, "Đã ẩn slide.", "Chưa ẩn slide."),
             _ => new LocalCriterion(item.Id, "error", 0, item.Weight, "unknown_predicate"),
         };
     }
@@ -969,6 +1007,38 @@ static class WordGrade
         return WordXml.Same(got, item.Predicate.Text)
             ? Pass(item, "Thuộc tính tài liệu đúng.")
             : Fail(item, "Thuộc tính tài liệu chưa đúng.");
+    }
+
+    static LocalCriterion SlideCount(WordFacts facts, JsonCriterion item)
+    {
+        if (item.Predicate.Count is int count)
+        {
+            return Flag(facts.SlideCount == count, item, "Đúng số slide.", "Chưa đúng số slide.");
+        }
+
+        if (item.Predicate.Min is int min)
+        {
+            return Flag(facts.SlideCount >= min, item, "Đủ số slide.", "Chưa đủ slide.");
+        }
+
+        return Fail(item, "Chưa đúng số slide.");
+    }
+
+    static LocalCriterion SlideSize(WordFacts facts, JsonCriterion item)
+    {
+        if (item.Predicate.Cx is int cx && Math.Abs(facts.SlideCx - cx) > 20000)
+        {
+            return Fail(item, "Chưa đúng khổ slide.");
+        }
+
+        if (item.Predicate.Cy is int cy && Math.Abs(facts.SlideCy - cy) > 20000)
+        {
+            return Fail(item, "Chưa đúng khổ slide.");
+        }
+
+        return item.Predicate.Cx is not null || item.Predicate.Cy is not null
+            ? Pass(item, "Khổ slide đúng.")
+            : Fail(item, "Chưa đúng khổ slide.");
     }
 
     static bool PhraseIn(string blob, string? needle)
@@ -1178,6 +1248,10 @@ sealed class JsonPredicate
     public bool WholeWord { get; set; }
     public int? MinHits { get; set; }
     public int? Page { get; set; }
+    public int? Count { get; set; }
+    public int? Cx { get; set; }
+    public int? Cy { get; set; }
+    public int? Index { get; set; }
 }
 
 sealed class JsonFeedback

@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-3-4",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 3.4 — Insert and format graphic elements",
+  "program": "powerpoint",
+  "objective": "3.4",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P34-T01",
+      "objective": "3.4",
+      "kind": "artifact",
+      "weight": 34,
+      "prompt": "Có chữ Family.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Family"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chèn **Text Box** hoặc shape.",
+        "Gõ **Family**.",
+        "Lưu."
+      ]
+    },
+    {
+      "id": "P34-T02",
+      "objective": "3.4",
+      "kind": "artifact",
+      "weight": 33,
+      "prompt": "Có chữ Nature.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Nature"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm shape.",
+        "Gõ **Nature**.",
+        "Lưu."
+      ]
+    },
+    {
+      "id": "P34-T03",
+      "objective": "3.4",
+      "kind": "artifact",
+      "weight": 33,
+      "prompt": "Có chữ Sleep.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Sleep"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm shape.",
+        "Gõ **Sleep**.",
+        "Lưu."
+      ]
+    }
+  ]
+}
