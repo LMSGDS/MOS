@@ -62,6 +62,24 @@ sealed class WordFacts
     public List<string> CustomShows { get; } = [];
     public List<string> SchemeColors { get; } = [];
     public List<int> HiddenSlides { get; } = [];
+    public List<string> SheetNames { get; } = [];
+    public List<string> HiddenSheets { get; } = [];
+    public List<string> DefinedNames { get; } = [];
+    public List<string> TableNames { get; } = [];
+    public List<string> TableStyles { get; } = [];
+    public List<string> TableTotals { get; } = [];
+    public List<string> Formulas { get; } = [];
+    public List<string> FormulaFuncs { get; } = [];
+    public List<string> FreezeCells { get; } = [];
+    public List<string> PrintOrients { get; } = [];
+    public List<string> PrintAreas { get; } = [];
+    public List<string> FilterOps { get; } = [];
+    public List<string> ChartTitles { get; } = [];
+    public List<string> AltTextsXlsx { get; } = [];
+    public int SparklineCount { get; set; }
+    public int CfCount { get; set; }
+    public int MergedCount { get; set; }
+    public bool Decorative { get; set; }
 }
 
 sealed class ParaFact
@@ -797,7 +815,9 @@ static class WordGrade
     {
         var facts = path.EndsWith(".pptx", StringComparison.OrdinalIgnoreCase)
             ? PptXml.Extract(path)
-            : WordXml.Extract(path);
+            : path.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".xlsm", StringComparison.OrdinalIgnoreCase)
+                ? ExcelXml.Extract(path)
+                : WordXml.Extract(path);
         var results = new List<LocalCriterion>();
         if (rubric?.Criteria is null || rubric.Criteria.Count == 0)
         {
@@ -915,7 +935,34 @@ static class WordGrade
             "section_named" => ContainsList(facts.SectionNames, item.Predicate.Name, item, "Đã có section.", "Chưa có section."),
             "scheme_color" => Flag(facts.SchemeColors.Any(c => string.Equals(c, item.Predicate.Name, StringComparison.OrdinalIgnoreCase)), item, "Đúng màu scheme.", "Chưa đúng màu."),
             "hidden_slide" => Flag(item.Predicate.Index is int idx ? facts.HiddenSlides.Contains(idx) : facts.HiddenSlides.Count > 0, item, "Đã ẩn slide.", "Chưa ẩn slide."),
+            "hyperlink_contains" => Flag(
+                facts.ExternalHyperlinks.Any(h => (h.Text + h.TargetText + h.Anchor).Contains(item.Predicate.Text ?? "", StringComparison.OrdinalIgnoreCase))
+                    || (facts.DocumentText ?? "").Contains(item.Predicate.Text ?? "", StringComparison.OrdinalIgnoreCase),
+                item,
+                "Đã có hyperlink.",
+                "Chưa thấy hyperlink."),
+            "sheet_named" => ContainsList(facts.SheetNames, item.Predicate.Name, item, "Đã có sheet.", "Chưa thấy sheet."),
+            "sheet_count" => Flag(facts.SheetNames.Count >= (item.Predicate.Min ?? 1), item, "Đủ sheet.", "Chưa đủ sheet."),
+            "table_named" => ContainsList(facts.TableNames, item.Predicate.Name, item, "Đã có bảng.", "Chưa thấy bảng."),
+            "table_style" => ContainsList(facts.TableStyles, item.Predicate.Name, item, "Đúng style bảng.", "Chưa đúng style."),
+            "table_has_total" => Flag(facts.TableTotals.Count > 0, item, "Đã có Total row.", "Chưa có Total row."),
+            "defined_name" => ContainsList(facts.DefinedNames, item.Predicate.Name, item, "Đã có named range.", "Chưa có named range."),
+            "formula_func" => Flag(facts.FormulaFuncs.Any(f => f.Contains(item.Predicate.Name ?? "", StringComparison.OrdinalIgnoreCase)), item, "Đã có hàm.", "Chưa thấy hàm."),
+            "formula_contains" => Flag(facts.Formulas.Any(f => f.Contains(item.Predicate.Text ?? "", StringComparison.OrdinalIgnoreCase)), item, "Đã có công thức.", "Chưa thấy công thức."),
+            "freeze_named" => ContainsList(facts.FreezeCells, item.Predicate.Name, item, "Đã freeze.", "Chưa freeze."),
+            "print_orient" => Flag(facts.PrintOrients.Any(o => o.Contains(item.Predicate.Name ?? "landscape", StringComparison.OrdinalIgnoreCase)), item, "Đúng hướng in.", "Chưa đúng hướng in."),
+            "hidden_sheet" => ContainsList(facts.HiddenSheets, item.Predicate.Name, item, "Đã ẩn sheet.", "Sheet vẫn hiện."),
+            "xlsx_chart_min" => Flag(facts.ChartCount >= (item.Predicate.Min ?? 1), item, "Đã có chart.", "Chưa đủ chart."),
+            "xlsx_spark_min" => Flag(facts.SparklineCount >= (item.Predicate.Min ?? 1), item, "Đã có sparkline.", "Chưa đủ sparkline."),
+            "xlsx_cf_min" => Flag(facts.CfCount >= (item.Predicate.Min ?? 1), item, "Đã có conditional format.", "Chưa có CF."),
+            "xlsx_merged_min" => Flag(facts.MergedCount >= (item.Predicate.Min ?? 1), item, "Đã merge.", "Chưa merge."),
+            "chart_title" => ContainsList(facts.ChartTitles, item.Predicate.Name ?? item.Predicate.Text, item, "Đúng tiêu đề chart.", "Chưa đúng tiêu đề."),
+            "filter_contains" => ContainsList(facts.FilterOps, item.Predicate.Text, item, "Đã lọc.", "Chưa lọc."),
+            "print_area" => Flag(facts.PrintAreas.Count > 0, item, "Đã đặt Print Area.", "Chưa đặt Print Area."),
+            "xlsx_decorative" => Flag(facts.Decorative, item, "Đã đánh decorative.", "Chưa decorative."),
+            "xlsx_alt_text" => ContainsList(facts.AltTextsXlsx, item.Predicate.Text, item, "Đã có alt text.", "Chưa có alt text."),
             _ => new LocalCriterion(item.Id, "error", 0, item.Weight, "unknown_predicate"),
+        };
         };
     }
 

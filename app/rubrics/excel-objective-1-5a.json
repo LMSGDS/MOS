@@ -1,0 +1,62 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-5a",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.5 — Configure content for collaboration",
+  "program": "excel",
+  "objective": "1.5",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E15A-C01",
+      "objective": "1.5",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Xóa comment / threaded comment.",
+      "predicate": {
+        "type": "comments_absent"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Review** > **Show Comments**.",
+        "Xóa threaded comment.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E15A-P01",
+      "objective": "1.5",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Document Inspector xóa Title.",
+      "predicate": {
+        "type": "core_empty",
+        "name": "title"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**File** > **Info** > **Check for Issues**.",
+        "**Inspect Document**.",
+        "Remove **Document Properties**."
+      ]
+    }
+  ]
+}

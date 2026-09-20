@@ -1,0 +1,38 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-5b",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.5 — Configure print area and save formats",
+  "program": "excel",
+  "objective": "1.5",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E15B-P01",
+      "objective": "1.5",
+      "kind": "artifact",
+      "weight": 100,
+      "prompt": "Đặt Print Area A1:B42.",
+      "predicate": {
+        "type": "print_area"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn **A1:B42**.",
+        "**Page Layout** > **Print Area** > **Set Print Area**.",
+        "Xem Print Preview."
+      ]
+    }
+  ]
+}

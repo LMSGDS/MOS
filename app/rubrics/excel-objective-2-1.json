@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-2-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 2.1 — Manipulate data in worksheets",
+  "program": "excel",
+  "objective": "2.1",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E21-F01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Fill series Item 2… trên Price List.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Item 2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Price List**.",
+        "Dùng **Fill Handle**.",
+        "Điền **Item 1** đến **Item 20**."
+      ]
+    },
+    {
+      "id": "E21-S01",
+      "objective": "2.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Transpose tên tạp chí sang sheet mới.",
+      "predicate": {
+        "type": "sheet_named",
+        "name": "Sheet1"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Copy cột Magazine.",
+        "**Paste Special** > **Transpose**.",
+        "Dán sang sheet mới."
+      ]
+    }
+  ]
+}

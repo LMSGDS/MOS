@@ -315,6 +315,7 @@ def test_objective_group_key_from_project_id():
     ).read_text(encoding="utf-8")
     assert 'word-objective-' in hub
     assert 'powerpoint-objective-' in hub
+    assert 'excel-objective-' in hub
     assert 'return dash > 0 ? tail[..dash] : tail' in hub
     assert 'Objective {key} · {items.Count} đề' in hub
     assert 'kind=extra&name=' in hub

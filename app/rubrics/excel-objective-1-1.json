@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.1 — Import data into workbooks",
+  "program": "excel",
+  "objective": "1.1",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E11-T01",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Nhập ContactList thành bảng.",
+      "predicate": {
+        "type": "table_named",
+        "name": "ContactList"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Data** > **From Text/CSV**.",
+        "Chọn **Excel_1-1_ContactList.txt**.",
+        "Load vào **Client Contacts**."
+      ]
+    },
+    {
+      "id": "E11-T02",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Nhập Global Population vào sheet mới.",
+      "predicate": {
+        "type": "table_named",
+        "name": "GlobalPopulationData"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Data** > **From Text/CSV**.",
+        "Chọn **Excel_1-1_GlobalPopulationData.csv**.",
+        "Load vào worksheet mới."
+      ]
+    },
+    {
+      "id": "E11-S01",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Workbook có ít nhất 2 sheet.",
+      "predicate": {
+        "type": "sheet_count",
+        "min": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra thanh **sheet**.",
+        "Phải có sheet dữ liệu dân số **GlobalPopulationData**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

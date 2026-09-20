@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-4-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 4.1 — Insert references",
+  "program": "excel",
+  "objective": "4.1",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E41-M01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Bảng nhân mixed reference B$1*$A2.",
+      "predicate": {
+        "type": "formula_contains",
+        "text": "B$1*$A2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Multiplication Table**.",
+        "Công thức mixed ref **B$1*$A2**.",
+        "Copy ra B2:K11."
+      ]
+    },
+    {
+      "id": "E41-S01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Tổng category bằng SUM.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "SUM"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sheet **Sales By Category**.",
+        "Dùng **SUM** tuyệt đối / tương đối.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

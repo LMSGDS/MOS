@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-1-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 1.2 — Navigate within workbooks",
+  "program": "excel",
+  "objective": "1.2",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E12-H01",
+      "objective": "1.2",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Sửa hyperlink thành Please visit our website.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Please visit our website"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở sheet **Employees**.",
+        "Sửa hyperlink ô C12.",
+        "Hiển thị **Please visit our website**."
+      ]
+    },
+    {
+      "id": "E12-H02",
+      "objective": "1.2",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Hyperlink tới adventure-works.",
+      "predicate": {
+        "type": "hyperlink_contains",
+        "text": "adventure-works"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Ô C12 trỏ **www.adventure-works.com**.",
+        "Giữ liên kết.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

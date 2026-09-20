@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-4-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 4.2 — Calculate and transform data",
+  "program": "excel",
+  "objective": "4.2",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E42-C01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "COUNTA trên named range Season.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "COUNTA"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Ô **A18**.",
+        "Gõ **=COUNTA(Season)**.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E42-A01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "AVERAGE cho Sales.",
+      "predicate": {
+        "type": "formula_func",
+        "name": "AVERAGE"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "D5 / G2 dùng **AVERAGE**.",
+        "MAX Spring, MIN Summer.",
+        "Lưu tệp."
+      ]
+    },
+    {
+      "id": "E42-I01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "IF hiện Excellent sales season!",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Excellent sales season"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Ô **F5**.",
+        "Gõ **=IF(D5>G2,\"Excellent sales season!\",\"\")**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

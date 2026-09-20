@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "excel-objective-5-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.6.0",
+  "title": "Excel Objective 5.2 — Modify charts",
+  "program": "excel",
+  "objective": "5.2",
+  "max_score": 100,
+  "capabilities": [
+    "excel.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "E52-T01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Đặt tiêu đề Sales by Category.",
+      "predicate": {
+        "type": "chart_title",
+        "name": "Sales by Category"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chart **Fall Sales**.",
+        "**Chart Title** **Sales by Category**.",
+        "Thêm legend tháng."
+      ]
+    },
+    {
+      "id": "E52-V01",
+      "objective": "5.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đổi Flowers October thành 500.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "500"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp Excel."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Sửa số October Flowers = **500**.",
+        "Chart phải cập nhật.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}
