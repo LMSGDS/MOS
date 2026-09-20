@@ -161,6 +161,32 @@ static class ExamHub
         }
     }
 
+    public static async Task<(bool Ok, string Message)> RestartProjectAsync(string program)
+    {
+        if (string.IsNullOrWhiteSpace(ExamSession.ProjectId) || string.IsNullOrWhiteSpace(ExamSession.LocalPath))
+        {
+            return (false, "Chưa mở đề MOS.");
+        }
+
+        try
+        {
+            WordCom.CloseExamDocument();
+            var bytes = await Portal.GetBytesAsync(
+                $"/api/v1/projects/{Uri.EscapeDataString(ExamSession.ProjectId)}/file");
+            Directory.CreateDirectory(Path.GetDirectoryName(ExamSession.LocalPath)!);
+            await File.WriteAllBytesAsync(ExamSession.LocalPath, bytes);
+            WordWindow.Launch(program, ExamSession.LocalPath);
+            ExamSession.HardStopReason = "";
+            ExamSession.LastCheck = [];
+            await TrackAsync("restart_project", new { project_id = ExamSession.ProjectId });
+            return (true, "Đã khôi phục file gốc của Project.");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     static async Task<(bool Ok, string Message)> ResumeFromLocalAsync(LocalExamState local, MosProject chosen, bool launchWord)
     {
         var dir = Path.Combine(ExamSession.DataDir, "attempts", local.AttemptId);
@@ -409,13 +435,29 @@ static class ExamHub
                 EvidenceFields(),
                 Portal.SyncHeaders(path));
             LocalExamStore.MarkSubmitted(ExamSession.AttemptId!);
-            var scoreEl = submitted.RootElement.GetProperty("score");
+            var root = submitted.RootElement;
+            var scoreEl = root.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
                 ? v
                 : scoreEl.GetProperty("score").GetDouble();
             var pending = scoreEl.TryGetProperty("pending", out var pe) && pe.TryGetDouble(out var p) ? p : 0;
             var max = scoreEl.TryGetProperty("max_score", out var mx) && mx.TryGetDouble(out var m) ? m : 100;
-            return (true, $"{score}/{max} đã xác minh" + (pending > 0 ? $" · {pending} chưa xác minh" : ""));
+            var line = $"{score}/{max} đã xác minh" + (pending > 0 ? $" · {pending} chưa xác minh" : "");
+            if (TryBankField(root, "scaled_1000", out var sc) && sc.TryGetInt32(out var scaled))
+            {
+                var passed = TryBankField(root, "passed", out var pd)
+                    ? pd.ValueKind == JsonValueKind.True
+                    : scaled >= ExamSession.Bank.CutScore;
+                line += $" · {scaled}/1000 {(passed ? "PASS" : "FAIL")}";
+            }
+
+            if (TryBankField(root, "udl_message", out var um) && um.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(um.GetString()))
+            {
+                line += "\n" + um.GetString();
+            }
+
+            return (true, line);
         }
         catch (Exception ex)
         {
@@ -568,12 +610,27 @@ static class ExamHub
             }
 
             LocalExamStore.ClearPending(ExamSession.AttemptId!, checkpoint: true, submit: false);
+            if (root.TryGetProperty("hard_stop", out var hs) && hs.ValueKind == JsonValueKind.Object
+                && hs.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String)
+            {
+                ExamSession.HardStopReason = reason.GetString() ?? "";
+            }
+
             if (root.TryGetProperty("score", out var scoreEl))
             {
                 var criteria = ParseCriteria(scoreEl);
                 var verified = GetDouble(scoreEl, "verified", GetDouble(scoreEl, "score", local.Verified));
                 var pending = GetDouble(scoreEl, "pending", local.Pending);
-                var summary = $"{verified}/100 đã xác minh · {pending} chưa xác minh.";
+                var summary = ExamSession.HideNumericScore
+                    ? (criteria.Any(c => c.Status != "pass")
+                        ? "Đã chấm. Có nhiệm vụ chưa đạt — hệ thống mở gợi ý cấp 1."
+                        : "Đã chấm. Các nhiệm vụ đã kiểm tra đạt.")
+                    : $"{verified}/100 đã xác minh · {pending} chưa xác minh.";
+                if (!string.IsNullOrWhiteSpace(ExamSession.HardStopReason))
+                {
+                    summary = ExamSession.HardStopReason;
+                }
+
                 return (true, summary, criteria.Count > 0 ? criteria : local.Criteria);
             }
 
@@ -607,6 +664,23 @@ static class ExamHub
         }
 
         return list;
+    }
+
+    static bool TryBankField(JsonElement root, string name, out JsonElement value)
+    {
+        if (root.TryGetProperty("bank", out var bank) && bank.ValueKind == JsonValueKind.Object
+            && bank.TryGetProperty(name, out value))
+        {
+            return true;
+        }
+
+        if (root.TryGetProperty("score", out var score) && score.ValueKind == JsonValueKind.Object
+            && score.TryGetProperty(name, out value))
+        {
+            return true;
+        }
+
+        return root.TryGetProperty(name, out value);
     }
 
     static double GetDouble(JsonElement el, string name, double fallback)

@@ -764,6 +764,7 @@ def admin_bank_save_task(
     hint1: str = Form(""),
     hint2: str = Form(""),
     hint3: str = Form(""),
+    final_state: str = Form(""),
 ):
     user = _session_user(request)
     if not user or not _leaders(user):
@@ -782,6 +783,7 @@ def admin_bank_save_task(
             hint1=hint1,
             hint2=hint2,
             hint3=hint3,
+            final_state=final_state,
             user_id=user.get("id"),
         )
     except ValueError:

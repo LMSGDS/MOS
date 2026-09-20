@@ -10,10 +10,12 @@ from app.bank import (
     auto_generate_exam,
     compile_payload,
     exam_counts,
+    get_task,
     knowledge_tree,
     list_exams,
     list_tasks,
     pack_exam_projects,
+    parse_final_state,
     passed,
     save_exam,
     save_task,
@@ -477,3 +479,24 @@ def test_rls_student_zero_bank_teacher_hides_drafts(pg):
     assert catalog.status_code == 200
     assert "Draft RLS pytest" not in catalog.text
     assert "Kho đề xuất bản" in catalog.text
+
+
+def test_q_matrix_final_state_and_global_catalog(pg):
+    assert parse_final_state("Retrospect") == {"contains_text": ["Retrospect"]}
+    assert parse_final_state('{"theme":"Retrospect"}') == {"theme": "Retrospect"}
+    tid = save_task(
+        task_id=None,
+        objective_id="mo-100-1-2",
+        instruction="Đổi theme thành Retrospect",
+        weight=3,
+        final_state="Retrospect",
+    )
+    task = get_task(tid)
+    assert task["q_matrix_rules"]["final_state"]["contains_text"] == ["Retrospect"]
+    private = auto_generate_exam(program="word", title="Đề nội bộ không global")
+    set_exam_status(private, "published")
+    with cursor() as cur:
+        cur.execute("UPDATE bank_exams SET is_global = FALSE WHERE id = %s", (private,))
+    shown = {e["id"] for e in list_exams(published_only=True)}
+    assert private not in shown
+    assert "exam-word-mock-1" in shown

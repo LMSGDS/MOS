@@ -286,6 +286,20 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "FlashRibbonHint" in form
     assert "Mark for Review" in form
     assert "ForceSubmitExam" in form
+    assert "RestartProjectAsync" in hub
+    assert "Làm lại Project" in form
+    assert "HardStopReason" in form
+    assert "HideNumericScore" in (root / "ExamSession.cs").read_text(encoding="utf-8")
+    assert "ReviewMark" in (root / "ExamSession.cs").read_text(encoding="utf-8")
+    assert "ToggleMark" in (root / "ExamSession.cs").read_text(encoding="utf-8")
+    assert "TryBankField" in hub
+    assert 'passed ? "PASS" : "FAIL"' in hub
+    assert "FlashFeedback" in (root / "WordWindow.cs").read_text(encoding="utf-8")
+    assert "Locate" in (root / "BankSession.cs").read_text(encoding="utf-8")
+    assert "SwitchBankProject(BankProjectBlock block, int taskIndex = 0)" in form
+    assert "PaintReviewGrid" in form
+    assert "Exam Summary" in form
+    assert "SystemSounds.Asterisk" in form
     assert "ShowTips" in form
     assert "Alt+F" in form
     assert "Alt+H" in form

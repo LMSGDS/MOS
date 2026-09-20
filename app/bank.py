@@ -453,6 +453,21 @@ def list_tasks(*, objective_id: str = "", orphans: bool = False, published_only:
         return [dict(r) for r in cur.fetchall()]
 
 
+def parse_final_state(raw: str) -> dict:
+    """Final State OpenXML: JSON hoặc danh sách chữ cần có trong file."""
+    text = (raw or "").strip()
+    if not text:
+        return {}
+    if text.startswith("{"):
+        try:
+            data = json.loads(text)
+            return data if isinstance(data, dict) else {"contains": text}
+        except json.JSONDecodeError:
+            return {"contains": text}
+    parts = [p.strip() for p in text.replace(";", ",").split(",") if p.strip()]
+    return {"contains_text": parts} if parts else {}
+
+
 def save_task(
     *,
     task_id: str | None,
@@ -466,16 +481,22 @@ def save_task(
     hint1: str = "",
     hint2: str = "",
     hint3: str = "",
+    final_state: str | dict | None = None,
     user_id: int | None = None,
 ) -> str:
     tid = task_id or f"bt-{secrets.token_hex(6)}"
     weight = 1 if weight not in (1, 2, 3) else weight
+    if isinstance(final_state, dict):
+        final = final_state
+    else:
+        final = parse_final_state(str(final_state or ""))
     rules = {
         "locate": locate,
         "tool": tool,
         "configure": configure,
         "valid_paths": [p.strip() for p in (valid_paths or []) if p and p.strip()],
         "hint_tiers": [h for h in (hint1, hint2, hint3) if h],
+        "final_state": final,
         "weight": weight,
         "partial_credit_training": True,
     }
@@ -604,7 +625,7 @@ def list_exams(*, published_only: bool = False, program: str = "") -> list[dict]
     sql = "SELECT * FROM bank_exams WHERE 1=1"
     params: list = []
     if published_only:
-        sql += " AND status = 'published'"
+        sql += " AND status = 'published' AND COALESCE(is_global, TRUE) = TRUE"
     if program:
         sql += " AND program = %s"
         params.append(program)

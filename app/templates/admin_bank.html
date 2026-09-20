@@ -234,6 +234,9 @@
         <label>Công cụ (Tool) <input name="tool" value="{{ rules.tool or '' }}" placeholder="Insert Table" /></label>
         <label>Cấu hình (Config) <input name="configure" value="{{ rules.configure or '' }}" placeholder="5 cột, 2 dòng, AutoFit" /></label>
         <label>Valid_Paths (phẩy) <input name="valid_paths" value="{{ (rules.valid_paths or [])|join(', ') }}" placeholder="Ribbon_Copy, Shortcut_CtrlC, ContextMenu_Copy" /></label>
+        <label>Final State (OpenXML / chứa chữ)
+          <input name="final_state" value="{% if rules.final_state is mapping and rules.final_state.contains_text %}{{ rules.final_state.contains_text|join(', ') }}{% elif rules.final_state is mapping and rules.final_state %}{{ rules.final_state|tojson }}{% endif %}" placeholder="Retrospect hoặc {&quot;theme&quot;:&quot;Retrospect&quot;}" />
+        </label>
         <label>Gợi ý 1 — định vị <input name="hint1" value="{{ (rules.hint_tiers or [''])[0] if rules.hint_tiers else '' }}" /></label>
         <label>Gợi ý 2 — thao tác <input name="hint2" value="{{ (rules.hint_tiers[1] if rules.hint_tiers and rules.hint_tiers|length > 1 else '') }}" /></label>
         <label>Gợi ý 3 — giải pháp <input name="hint3" value="{{ (rules.hint_tiers[2] if rules.hint_tiers and rules.hint_tiers|length > 2 else '') }}" /></label>

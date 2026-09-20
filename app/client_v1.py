@@ -915,6 +915,38 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     store_q_matrix(attempt_id, scored)
     record_attempt_event(attempt, event="checkpoint", payload={**payload, "evidence_count": len(events)})
     _notify_live(attempt, row_user, payload, "checkpoint")
+    stop = None
+    failed = False
+    if training:
+        from app.bank import hard_stop_next, record_formative, record_task_results
+
+        record_task_results(attempt_id, scored)
+        last_tid = ""
+        with cursor() as cur:
+            for item in payload.get("criteria") or []:
+                if not isinstance(item, dict):
+                    continue
+                cid = str(item.get("criterion_id") or item.get("id") or "")
+                tid = ""
+                if cid:
+                    cur.execute(
+                        "SELECT id FROM bank_tasks WHERE id IN (%s, %s)",
+                        (cid, f"bt-{attempt.get('project_id')}-{cid}"),
+                    )
+                    hit = cur.fetchone()
+                    tid = (hit or {}).get("id") or ""
+                event = "check_pass" if item.get("status") == "pass" else "wrong_check"
+                if event == "wrong_check":
+                    failed = True
+                    last_tid = tid or last_tid
+                record_formative(
+                    student_id=row_user["id"],
+                    attempt_id=attempt_id,
+                    event=event,
+                    task_id=tid,
+                )
+        if last_tid:
+            stop = hard_stop_next(row_user["id"], last_tid)
     if not training:
         return {
             "ok": True,
@@ -931,6 +963,8 @@ async def v1_checkpoint(request: Request, attempt_id: str):
         "score": payload,
         "evidence_stored": len(events),
         "evidence_path": evidence_path,
+        "hard_stop": stop,
+        "auto_hint": 1 if stop or failed else 0,
     }
 
 

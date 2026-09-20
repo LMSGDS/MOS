@@ -6,6 +6,9 @@ sealed class BankTask
 {
     public string TaskId { get; init; } = "";
     public string Instruction { get; init; } = "";
+    public string Locate { get; init; } = "";
+    public string Tool { get; init; } = "";
+    public string Configure { get; init; } = "";
     public string[] HintTiers { get; init; } = [];
 }
 
@@ -77,11 +80,28 @@ sealed class BankPayload
                 {
                     foreach (var t in tarr.EnumerateArray())
                     {
+                        var qm = t.TryGetProperty("q_matrix", out var qel) && qel.ValueKind == JsonValueKind.Object
+                            ? qel
+                            : default;
+                        var locate = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "locate") : "";
+                        var tool = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "tool") : "";
+                        var configure = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "configure") : "";
+                        var hints = StringArray(t, "hint_tiers");
+                        if (hints.Length == 0)
+                        {
+                            hints = new[] { locate, tool, configure }
+                                .Where(s => s.Length > 0)
+                                .ToArray();
+                        }
+
                         tasks.Add(new BankTask
                         {
                             TaskId = GetString(t, "task_id"),
                             Instruction = GetString(t, "instruction"),
-                            HintTiers = StringArray(t, "hint_tiers"),
+                            Locate = locate,
+                            Tool = tool,
+                            Configure = configure,
+                            HintTiers = hints,
                         });
                     }
                 }
@@ -135,6 +155,40 @@ sealed class BankPayload
 
         return [];
     }
+
+    public BankProjectBlock? BlockFor(string? projectId)
+    {
+        if (Projects.Count == 0)
+        {
+            return null;
+        }
+
+        return Projects.FirstOrDefault(p =>
+                   string.Equals(p.SourceProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+               ?? Projects[0];
+    }
+
+    public BankProjectBlock? NextBlock(string? projectId)
+    {
+        if (Projects.Count < 2)
+        {
+            return null;
+        }
+
+        var idx = Projects.FindIndex(p =>
+            string.Equals(p.SourceProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase));
+        if (idx < 0 || idx + 1 >= Projects.Count)
+        {
+            return null;
+        }
+
+        return Projects[idx + 1];
+    }
+
+    public string SourceId(BankProjectBlock block) =>
+        string.IsNullOrWhiteSpace(block.SourceProjectId) ? block.ProjectId : block.SourceProjectId;
 
     public string ProjectCaption(string? projectId)
     {
