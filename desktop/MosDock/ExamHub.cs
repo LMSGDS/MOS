@@ -77,7 +77,7 @@ static class ExamHub
             p.TryGetProperty("program", out var prog) ? prog.GetString() ?? "word" : "word",
             p.TryGetProperty("skill_domain", out var skill) ? skill.GetString() ?? "" : "",
             p.TryGetProperty("filename", out var fn) ? fn.GetString() ?? "" : "",
-            p.TryGetProperty("time_limit_sec", out var tl) && tl.TryGetInt32(out var sec) ? sec : 1800,
+            p.TryGetProperty("time_limit_sec", out var tl) && tl.TryInt(out var sec) ? sec : 1800,
             steps,
             p.TryGetProperty("rubric_version", out var rv) ? rv.GetString() ?? "" : "");
     }
@@ -488,13 +488,13 @@ static class ExamHub
             LocalExamStore.MarkSubmitted(ExamSession.AttemptId!);
             var root = submitted.RootElement;
             var scoreEl = root.GetProperty("score");
-            var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
+            var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryDouble(out var v)
                 ? v
-                : scoreEl.GetProperty("score").GetDouble();
-            var pending = scoreEl.TryGetProperty("pending", out var pe) && pe.TryGetDouble(out var p) ? p : 0;
-            var max = scoreEl.TryGetProperty("max_score", out var mx) && mx.TryGetDouble(out var m) ? m : 100;
+                : scoreEl.TryGetProperty("score", out var sv) && sv.TryDouble(out var s0) ? s0 : 0;
+            var pending = scoreEl.TryGetProperty("pending", out var pe) && pe.TryDouble(out var p) ? p : 0;
+            var max = scoreEl.TryGetProperty("max_score", out var mx) && mx.TryDouble(out var m) ? m : 100;
             var line = $"{score}/{max} đã xác minh" + (pending > 0 ? $" · {pending} chưa xác minh" : "");
-            if (TryBankField(root, "scaled_1000", out var sc) && sc.TryGetInt32(out var scaled))
+            if (TryBankField(root, "scaled_1000", out var sc) && sc.TryInt(out var scaled))
             {
                 var passed = TryBankField(root, "passed", out var pd)
                     ? pd.ValueKind == JsonValueKind.True
@@ -736,7 +736,7 @@ static class ExamHub
 
     static double GetDouble(JsonElement el, string name, double fallback)
     {
-        if (el.TryGetProperty(name, out var p) && p.TryGetDouble(out var v))
+        if (el.TryGetProperty(name, out var p) && p.TryDouble(out var v))
         {
             return v;
         }
@@ -746,7 +746,7 @@ static class ExamHub
 
     static double? GetDoubleOrNull(JsonElement el, string name)
     {
-        if (el.TryGetProperty(name, out var p) && p.ValueKind is JsonValueKind.Number && p.TryGetDouble(out var v))
+        if (el.TryGetProperty(name, out var p) && p.TryDouble(out var v))
         {
             return v;
         }

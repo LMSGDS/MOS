@@ -235,7 +235,7 @@ sealed class BankPayload
 
     static int GetInt(JsonElement el, string name, int fallback)
     {
-        if (el.ValueKind != JsonValueKind.Object || !el.TryGetProperty(name, out var p) || !p.TryGetInt32(out var n))
+        if (el.ValueKind != JsonValueKind.Object || !el.TryGetProperty(name, out var p) || !p.TryInt(out var n))
         {
             return fallback;
         }
@@ -245,7 +245,7 @@ sealed class BankPayload
 
     static int? GetIntOrNull(JsonElement el, string name)
     {
-        if (el.ValueKind != JsonValueKind.Object || !el.TryGetProperty(name, out var p) || !p.TryGetInt32(out var n))
+        if (el.ValueKind != JsonValueKind.Object || !el.TryGetProperty(name, out var p) || !p.TryInt(out var n))
         {
             return null;
         }

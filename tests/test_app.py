@@ -574,3 +574,21 @@ def test_dock_mode_hides_simulated_word():
     assert "KulKul" in r.text
     assert "GMetrix" not in r.text
     assert "word-sim" not in r.text
+
+
+def test_dock_numeric_json_reads_tolerate_null():
+    # TryGetInt32/TryGetDouble throw on JSON null; the portal returns null
+    # time_limit_sec/remaining_sec for Training and elapsed-only banks.
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
+    helper = (root / "JsonNum.cs").read_text(encoding="utf-8")
+    assert "JsonValueKind.Number" in helper
+    for src in root.glob("*.cs"):
+        if src.name == "JsonNum.cs":
+            continue
+        text = src.read_text(encoding="utf-8")
+        assert ".TryGetInt32(" not in text, src.name
+        assert ".TryGetDouble(" not in text, src.name
+        assert ".GetDouble()" not in text, src.name
+        assert ".GetInt32()" not in text, src.name
