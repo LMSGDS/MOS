@@ -123,4 +123,5 @@ def test_teacher_still_sees_class_roster(pg):
         role="student",
     )
     hidden = teacher.get("/quan-tri/hoc-sinh", params={"q": guest["username"]})
-    assert guest["username"] not in hidden.text
+    assert f">{guest['name']}</a>" not in hidden.text
+    assert "Không có học sinh khớp bộ lọc." in hidden.text
