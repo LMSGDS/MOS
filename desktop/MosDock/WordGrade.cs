@@ -963,7 +963,6 @@ static class WordGrade
             "xlsx_alt_text" => ContainsList(facts.AltTextsXlsx, item.Predicate.Text, item, "Đã có alt text.", "Chưa có alt text."),
             _ => new LocalCriterion(item.Id, "error", 0, item.Weight, "unknown_predicate"),
         };
-        };
     }
 
     static LocalCriterion Bookmark(WordFacts facts, JsonCriterion item)
