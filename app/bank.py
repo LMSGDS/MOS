@@ -183,6 +183,20 @@ def seed_taxonomy() -> None:
                         """,
                         (_oid(subject, ccode), subject, ccode, ctitle, ctitle, parent, j),
                     )
+        wanted = []
+        for subject, _prog, _label in SUBJECTS:
+            for code, _title, children in TAXONOMY[subject]:
+                wanted.append(_oid(subject, code))
+                wanted.extend(_oid(subject, ccode) for ccode, _n in children)
+        cur.execute(
+            """
+            DELETE FROM objective_domains d
+            WHERE d.subject = ANY(%s)
+              AND NOT (d.id = ANY(%s))
+              AND NOT EXISTS (SELECT 1 FROM bank_tasks t WHERE t.objective_id = d.id)
+            """,
+            ([s for s, _p, _l in SUBJECTS], wanted),
+        )
 
 
 def sync_existing_projects() -> None:
