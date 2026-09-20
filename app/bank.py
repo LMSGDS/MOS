@@ -381,19 +381,19 @@ def list_subjects() -> list[dict]:
 
 
 def knowledge_tree(subject: str | None = None) -> list[dict]:
+    sql = """
+        SELECT d.id, d.subject, d.code, d.title, d.parent_id, d.sort_order,
+               COUNT(t.id) FILTER (WHERE t.status <> 'archived') AS task_n
+        FROM objective_domains d
+        LEFT JOIN bank_tasks t ON t.objective_id = d.id
+    """
+    params: list = []
+    if subject:
+        sql += " WHERE d.subject = %s"
+        params.append(subject)
+    sql += " GROUP BY d.id ORDER BY d.subject, d.sort_order, d.code"
     with cursor() as cur:
-        cur.execute(
-            """
-            SELECT d.id, d.subject, d.code, d.title, d.parent_id, d.sort_order,
-                   COUNT(t.id) FILTER (WHERE t.status <> 'archived') AS task_n
-            FROM objective_domains d
-            LEFT JOIN bank_tasks t ON t.objective_id = d.id
-            WHERE (%s IS NULL OR d.subject = %s)
-            GROUP BY d.id
-            ORDER BY d.subject, d.sort_order, d.code
-            """,
-            (subject, subject),
-        )
+        cur.execute(sql, tuple(params))
         rows = [dict(r) for r in cur.fetchall()]
     by_parent: dict[str | None, list[dict]] = {}
     for row in rows:
