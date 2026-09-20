@@ -916,36 +916,37 @@ async def v1_checkpoint(request: Request, attempt_id: str):
     record_attempt_event(attempt, event="checkpoint", payload={**payload, "evidence_count": len(events)})
     _notify_live(attempt, row_user, payload, "checkpoint")
     stop = None
+    failed = False
     if training:
         from app.bank import hard_stop_next, record_formative, record_task_results
 
         record_task_results(attempt_id, scored)
         last_tid = ""
-        failed = False
-        for item in payload.get("criteria") or []:
-            if not isinstance(item, dict):
-                continue
-            cid = str(item.get("criterion_id") or item.get("id") or "")
-            if item.get("status") == "pass":
+        with cursor() as cur:
+            for item in payload.get("criteria") or []:
+                if not isinstance(item, dict):
+                    continue
+                cid = str(item.get("criterion_id") or item.get("id") or "")
+                tid = ""
+                if cid:
+                    cur.execute(
+                        "SELECT id FROM bank_tasks WHERE id IN (%s, %s)",
+                        (cid, f"bt-{attempt.get('project_id')}-{cid}"),
+                    )
+                    hit = cur.fetchone()
+                    tid = (hit or {}).get("id") or ""
+                event = "check_pass" if item.get("status") == "pass" else "wrong_check"
+                if event == "wrong_check":
+                    failed = True
+                    last_tid = tid or last_tid
                 record_formative(
                     student_id=row_user["id"],
                     attempt_id=attempt_id,
-                    event="check_pass",
-                    task_id=cid,
-                )
-            else:
-                failed = True
-                last_tid = cid or last_tid
-                record_formative(
-                    student_id=row_user["id"],
-                    attempt_id=attempt_id,
-                    event="wrong_check",
-                    task_id=cid,
+                    event=event,
+                    task_id=tid,
                 )
         if last_tid:
-            stop = hard_stop_next(row_user["id"], last_tid) or hard_stop_next(
-                row_user["id"], f"bt-{attempt.get('project_id')}-{last_tid}"
-            )
+            stop = hard_stop_next(row_user["id"], last_tid)
     if not training:
         return {
             "ok": True,
