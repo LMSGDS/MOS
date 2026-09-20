@@ -3,7 +3,8 @@
 {% block body %}
 <section class="card hero admin-wide">
   {% include "admin_nav.html" %}
-  <h1>Dual-role: LMS riêng + công cụ LTI 1.3</h1>
+  <h1>Cấu hình hệ thống &amp; bảo mật</h1>
+  {% if saved %}<p class="success">Đã lưu cấu hình.</p>{% endif %}
   <p class="lead">mos.gds.edu.vn vừa là Micro-LMS standalone (admin tạo lớp, giao bài MOS, giám sát) vừa là Tool Provider cho Canvas/Moodle. Điểm chính thức vẫn do lõi chấm OpenXML — Grade Passback chỉ gửi số về sổ điểm nền tảng kia.</p>
   <p class="hint">Không xây forum, bài luận, quiz chung, hay hòm thư. Giao tiếp để Teams / Zalo.</p>
 
@@ -38,5 +39,18 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <h2 style="margin-top:24px;font-size:18px">Tường lửa phòng máy (thi)</h2>
+  <p class="hint">Dải IP/CIDR được phép nộp bài khi chế độ Thi. Luyện tập không bị chặn. Ví dụ: 192.168.0.0/16,10.0.0.0/8</p>
+  <form method="post" action="/quan-tri/lti/ip" class="grid" style="max-width:520px">
+    <label>Dải IP an toàn
+      <input name="exam_ip_allow" value="{{ exam_ip_allow }}" placeholder="192.168.0.0/16,10.0.0.0/8" />
+    </label>
+    <button type="submit" class="btn btn-primary">Lưu dải IP</button>
+  </form>
+
+  <h2 style="margin-top:24px;font-size:18px">Client MOS-KulKul</h2>
+  <p>Phiên bản trong mã nguồn: <strong>{{ client_version or "—" }}</strong></p>
+  <p class="hint">Bản cài đặt phát qua GitHub Releases / trang <a href="/cai-dat">Cài đặt</a>. Không tải file .exe lên form này (tránh nhồi binary vào git).</p>
 </section>
 {% endblock %}

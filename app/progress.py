@@ -456,6 +456,7 @@ def student_skills(user_id: int, program: str = "word") -> list[dict]:
 def list_roster(class_id: int | None = None) -> list[dict]:
     sql = """
         SELECT u.id, u.username, u.name, u.student_code, u.role,
+               COALESCE(u.is_active, TRUE) AS is_active,
                u.last_seen_at, u.last_client, u.created_at,
                c.id AS class_id, c.name AS class_name,
                e.overall_score, e.completion_pct, e.level, e.exercises_completed,

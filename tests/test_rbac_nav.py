@@ -69,7 +69,7 @@ def test_admin_keeps_macro_tools(pg):
     page = admin.get("/quan-tri")
     assert "Super Admin" in page.text
     assert "Tổng quan trường" in page.text
-    assert "MOS-KulKul đang mở" in page.text
+    assert "Đang online" in page.text
     assert "Cấu hình hệ thống" in page.text
     lti = admin.get("/quan-tri/lti")
     assert lti.status_code == 200

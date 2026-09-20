@@ -173,7 +173,7 @@ def list_teachers() -> list[dict]:
 CSV_TEMPLATE = "Họ tên,Mã HS,Tài khoản\nNguyễn Văn A,HS101,\nTrần Thị B,HS102,\n"
 
 
-def reset_one(user_id: int) -> dict | None:
+def reset_one(user_id: int, *, roles: tuple[str, ...] = ("student",)) -> dict | None:
     pwd = _password()
     with cursor() as cur:
         cur.execute(
@@ -181,7 +181,7 @@ def reset_one(user_id: int) -> dict | None:
             (user_id,),
         )
         row = cur.fetchone()
-        if not row or row["role"] != "student":
+        if not row or row["role"] not in roles:
             return None
         cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hash_password(pwd), user_id))
     return {**dict(row), "password": pwd}
