@@ -77,6 +77,20 @@
               {% endfor %}
             </tbody>
           </table>
+          <h3 style="font-size:16px;margin-top:20px">Cập nhật Tầng 1 — Objective Domains</h3>
+          <p class="hint">Khóa với giáo viên. Chỉ Super Admin sửa khi Microsoft đổi syllabus.</p>
+          <form method="post" action="/quan-tri/ngan-hang/objective" class="grid" style="max-width:640px">
+            <input type="hidden" name="subject" value="{{ subject }}" />
+            <label>Nhánh cha
+              <select name="parent_id">
+                <option value="">— gốc (Objective 1, 2, …) —</option>
+                {% for p in parents %}<option value="{{ p.id }}">{{ p.code }} {{ p.title }}</option>{% endfor %}
+              </select>
+            </label>
+            <label>Mã <input name="code" required placeholder="2.2" /></label>
+            <label>Tên <input name="title" required placeholder="Format text and paragraphs" /></label>
+            <button class="btn btn-outline" type="submit">Lưu nhánh</button>
+          </form>
           <h3 style="font-size:16px;margin-top:20px">Thêm task nháp</h3>
           <form method="post" action="/quan-tri/ngan-hang/task" class="grid" style="max-width:640px">
             <label>Objective

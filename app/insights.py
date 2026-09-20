@@ -88,6 +88,14 @@ def skill_gaps(class_id: int = 0) -> list[dict]:
                 "action": action,
             }
         )
+    try:
+        from app.bank import objective_gaps
+
+        traced = objective_gaps(class_id)
+        if traced:
+            out = traced + out
+    except Exception:
+        pass
     return out
 
 

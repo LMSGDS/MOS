@@ -527,7 +527,23 @@ CREATE TABLE IF NOT EXISTS student_task_results (
 );
 
 ALTER TABLE assignments ADD COLUMN IF NOT EXISTS exam_id TEXT REFERENCES bank_exams(id) ON DELETE SET NULL;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS objective_id TEXT REFERENCES objective_domains(id) ON DELETE SET NULL;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS opens_at TIMESTAMPTZ;
+ALTER TABLE assignments ADD COLUMN IF NOT EXISTS closes_at TIMESTAMPTZ;
+ALTER TABLE bank_tasks ADD COLUMN IF NOT EXISTS high_difficulty BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS formative_telemetry (
+  id            BIGSERIAL PRIMARY KEY,
+  student_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  task_id       TEXT REFERENCES bank_tasks(id) ON DELETE SET NULL,
+  attempt_id    TEXT REFERENCES attempts(id) ON DELETE SET NULL,
+  event         TEXT NOT NULL CHECK (event IN ('hint1', 'hint2', 'hint3', 'wrong_check', 'check_pass')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS idx_bank_tasks_objective ON bank_tasks(objective_id);
 CREATE INDEX IF NOT EXISTS idx_bank_tasks_status ON bank_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_student_task_results ON student_task_results(student_id, task_id);
 CREATE INDEX IF NOT EXISTS idx_exam_flags ON exam_issue_flags(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bank_tasks_qmatrix ON bank_tasks USING GIN (q_matrix_rules);
+CREATE INDEX IF NOT EXISTS idx_formative_task ON formative_telemetry(task_id, event);

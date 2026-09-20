@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import secrets
 from itertools import combinations
 from pathlib import Path
@@ -180,14 +181,15 @@ def sync_existing_projects() -> None:
         rows = list(cur.fetchall())
     for row in rows:
         subject = {"word": "MO-100", "excel": "MO-200", "powerpoint": "MO-300"}.get(row["program"], "MO-100")
-        code = str(row.get("objective") or "").strip() or "1.1"
+        code = str(row.get("objective") or "").strip()
         if code.count(".") > 1:
             code = ".".join(code.split(".")[:2])
-        obj_id = _oid(subject, code)
-        with cursor() as cur:
-            cur.execute("SELECT id FROM objective_domains WHERE id = %s", (obj_id,))
-            if not cur.fetchone():
-                obj_id = _oid(subject, "1.1")
+        obj_id = _oid(subject, code) if code else None
+        if obj_id:
+            with cursor() as cur:
+                cur.execute("SELECT id FROM objective_domains WHERE id = %s", (obj_id,))
+                if not cur.fetchone():
+                    obj_id = None
         pid = f"bp-{row['id']}"
         status = "published" if row.get("published") is not False else "draft"
         rubric = row.get("rubric")
@@ -667,7 +669,7 @@ def auto_generate_exam(*, program: str, title: str, user_id: int | None = None) 
     )
 
 
-def compile_payload(exam_id: str) -> dict:
+def compile_payload(exam_id: str, student_id: int | None = None) -> dict:
     exam = get_exam(exam_id)
     if not exam:
         raise ValueError("exam")
@@ -716,7 +718,7 @@ def compile_payload(exam_id: str) -> dict:
                     "tasks": tasks,
                 }
             )
-    return {
+    payload = {
         "exam_id": exam["id"],
         "title": exam["title"],
         "exam_type": exam["exam_type"],
@@ -730,6 +732,7 @@ def compile_payload(exam_id: str) -> dict:
         "focus_lock": mock,
         "force_submit": mock,
         "ip_whitelist": mock,
+        "version_hash": exam.get("version_hash") or "",
         "navigation": {
             "next_task": True,
             "prev_task": True,
@@ -738,9 +741,12 @@ def compile_payload(exam_id: str) -> dict:
         },
         "projects": projects,
     }
+    if student_id and mock:
+        payload["projects"] = shuffle_projects(projects, f"{exam['id']}:{student_id}")
+    return payload
 
 
-def session_for_project(project_id: str, mode: str) -> dict:
+def session_for_project(project_id: str, mode: str, student_id: int | None = None) -> dict:
     """Cờ luyện tập / thi khi MOS-KulKul mở một project hiện có."""
     training = mode != "testing"
     with cursor() as cur:
@@ -757,7 +763,7 @@ def session_for_project(project_id: str, mode: str) -> dict:
         exam = cur.fetchone()
     if exam:
         try:
-            payload = compile_payload(exam["id"])
+            payload = compile_payload(exam["id"], student_id=student_id)
             payload["mode"] = "testing" if exam["exam_type"] == "CERTIFICATION_MOCK" else "training"
             return payload
         except ValueError:
@@ -895,6 +901,18 @@ def record_task_results(attempt_id: str, scored: dict | None) -> int:
     return written
 
 
+def parent_objectives(subject: str | None = None) -> list[dict]:
+    sql = "SELECT id, subject, code, title FROM objective_domains WHERE parent_id IS NULL"
+    params: list = []
+    if subject:
+        sql += " AND subject = %s"
+        params.append(subject)
+    sql += " ORDER BY subject, code"
+    with cursor() as cur:
+        cur.execute(sql, tuple(params))
+        return [dict(r) for r in cur.fetchall()]
+
+
 def leaf_objectives() -> list[dict]:
     with cursor() as cur:
         cur.execute(
@@ -906,3 +924,336 @@ def leaf_objectives() -> list[dict]:
             """
         )
         return [dict(r) for r in cur.fetchall()]
+
+
+def save_objective(*, subject: str, code: str, title: str, parent_id: str | None = None) -> str:
+    """Super Admin cập nhật Tầng 1 khi Microsoft đổi syllabus."""
+    subject = subject if subject in ("MO-100", "MO-200", "MO-300") else "MO-100"
+    oid = _oid(subject, code.strip())
+    with cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO objective_domains (id, subject, code, title, description, parent_id, sort_order)
+            VALUES (%s, %s, %s, %s, %s, %s, 99)
+            ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, parent_id = EXCLUDED.parent_id
+            """,
+            (oid, subject, code.strip(), title.strip(), title.strip(), parent_id or None),
+        )
+    return oid
+
+
+def shuffle_projects(projects: list[dict], seed_key: str) -> list[dict]:
+    items = [dict(p) for p in projects]
+    rnd = random.Random(int(hashlib.sha256(seed_key.encode()).hexdigest()[:12], 16))
+    rnd.shuffle(items)
+    for i, block in enumerate(items, start=1):
+        block["order"] = i
+        tasks = list(block.get("tasks") or [])
+        rnd.shuffle(tasks)
+        for j, task in enumerate(tasks, start=1):
+            task["sequence"] = j
+        block["tasks"] = tasks
+    return items
+
+
+def assign_objective_drill(class_id: int, objective_id: str, assigned_by: int | None = None) -> list[str]:
+    """Giao luyện tập theo Tầng 1: gom mọi Atomic Task cùng Objective."""
+    from app.assign import configure_assignment
+
+    tasks = list_tasks(objective_id=objective_id, published_only=True)
+    sources: list[str] = []
+    for task in tasks:
+        src = task.get("source_project_id")
+        if src and src not in sources:
+            sources.append(src)
+    if not sources:
+        raise ValueError("tasks")
+    for src in sources[:8]:
+        configure_assignment(class_id, src, assigned_by=assigned_by, mode="training")
+        with cursor() as cur:
+            cur.execute(
+                "UPDATE assignments SET objective_id = %s WHERE class_id = %s AND project_id = %s",
+                (objective_id, class_id, src),
+            )
+    return sources
+
+
+def apply_certiport_scale(scored: dict | None, mode: str) -> dict:
+    data = dict(scored or {})
+    items = data.get("criteria") or data.get("results") or []
+    raw = 0.0
+    possible = 0.0
+    exam = mode == "testing"
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            weight = int(item.get("weight") or 1)
+            if weight not in (1, 2, 3):
+                weight = 1
+            earned = float(item.get("earned") or 0)
+            poss = float(item.get("possible") or 0) or 1.0
+            frac = earned / poss
+            if exam and frac < 1:
+                frac = 0.0
+                item["earned"] = 0
+            raw += weight * frac
+            possible += weight
+    scaled = scale_score(raw, possible)
+    data["raw_earned"] = raw
+    data["raw_possible"] = possible
+    data["scaled_1000"] = scaled
+    data["passed"] = passed(scaled)
+    data["cut_score"] = CUT_SCORE
+    return data
+
+
+def telemetry_hits_path(events: list, valid_paths: list[str]) -> bool:
+    blob = " ".join(
+        f"{ev.get('skill', '')} {ev.get('action', '')} {ev.get('detail', '')}".lower()
+        for ev in events
+        if isinstance(ev, dict)
+    )
+    for path in valid_paths:
+        token = str(path).lower().replace("_", " ")
+        tail = str(path).split("_")[-1].lower()
+        if token in blob or (tail and tail in blob):
+            return True
+    return False
+
+
+def record_formative(*, student_id: int, attempt_id: str, event: str, task_id: str = "") -> None:
+    if event not in ("hint1", "hint2", "hint3", "wrong_check", "check_pass"):
+        return
+    with cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO formative_telemetry (student_id, task_id, attempt_id, event)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (student_id, task_id or None, attempt_id, event),
+        )
+    if event == "hint3":
+        refresh_empirical_difficulty()
+
+
+def ingest_formative_events(student_id: int, attempt_id: str, events: list) -> int:
+    n = 0
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        action = str(ev.get("action") or ev.get("skill") or "").lower()
+        detail = ev.get("detail") if isinstance(ev.get("detail"), dict) else {}
+        tier = detail.get("tier") or detail.get("hint_tier") or ev.get("tier")
+        event = ""
+        if tier in (1, "1", "hint1") or action in {"hint1", "hint_1"}:
+            event = "hint1"
+        elif tier in (2, "2", "hint2") or action in {"hint2", "hint_2"}:
+            event = "hint2"
+        elif tier in (3, "3", "hint3") or action in {"hint3", "hint_3", "hint-level-3"}:
+            event = "hint3"
+        elif action in {"hint"}:
+            event = "hint1"
+        elif action in {"wrong", "check_fail", "fail"}:
+            event = "wrong_check"
+        elif action in {"check_pass", "pass"}:
+            event = "check_pass"
+        if event:
+            record_formative(
+                student_id=student_id,
+                attempt_id=attempt_id,
+                event=event,
+                task_id=str(ev.get("task_id") or detail.get("task_id") or ""),
+            )
+            n += 1
+    return n
+
+
+def refresh_empirical_difficulty() -> int:
+    """80% học sinh khối 10 dùng hint cấp 3 → High_Difficulty."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            WITH grade10 AS (
+              SELECT DISTINCT u.id
+              FROM users u
+              JOIN enrollments e ON e.user_id = u.id
+              JOIN classes c ON c.id = e.class_id
+              WHERE c.name ~ '^10'
+            ),
+            stats AS (
+              SELECT f.task_id,
+                     COUNT(DISTINCT f.student_id) FILTER (WHERE f.student_id IN (SELECT id FROM grade10)) AS n,
+                     COUNT(DISTINCT f.student_id) FILTER (
+                       WHERE f.event = 'hint3' AND f.student_id IN (SELECT id FROM grade10)
+                     ) AS hint3
+              FROM formative_telemetry f
+              WHERE f.task_id IS NOT NULL
+              GROUP BY f.task_id
+            )
+            UPDATE bank_tasks t
+            SET high_difficulty = (s.n >= 5 AND (100.0 * s.hint3 / s.n) >= 80)
+            FROM stats s
+            WHERE t.id = s.task_id
+            """
+        )
+        return cur.rowcount or 0
+
+
+def hard_stop_next(student_id: int, task_id: str) -> dict | None:
+    """Sai 3 lần liên tiếp → không sang task khác objective; đưa bài cùng Objective."""
+    if not task_id:
+        return None
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT is_correct FROM student_task_results
+            WHERE student_id = %s AND task_id = %s
+            ORDER BY created_at DESC LIMIT 3
+            """,
+            (student_id, task_id),
+        )
+        rows = list(cur.fetchall())
+        if len(rows) < 3 or any(r["is_correct"] for r in rows):
+            return None
+        cur.execute("SELECT objective_id, instruction_text FROM bank_tasks WHERE id = %s", (task_id,))
+        src = cur.fetchone()
+        if not src or not src["objective_id"]:
+            return None
+        cur.execute(
+            """
+            SELECT id, instruction_text, source_project_id
+            FROM bank_tasks
+            WHERE objective_id = %s AND status = 'published' AND id <> %s
+            ORDER BY random() LIMIT 1
+            """,
+            (src["objective_id"], task_id),
+        )
+        nxt = cur.fetchone()
+    if not nxt:
+        return None
+    return {
+        "hard_stop": True,
+        "failed_task_id": task_id,
+        "next_task_id": nxt["id"],
+        "next_project_id": nxt.get("source_project_id"),
+        "reason": f"Sai 3 lần liên tiếp «{src['instruction_text']}». Làm bài cùng Objective trước khi sang kỹ năng khác.",
+    }
+
+
+def unlock_remedial(student_id: int, attempt_id: str, scaled: int | None = None) -> dict:
+    """Traceback Tầng 3→1: sai ≥3 task cùng Objective thì mở khóa luyện tập bổ trợ."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT t.objective_id, d.code, d.title, d.subject, COUNT(*) AS fails
+            FROM student_task_results r
+            JOIN bank_tasks t ON t.id = r.task_id
+            JOIN objective_domains d ON d.id = t.objective_id
+            WHERE r.attempt_id = %s AND r.is_correct = FALSE
+            GROUP BY t.objective_id, d.code, d.title, d.subject
+            HAVING COUNT(*) >= 3
+            ORDER BY COUNT(*) DESC
+            """,
+            (attempt_id,),
+        )
+        weak = [dict(r) for r in cur.fetchall()]
+        cur.execute("SELECT class_id FROM enrollments WHERE user_id = %s LIMIT 1", (student_id,))
+        enr = cur.fetchone()
+        if scaled is None:
+            cur.execute(
+                """
+                SELECT scaled_1000 FROM student_task_results
+                WHERE attempt_id = %s AND scaled_1000 IS NOT NULL
+                ORDER BY id DESC LIMIT 1
+                """,
+                (attempt_id,),
+            )
+            scaled_row = cur.fetchone()
+            if scaled_row and scaled_row.get("scaled_1000") is not None:
+                scaled = int(scaled_row["scaled_1000"])
+    unlocked: list[str] = []
+    if weak and enr:
+        try:
+            unlocked = assign_objective_drill(int(enr["class_id"]), weak[0]["objective_id"])
+        except ValueError:
+            unlocked = []
+    if weak:
+        w = weak[0]
+        score_bit = f"Bạn đạt {scaled}/1000. " if scaled is not None else ""
+        message = (
+            f"{score_bit}Tuy nhiên, dữ liệu cho thấy bạn sai liên tiếp {w['fails']} câu thuộc "
+            f"Objective {w['code']}: {w['title']}. Hệ thống đã tự động mở khóa bộ bài tập luyện tập "
+            f"bổ trợ cho phần này trong danh sách Việc cần làm."
+        )
+    elif scaled is not None:
+        badge = "PASS" if passed(scaled) else "FAIL"
+        message = f"Bạn đạt {scaled}/1000 — {badge}."
+    else:
+        message = ""
+    return {"udl_message": message, "unlocked_projects": unlocked, "weak_objectives": weak, "scaled_1000": scaled}
+
+
+def objective_gaps(class_id: int = 0) -> list[dict]:
+    """Lỗ hổng theo Tầng 1: Student_Task_Results → Tasks → Objective_Domains."""
+    with cursor() as cur:
+        cur.execute(
+            """
+            SELECT
+              COALESCE(c.name, 'Chưa xếp lớp') AS class_name,
+              a.class_id,
+              d.id AS exam_id,
+              (d.subject || ' ' || d.code || ' — ' || d.title) AS title,
+              (d.subject || ' ' || d.code) AS skill,
+              COUNT(*) AS n,
+              COUNT(*) FILTER (WHERE r.is_correct = FALSE) AS fails,
+              0 AS locate_fail,
+              0 AS tool_fail,
+              0 AS configure_fail
+            FROM student_task_results r
+            JOIN bank_tasks t ON t.id = r.task_id
+            JOIN objective_domains d ON d.id = t.objective_id
+            JOIN attempts a ON a.id = r.attempt_id
+            LEFT JOIN classes c ON c.id = a.class_id
+            WHERE a.status IN ('submitted', 'graded')
+              AND (%s = 0 OR a.class_id = %s)
+            GROUP BY c.name, a.class_id, d.id, d.subject, d.code, d.title
+            HAVING COUNT(*) > 0
+            ORDER BY
+              (100.0 * COUNT(*) FILTER (WHERE r.is_correct = FALSE) / COUNT(*)) DESC,
+              d.code
+            """,
+            (class_id, class_id),
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+    out = []
+    for row in rows:
+        n = int(row["n"] or 0)
+        fails = int(row["fails"] or 0)
+        fail_pct = round(100.0 * fails / n, 1) if n else 0.0
+        heat = "red" if fail_pct >= 75 else "amber" if fail_pct >= 50 else "green"
+        row.update(
+            {
+                "fail_pct": fail_pct,
+                "heat": heat,
+                "action": (
+                    f"{fail_pct:.0f}% sai Objective {row['skill']} — giao luyện tập Tầng 1 cho chuyên đề này."
+                    if heat in {"red", "amber"}
+                    else ""
+                ),
+            }
+        )
+        out.append(row)
+    return out
+
+
+def exam_hash_ok(exam_id: str, client_hash: str) -> bool:
+    if not client_hash:
+        return True
+    with cursor() as cur:
+        cur.execute("SELECT version_hash FROM bank_exams WHERE id = %s", (exam_id,))
+        row = cur.fetchone()
+    if not row:
+        return True
+    stored = row.get("version_hash") or ""
+    return not stored or stored == client_hash

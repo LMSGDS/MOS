@@ -14,6 +14,7 @@ from app.db import cursor
 from app.roles import is_admin, is_staff, persona
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
 from app.bank import (
+    assign_objective_drill,
     attach_task,
     auto_generate_exam,
     flag_issue,
@@ -22,11 +23,13 @@ from app.bank import (
     knowledge_tree,
     leaf_objectives,
     list_exams,
+    parent_objectives,
     list_flags,
     list_projects,
     list_subjects,
     list_tasks,
     save_exam,
+    save_objective,
     save_project,
     save_task,
     set_exam_status,
@@ -726,6 +729,7 @@ def admin_bank(request: Request):
                 "orphans": orphans,
                 "orphan_tasks": list_tasks(orphans=True),
                 "leaves": leaf_objectives(),
+                "parents": parent_objectives(subject),
                 "projects": list_projects(),
                 "exams": list_exams(),
                 "exam": exam,
@@ -894,6 +898,7 @@ def teacher_bank(request: Request):
                 "nav": "catalog",
                 "exams": list_exams(published_only=True),
                 "tasks": list_tasks(published_only=True)[:80],
+                "leaves": leaf_objectives(),
                 "classes": classes_for(user),
                 "saved": request.query_params.get("ok"),
             },
@@ -921,6 +926,7 @@ def teacher_assign_exam(
     exam_id: str = Form(...),
     class_id: str = Form(...),
     lan_only: str = Form(""),
+    practice_mode: str = Form(""),
 ):
     user = _session_user(request)
     if not user or not _staff(user):
@@ -929,7 +935,7 @@ def teacher_assign_exam(
     if not exam or exam.get("status") != "published":
         return RedirectResponse("/quan-tri/kho-de?loi=1", status_code=303)
     cid = int(class_id) if str(class_id).isdigit() else 0
-    mock = exam.get("exam_type") == "CERTIFICATION_MOCK"
+    mock = exam.get("exam_type") == "CERTIFICATION_MOCK" and practice_mode != "1"
     ip_allow = (get_setting("exam_ip_allow") or LAN_DEFAULT) if lan_only == "1" or mock else ""
     for block in exam.get("projects") or []:
         src = block.get("source_project_id")
@@ -945,6 +951,38 @@ def teacher_assign_exam(
             exam_id=exam["id"],
         )
     return RedirectResponse("/quan-tri/bai-tap?ok=exam", status_code=303)
+
+
+@router.post("/quan-tri/kho-de/giao-objective")
+def teacher_assign_objective(
+    request: Request,
+    objective_id: str = Form(...),
+    class_id: str = Form(...),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else 0
+    try:
+        assign_objective_drill(cid, objective_id, assigned_by=user.get("id"))
+    except ValueError:
+        return RedirectResponse("/quan-tri/kho-de?loi=tasks", status_code=303)
+    return RedirectResponse("/quan-tri/bai-tap?ok=objective", status_code=303)
+
+
+@router.post("/quan-tri/ngan-hang/objective")
+def admin_bank_save_objective(
+    request: Request,
+    subject: str = Form("MO-100"),
+    code: str = Form(...),
+    title: str = Form(...),
+    parent_id: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    save_objective(subject=subject, code=code, title=title, parent_id=parent_id or None)
+    return RedirectResponse(f"/quan-tri/ngan-hang?tab=cay&mon={subject}&ok=obj", status_code=303)
 
 
 @router.get("/quan-tri/phan-cap", response_class=HTMLResponse)

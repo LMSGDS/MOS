@@ -21,6 +21,8 @@
             <form method="post" action="/quan-tri/kho-de/giao" class="inline-row">
               <input type="hidden" name="exam_id" value="{{ e.id }}" />
               <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+              <label class="hint"><input type="checkbox" name="practice_mode" value="1" /> Practice_Mode</label>
+              <label class="hint"><input type="checkbox" name="lan_only" value="1" /> IP phòng máy</label>
               <button class="btn btn-primary" type="submit">Giao</button>
             </form>
           </td>
@@ -30,6 +32,13 @@
         {% endfor %}
       </tbody>
     </table>
+    <h2 style="font-size:18px;margin-top:24px">Giao luyện tập theo Objective (Tầng 1)</h2>
+    <p class="hint">Gom mọi Atomic Task cùng chuyên đề — drill-and-practice MOS Study Guide, không phải đề Certiport.</p>
+    <form method="post" action="/quan-tri/kho-de/giao-objective" class="inline-row">
+      <select name="objective_id">{% for o in leaves %}<option value="{{ o.id }}">{{ o.subject }} {{ o.code }} {{ o.title }}</option>{% endfor %}</select>
+      <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+      <button class="btn btn-primary" type="submit">Giao ôn</button>
+    </form>
     <h2 style="font-size:18px;margin-top:24px">Bài luyện tập đã xuất bản</h2>
     <table class="grid">
       <thead><tr><th>Nhiệm vụ</th><th>Objective</th><th>Trọng số</th></tr></thead>

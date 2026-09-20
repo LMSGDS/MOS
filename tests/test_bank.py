@@ -213,6 +213,55 @@ def test_super_admin_tabs_and_teacher_readonly(client):
     assert blocked.headers["location"] == "/tien-do"
 
 
+def test_five_architecture_layers(pg, client):
+    from app.bank import apply_certiport_scale, assign_objective_drill, compile_payload, save_objective
+
+    oid = save_objective(subject="MO-100", code="9.9", title="Extra skill", parent_id="mo-100-1")
+    assert oid == "mo-100-9-9"
+    exam = apply_certiport_scale(
+        {"criteria": [{"earned": 1, "possible": 1, "weight": 1}, {"earned": 0.5, "possible": 1, "weight": 1}]},
+        "testing",
+    )
+    assert exam["scaled_1000"] == 500
+    assert exam["passed"] is False
+    train = apply_certiport_scale(
+        {"criteria": [{"earned": 1, "possible": 1, "weight": 1}, {"earned": 0.5, "possible": 1, "weight": 1}]},
+        "training",
+    )
+    assert train["scaled_1000"] == 750
+    one = compile_payload("exam-word-mock-1", student_id=1)
+    two = compile_payload("exam-word-mock-1", student_id=2)
+    assert {p["project_id"] for p in one["projects"]} == {p["project_id"] for p in two["projects"]}
+    assert one.get("version_hash") is not None
+    sources = assign_objective_drill(1, "mo-100-2-2")
+    assert sources
+    assert "word-mail-merge" not in sources
+    admin = TestClient(app)
+    admin.post("/dang-nhap", data={"username": "admin", "password": "Mos@Gds2026"})
+    assert "Cập nhật Tầng 1" in admin.get("/quan-tri/ngan-hang?tab=cay").text
+    teacher = TestClient(app)
+    teacher.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"})
+    catalog = teacher.get("/quan-tri/kho-de")
+    assert "Giao luyện tập theo Objective" in catalog.text
+    assert "Practice_Mode" in catalog.text
+    denied = teacher.post(
+        "/quan-tri/ngan-hang/objective",
+        data={"subject": "MO-100", "code": "8.8", "title": "hack"},
+        follow_redirects=False,
+    )
+    assert denied.status_code == 303
+    assert denied.headers["location"] == "/quan-tri"
+    drill = teacher.post(
+        "/quan-tri/kho-de/giao-objective",
+        data={"objective_id": "mo-100-2-2", "class_id": "1"},
+        follow_redirects=False,
+    )
+    assert drill.status_code == 303
+    gaps = teacher.get("/quan-tri/lo-hong")
+    assert gaps.status_code == 200
+    assert "Objective_Domains" in gaps.text or "Tầng" in gaps.text
+
+
 def test_client_start_includes_bank_flags(client):
     token = _token(client, "hocsinh")
     started = client.post(
