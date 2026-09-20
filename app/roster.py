@@ -190,7 +190,7 @@ def reset_one(user_id: int) -> dict | None:
 def staff_manages_student(staff: dict | None, user_id: int) -> bool:
     if not staff:
         return False
-    if staff.get("role") == "admin":
+    if staff.get("role") in ("admin", "leadership"):
         return True
     allowed = {c["id"] for c in classes_for(staff)}
     if not allowed:

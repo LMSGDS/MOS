@@ -12,9 +12,11 @@
   <link rel="apple-touch-icon" href="/static/kulkul.png?v={{ asset_v }}" />
   <link rel="stylesheet" href="/static/mos.css?v={{ asset_v }}" />
 </head>
-<body class="{% block bodyclass %}{% endblock %}{% if user %} ic-app{% endif %}">
+<body class="{% block bodyclass %}{% endblock %}{% if user and persona != 'student' %} ic-app{% endif %}{% if persona == 'student' %} student-app{% endif %}">
   {% block chrome %}
-  {% if user %}
+  {% if user and persona == 'student' %}
+  {% include "student_nav.html" %}
+  {% elif user %}
   {% include "global_nav.html" %}
   {% else %}
   <header class="top">

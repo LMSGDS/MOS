@@ -24,6 +24,8 @@ from app.live import router as live_router
 from app.kulkul_layout import Rect, compute, grow_for_help, measure
 from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
+from app.roles import is_staff as _staff_web
+from app.roles import is_student, persona
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
@@ -43,7 +45,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul11")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul14")
 SESSION_SECRET = _session_secret()
 
 
@@ -114,10 +116,6 @@ def current_user(request: Request) -> dict | None:
     return user if isinstance(user, dict) else None
 
 
-def _staff_web(user: dict | None) -> bool:
-    return bool(user and user.get("role") in ("admin", "teacher", "leadership"))
-
-
 def current_program(request: Request) -> dict:
     q = request.query_params.get("chuong-trinh") or request.query_params.get("app")
     if q:
@@ -126,13 +124,15 @@ def current_program(request: Request) -> dict:
 
 
 def _ctx(request: Request, extra: dict | None = None) -> dict:
+    user = current_user(request)
     data = {
-        "user": current_user(request),
+        "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
         "program": current_program(request),
         "programs": MENU,
         "asset_v": ASSET_V,
         "app_version": app_version(),
+        "persona": persona(user),
     }
     if extra:
         data.update(extra)
@@ -270,6 +270,8 @@ def home(request: Request):
         return RedirectResponse("/dang-nhap", status_code=303)
     if _staff_web(user) and not _is_dock(request):
         return RedirectResponse("/quan-tri", status_code=303)
+    if is_student(user) and not _is_dock(request):
+        return RedirectResponse("/tien-do", status_code=303)
     template = "dock_content.html" if _is_dock(request) else "portal.html"
     cards = []
     if user.get("role") == "student" and user.get("id"):

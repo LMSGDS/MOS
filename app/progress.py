@@ -397,7 +397,7 @@ def list_student_exercises(user_id: int, program: str | None = None) -> list[dic
                ep.status, ep.best_verified, ep.last_verified, ep.last_pending, ep.growth,
                ep.attempt_count, ep.checkpoint_count, ep.evidence_count,
                ep.criteria_passed, ep.criteria_total, ep.last_activity_at,
-               a.id AS assignment_id, a.due_at
+               a.id AS assignment_id, a.due_at, a.mode AS assign_mode
         FROM projects p
         LEFT JOIN exercise_progress ep ON ep.project_id = p.id AND ep.user_id = %s
         LEFT JOIN enrollments en ON en.user_id = %s

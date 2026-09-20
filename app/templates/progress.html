@@ -1,61 +1,96 @@
 {% extends "base.html" %}
 {% block title %}Tiến độ học tập{% endblock %}
 {% block body %}
-<section class="card hero admin-wide">
-  {% if user.role in ['admin', 'teacher', 'leadership'] %}
-  {% include "admin_nav.html" %}
-  {% endif %}
-  <h1>Tiến độ và đánh giá của bạn</h1>
-  <form method="post" action="/vao-lop" class="live-filter">
+<section class="card hero student-shell">
+  {% if student_nav == 'progress' %}
+  <h1>Tiến độ của tôi</h1>
+  <p class="lead">So sánh với chính bạn — không có bảng xếp hạng lớp.</p>
+  <form method="post" action="/vao-lop" class="join-row">
     <label>Mã vào lớp <input name="ma" required placeholder="A1B2C3" /></label>
-    <button type="submit">Tham gia</button>
+    <button type="submit" class="btn btn-primary">Tham gia</button>
   </form>
   {% if join_error %}
   <p class="alert" role="alert">Mã lớp không đúng.</p>
   {% endif %}
   {% if adaptive %}
-  <h2 style="margin-top:8px;font-size:18px">Lộ trình thích ứng</h2>
+  <h2>Lộ trình thích ứng</h2>
   {% for c in adaptive %}
   <p class="alert heat-red"><strong>{{ c.title }}</strong> — {{ c.reason }}</p>
   {% endfor %}
   {% endif %}
-  {% if not evaluation %}
-  <p class="lead">Chưa có dữ liệu bài làm.</p>
-  {% else %}
-  <p class="lead">{{ evaluation.summary }}</p>
-  <p><span class="badge badge-{{ evaluation.level }}">{{ evaluation.level_label }}</span></p>
-  <div class="program-grid" style="margin-top:12px">
-    <div class="program-tile"><span class="pname">Tiến độ<br><strong>{{ "%.0f"|format(evaluation.completion_pct or 0) }}%</strong></span></div>
-    <div class="program-tile"><span class="pname">Đã nộp<br><strong>{{ evaluation.exercises_completed }}/{{ evaluation.exercises_assigned }}</strong></span></div>
-    <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ "%.0f"|format(evaluation.overall_score or 0) }}</strong></span></div>
-    <div class="program-tile"><span class="pname">Tiến bộ<br><strong>{{ "%+.0f"|format(evaluation.avg_growth or 0) }}</strong></span></div>
+  <div class="student-radar">
+    {% set w = (radar.word or 0) / 100 %}
+    {% set x = (radar.excel or 0) / 100 %}
+    {% set p = (radar.powerpoint or 0) / 100 %}
+    <svg viewBox="0 0 240 220" width="240" height="220" aria-label="Radar năng lực">
+      <polygon points="120,28 200,176 40,176" fill="none" stroke="#cbd5e1" />
+      <polygon points="120,{{ 102 - 74 * w }} {{ 120 + 80 * x }},{{ 102 + 74 * x }} {{ 120 - 80 * p }},{{ 102 + 74 * p }}" fill="rgba(0,142,226,0.28)" stroke="#008EE2" />
+      <text x="120" y="16" text-anchor="middle" font-size="13">Word {{ "%.0f"|format(radar.word or 0) }}</text>
+      <text x="232" y="196" text-anchor="end" font-size="13">Excel {{ "%.0f"|format(radar.excel or 0) }}</text>
+      <text x="8" y="196" text-anchor="start" font-size="13">PowerPoint {{ "%.0f"|format(radar.powerpoint or 0) }}</text>
+    </svg>
+    {% if evaluation %}
+    <div>
+      <p><span class="badge badge-{{ evaluation.level }}">{{ evaluation.level_label }}</span></p>
+      <p class="lead">{{ evaluation.summary }}</p>
+      <p>Tiến độ Word {{ "%.0f"|format(evaluation.completion_pct or 0) }}% · Điểm TB {{ "%.0f"|format(evaluation.overall_score or 0) }} · Tiến bộ {{ "%+.0f"|format(evaluation.avg_growth or 0) }}</p>
+    </div>
+    {% endif %}
   </div>
-  <div class="bar big"><span style="width:{{ [evaluation.completion_pct or 0, 100]|min }}%"></span></div>
+  {% if evaluation and evaluation.weak_skills %}
+  <h2>Cần ôn</h2>
+  <ul class="skill-list">
+    {% for s in evaluation.weak_skills %}
+    <li>{{ s.title }} — {{ s.label }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 
-  <h2 style="margin-top:28px;font-size:18px">Bài tập Word</h2>
+  {% elif student_nav == 'tasks' %}
+  <h1>Nhiệm vụ cần làm</h1>
+  <p class="lead">Mở bài trong MOS-KulKul trên máy — web không chạy Office Online.</p>
+  <ul class="task-list">
+    {% for ex in tasks %}
+    <li class="task-card task-{{ ex.assign_mode or 'training' }}">
+      <p class="task-mode">{% if ex.assign_mode == 'testing' %}Thi{% else %}Luyện tập{% endif %}</p>
+      <h2>{{ ex.title }}</h2>
+      <p>{{ ex.status_label }}{% if ex.best_verified %} · {{ "%.0f"|format(ex.best_verified) }} điểm{% endif %}</p>
+      <p class="hint">Mở MOS-KulKul, bài <code>{{ ex.project_id }}</code>.</p>
+    </li>
+    {% else %}
+    <li class="hint">Chưa có bài giáo viên giao. Nhập mã vào lớp nếu thầy/cô vừa phát mã.</li>
+    {% endfor %}
+  </ul>
+
+  {% else %}
+  <h1>Lịch sử bài nộp</h1>
+  <p class="lead">Xem điểm và kỹ năng còn sai — không so sánh với bạn khác.</p>
   <table class="grid">
-    <thead><tr><th>Bài</th><th>Trạng thái</th><th>Điểm</th><th>Tiến bộ</th></tr></thead>
+    <thead><tr><th>Bài</th><th>Trạng thái</th><th>Điểm</th><th>Tiến bộ</th><th>Kỹ năng</th></tr></thead>
     <tbody>
-      {% for ex in exercises %}
+      {% for ex in done %}
       <tr>
         <td>{{ ex.title }}</td>
         <td>{{ ex.status_label }}</td>
         <td>{{ "%.0f"|format(ex.best_verified or 0) }}</td>
         <td>{{ "%+.0f"|format(ex.growth or 0) }}</td>
+        <td>{{ ex.criteria_passed or 0 }}/{{ ex.criteria_total or 0 }}</td>
       </tr>
+      {% else %}
+      <tr><td colspan="5">Chưa có bài nộp.</td></tr>
       {% endfor %}
     </tbody>
   </table>
-
-  <h2 style="margin-top:28px;font-size:18px">Cần ôn</h2>
+  {% if evaluation and evaluation.weak_skills %}
+  <h2>Chi tiết lỗi từ Q-Matrix</h2>
   <ul class="skill-list">
     {% for s in evaluation.weak_skills %}
-    <li>{{ s.title }} — {{ s.label }}</li>
+    <li>{{ s.title }} — {{ s.label }} ({{ s.status }})</li>
     {% else %}
-    <li>Không có mục yếu được ghi nhận.</li>
+    <li>Chưa có lỗi được ghi nhận.</li>
     {% endfor %}
   </ul>
   {% endif %}
-  <p><a class="linkish" href="/">← Về trang chủ</a></p>
+  {% endif %}
 </section>
 {% endblock %}

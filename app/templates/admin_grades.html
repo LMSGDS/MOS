@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Sổ điểm · MOS-KulKul{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
+  <div class="admin-panel">
+    <h1>Sổ điểm</h1>
+    <p class="lead">Điểm tự động khi học sinh nộp bài trên MOS-KulKul. Chỉ các lớp bạn được phân công.</p>
+    <form method="get" action="/quan-tri/so-diem" class="roster-toolbar__filters">
+      <label>Lớp
+        <select name="lop" onchange="this.form.submit()">
+          <option value="">Tất cả lớp của tôi</option>
+          {% for c in classes %}
+          <option value="{{ c.id }}" {% if lop == (c.id|string) %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <a class="btn btn-primary" href="/quan-tri/hoc-sinh/bao-cao.csv?lop={{ lop }}">Xuất Excel / CSV</a>
+    </form>
+    <table class="grid">
+      <thead>
+        <tr>
+          <th>Mã HS</th><th>Họ tên</th><th>Lớp</th>
+          <th>Hoàn thành</th><th>Điểm TB</th><th>Tiến bộ</th><th>Đánh giá</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in roster %}
+        <tr>
+          <td>{{ s.student_code or "—" }}</td>
+          <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
+          <td>{{ s.class_name or "—" }}</td>
+          <td>{{ s.exercises_completed or 0 }}/{{ s.exercises_assigned or 0 }}</td>
+          <td>{{ "%.0f"|format(s.overall_score or 0) }}</td>
+          <td>{{ "%+.0f"|format(s.avg_growth or 0) }}</td>
+          <td><span class="badge badge-{{ s.level or 'chua_bat_dau' }}">{{ s.level_label }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">Chưa có điểm.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
