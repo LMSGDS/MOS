@@ -49,6 +49,49 @@ ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul15")
 SESSION_SECRET = _session_secret()
 
 
+def _user_from_scope(scope: dict) -> dict | None:
+    session = scope.get("session")
+    if isinstance(session, dict):
+        cand = session.get("user")
+        if isinstance(cand, dict) and cand.get("username"):
+            return cand
+    for key, val in scope.get("headers") or []:
+        if key == b"authorization":
+            raw = val.decode("latin-1")
+            if raw.lower().startswith("bearer "):
+                from app.tokens import decode
+
+                data = decode(raw.split(" ", 1)[1].strip())
+                if data and data.get("sub"):
+                    return {
+                        "username": data["sub"],
+                        "name": data.get("name") or data["sub"],
+                        "role": data.get("role") or "student",
+                        "id": data.get("uid"),
+                    }
+            break
+    return None
+
+
+class RequestIdentityMiddleware:
+    """Gắn persona Postgres RLS sau cookie phiên, trước handler."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        from app.db import bind_request_identity, reset_identity
+
+        tokens = bind_request_identity(_user_from_scope(scope))
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            reset_identity(tokens)
+
+
 def app_version() -> str:
     text = (ROOT / "desktop" / "MosDock" / "MosDock.csproj").read_text(encoding="utf-8")
     marker = "<Version>"
@@ -92,6 +135,7 @@ app.add_middleware(
     https_only=os.environ.get("MOS_HTTPS_ONLY", "0") == "1",
     max_age=60 * 60 * 12,
 )
+app.add_middleware(RequestIdentityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 
@@ -578,7 +622,7 @@ def install_macos_file(name: str):
     return FileResponse(path, filename=name)
 
 
-@app.post("/dang-xuat")
+@app.api_route("/dang-xuat", methods=["GET", "POST"])
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/dang-nhap", status_code=303)

@@ -412,3 +412,66 @@ def test_student_progress_shows_certiport_badge(pg, client):
     assert page.status_code == 200
     assert "PASS" in page.text
     assert "800/1000" in page.text
+
+
+def test_logout_get_clears_session(pg, client):
+    student = TestClient(app)
+    student.post("/dang-nhap", data={"username": "hocsinh", "password": "Mos@Gds2026"})
+    home = student.get("/tien-do")
+    assert home.status_code == 200
+    gone = student.get("/dang-xuat", follow_redirects=False)
+    assert gone.status_code == 303
+    assert gone.headers["location"] == "/dang-nhap"
+    again = student.get("/tien-do", follow_redirects=False)
+    assert again.status_code == 303
+    assert "/dang-nhap" in again.headers["location"]
+
+
+def test_rls_student_zero_bank_teacher_hides_drafts(pg):
+    from app.db import bind_request_identity, reset_identity
+
+    with cursor() as cur:
+        cur.execute("SELECT COUNT(*) AS n FROM bank_exams")
+        total = cur.fetchone()["n"]
+        cur.execute("SELECT id FROM users WHERE username = 'hocsinh'")
+        sid = cur.fetchone()["id"]
+        cur.execute("SELECT id FROM users WHERE username = 'giaovien'")
+        tid = cur.fetchone()["id"]
+    assert total > 0
+    draft_id = save_exam(
+        exam_id=None,
+        title="Draft RLS pytest",
+        exam_type="PRACTICE_EXAM",
+        program="word",
+        project_ids=[p["id"] for p in pack_exam_projects("word")[:5]],
+        user_id=tid,
+    )
+    st = bind_request_identity({"id": sid, "role": "student", "username": "hocsinh"})
+    try:
+        with cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM bank_exams")
+            assert cur.fetchone()["n"] == 0
+            cur.execute("SELECT COUNT(*) AS n FROM bank_tasks")
+            assert cur.fetchone()["n"] == 0
+            cur.execute("SELECT COUNT(*) AS n FROM bank_projects")
+            assert cur.fetchone()["n"] == 0
+    finally:
+        reset_identity(st)
+    te = bind_request_identity({"id": tid, "role": "teacher", "username": "giaovien"})
+    try:
+        with cursor() as cur:
+            cur.execute("SELECT id FROM bank_exams WHERE id = %s", (draft_id,))
+            assert cur.fetchone() is None
+            cur.execute("SELECT COUNT(*) AS n FROM bank_exams WHERE status = 'published'")
+            published = cur.fetchone()["n"]
+            cur.execute("SELECT COUNT(*) AS n FROM bank_exams")
+            assert cur.fetchone()["n"] == published
+            assert published >= 1
+    finally:
+        reset_identity(te)
+    teacher = TestClient(app)
+    teacher.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"})
+    catalog = teacher.get("/quan-tri/kho-de")
+    assert catalog.status_code == 200
+    assert "Draft RLS pytest" not in catalog.text
+    assert "Kho đề xuất bản" in catalog.text
