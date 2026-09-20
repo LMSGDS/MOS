@@ -52,13 +52,29 @@ def as_service():
         _persona.reset(token)
 
 
+def _apply_app_role(conn) -> None:
+    """Hạ xuống mos_app để superuser CI không bypass FORCE RLS."""
+    try:
+        row = conn.execute("SELECT 1 FROM pg_roles WHERE rolname = 'mos_app'").fetchone()
+        if not row:
+            return
+        conn.execute("SET ROLE mos_app")
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
 def connect() -> psycopg.Connection:
-    return psycopg.connect(
+    conn = psycopg.connect(
         database_url(),
         row_factory=dict_row,
         autocommit=False,
         client_encoding="UTF8",
     )
+    _apply_app_role(conn)
+    return conn
 
 
 @contextmanager
