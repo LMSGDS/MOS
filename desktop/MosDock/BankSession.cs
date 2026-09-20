@@ -86,10 +86,10 @@ sealed class BankPayload
                         var locate = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "locate") : "";
                         var tool = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "tool") : "";
                         var configure = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "configure") : "";
-                        var hints = StringArray(t, "hint_tiers");
-                        if (hints.Length == 0)
+                        var hintTiers = StringArray(t, "hint_tiers");
+                        if (hintTiers.Length == 0)
                         {
-                            hints = new[] { locate, tool, configure }
+                            hintTiers = new[] { locate, tool, configure }
                                 .Where(s => s.Length > 0)
                                 .ToArray();
                         }
@@ -101,7 +101,7 @@ sealed class BankPayload
                             Locate = locate,
                             Tool = tool,
                             Configure = configure,
-                            HintTiers = hints,
+                            HintTiers = hintTiers,
                         });
                     }
                 }
