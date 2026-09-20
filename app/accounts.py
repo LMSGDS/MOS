@@ -101,6 +101,67 @@ def create_account(
     return dict(row)
 
 
+def update_account(
+    user_id: int,
+    *,
+    name: str,
+    student_code: str | None = None,
+    class_id: int | None = None,
+    password: str | None = None,
+) -> dict:
+    display = (name or "").strip()
+    if not display:
+        raise ValueError("name")
+    code = (student_code or "").strip() or None
+    with cursor() as cur:
+        cur.execute("SELECT id, role FROM users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        if not row:
+            raise ValueError("missing")
+        cur.execute(
+            """
+            UPDATE users SET name = %s, student_code = %s
+            WHERE id = %s
+            RETURNING id, username, name, role, student_code
+            """,
+            (display, code, user_id),
+        )
+        updated = cur.fetchone()
+        if password:
+            cur.execute(
+                "UPDATE users SET password_hash = %s WHERE id = %s",
+                (hash_password(password), user_id),
+            )
+        if updated["role"] == "student":
+            cur.execute("DELETE FROM enrollments WHERE user_id = %s", (user_id,))
+            if class_id:
+                cur.execute("SELECT id FROM classes WHERE id = %s", (class_id,))
+                if cur.fetchone():
+                    cur.execute(
+                        """
+                        INSERT INTO enrollments (class_id, user_id) VALUES (%s, %s)
+                        ON CONFLICT DO NOTHING
+                        """,
+                        (class_id, user_id),
+                    )
+    return dict(updated)
+
+
+def remove_student(user_id: int) -> dict:
+    with cursor() as cur:
+        cur.execute("SELECT id, username, name, role FROM users WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+        if not row or row["role"] != "student":
+            raise ValueError("student")
+        cur.execute("DELETE FROM enrollments WHERE user_id = %s", (user_id,))
+    try:
+        with cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        return {"ok": True, "deleted": True, "username": row["username"]}
+    except Exception:
+        return {"ok": True, "deleted": False, "unenrolled": True, "username": row["username"]}
+
+
 def list_classes() -> list[dict]:
     try:
         with cursor() as cur:

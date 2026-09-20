@@ -5,20 +5,23 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.accounts import create_account
+from app.accounts import create_account, remove_student, update_account
 from app.assign import LAN_DEFAULT, configure_assignment, list_configured
 from app.db import cursor
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
 from app.roster import (
+    CSV_TEMPLATE,
     assign_teacher,
     bulk_reset,
     classes_for,
     import_csv,
     list_teachers,
+    reset_one,
     rotate_join_code,
+    staff_manages_student,
 )
 from app.pedagogy import (
     class_first_attempt_fail,
@@ -71,7 +74,7 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul11",
+        "asset_v": "kulkul13",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,
@@ -194,6 +197,52 @@ def _dashboard(request: Request, user: dict):
     )
 
 
+ROSTER_PAGE = 25
+STUDENT_TABS = ("danh-sach", "nhap", "phong-may")
+
+
+def _students_tab(value: str | None) -> str:
+    tab = (value or "danh-sach").strip()
+    return tab if tab in STUDENT_TABS else "danh-sach"
+
+
+def _students_url(**params) -> str:
+    parts = []
+    for key, raw in params.items():
+        if raw is None or raw == "":
+            continue
+        parts.append(f"{key}={raw}")
+    return "/quan-tri/hoc-sinh" + (("?" + "&".join(parts)) if parts else "")
+
+
+def _filter_roster(user: dict, class_id: int | None, query: str, level: str) -> list[dict]:
+    roster = list_roster(class_id)
+    if user.get("role") == "teacher":
+        allowed = {c["id"] for c in classes_for(user)}
+        roster = [row for row in roster if row.get("class_id") in allowed]
+    needle = (query or "").strip().lower()
+    if needle:
+        roster = [
+            row
+            for row in roster
+            if needle in (row.get("name") or "").lower()
+            or needle in (row.get("username") or "").lower()
+            or needle in (row.get("student_code") or "").lower()
+        ]
+    if level:
+        roster = [row for row in roster if (row.get("level") or "chua_bat_dau") == level]
+    return roster
+
+
+def _store_password_csv(request: Request, accounts: list[dict]) -> None:
+    lines = ["username,password,name,student_code"]
+    for acc in accounts:
+        lines.append(
+            f"{acc['username']},{acc['password']},{acc.get('name') or ''},{acc.get('student_code') or ''}"
+        )
+    request.session["roster_csv"] = "\n".join(lines)
+
+
 @router.get("/quan-tri/hoc-sinh", response_class=HTMLResponse)
 def admin_students(request: Request):
     user = _session_user(request)
@@ -201,6 +250,20 @@ def admin_students(request: Request):
         return RedirectResponse("/dang-nhap", status_code=303)
     if not _staff(user):
         return RedirectResponse("/tien-do", status_code=303)
+    tab = _students_tab(request.query_params.get("tab"))
+    query = (request.query_params.get("q") or "").strip()
+    lop = request.query_params.get("lop") or ""
+    muc = request.query_params.get("muc") or ""
+    cid = int(lop) if str(lop).isdigit() else None
+    roster = _filter_roster(user, cid, query, muc)
+    total = len(roster)
+    pages = max(1, (total + ROSTER_PAGE - 1) // ROSTER_PAGE)
+    try:
+        page = max(1, int(request.query_params.get("trang") or 1))
+    except ValueError:
+        page = 1
+    page = min(page, pages)
+    start = (page - 1) * ROSTER_PAGE
     return TEMPLATES.TemplateResponse(
         request,
         "admin_students.html",
@@ -209,12 +272,22 @@ def admin_students(request: Request):
             user,
             {
                 "nav": "students",
-                "roster": list_roster(),
+                "tab": tab,
+                "roster": roster[start : start + ROSTER_PAGE],
+                "roster_total": total,
+                "page": page,
+                "pages": pages,
+                "q": query,
+                "lop": lop,
+                "muc": muc,
                 "classes": classes_for(user),
                 "teachers": list_teachers() if user.get("role") == "admin" else [],
                 "imported": request.query_params.get("nhap"),
                 "reset_n": request.query_params.get("reset"),
                 "error": request.query_params.get("loi"),
+                "created": request.query_params.get("tao"),
+                "updated": request.query_params.get("sua"),
+                "removed": request.query_params.get("xoa"),
             },
         ),
     )
@@ -250,8 +323,8 @@ def admin_create_student(
             class_id=cid,
         )
     except ValueError:
-        return RedirectResponse("/quan-tri/hoc-sinh?loi=1", status_code=303)
-    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    return RedirectResponse(_students_url(tab="danh-sach", tao=1), status_code=303)
 
 
 @router.post("/quan-tri/hoc-sinh/nhap")
@@ -267,13 +340,57 @@ async def admin_import_roster(
     text = raw.decode("utf-8-sig", errors="replace")
     cid = int(class_id) if str(class_id).isdigit() else None
     result = import_csv(text, class_id=cid)
-    lines = ["username,password,name,student_code"]
-    for acc in result.get("accounts") or []:
+    _store_password_csv(request, result.get("accounts") or [])
+    return RedirectResponse(_students_url(tab="nhap", nhap=result["created"]), status_code=303)
+
+
+@router.get("/quan-tri/hoc-sinh/mau.csv")
+def admin_roster_template(request: Request):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    body = "\ufeff" + CSV_TEMPLATE
+    return Response(
+        body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="mau-danh-sach-hoc-sinh.csv"'},
+    )
+
+
+@router.get("/quan-tri/hoc-sinh/bao-cao.csv")
+def admin_roster_export(request: Request):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    query = (request.query_params.get("q") or "").strip()
+    lop = request.query_params.get("lop") or ""
+    muc = request.query_params.get("muc") or ""
+    cid = int(lop) if str(lop).isdigit() else None
+    roster = _filter_roster(user, cid, query, muc)
+    lines = ["Mã HS,Họ tên,Tài khoản,Lớp,Tiến độ,Hoàn thành,Điểm TB,Tiến bộ,Đánh giá"]
+    for row in roster:
+        done = f"{row.get('exercises_completed') or 0}/{row.get('exercises_assigned') or 0}"
         lines.append(
-            f"{acc['username']},{acc['password']},{acc.get('name') or ''},{acc.get('student_code') or ''}"
+            ",".join(
+                [
+                    str(row.get("student_code") or ""),
+                    str(row.get("name") or "").replace(",", " "),
+                    str(row.get("username") or ""),
+                    str(row.get("class_name") or "Chưa xếp lớp").replace(",", " "),
+                    f"{float(row.get('completion_pct') or 0):.0f}",
+                    done,
+                    f"{float(row.get('overall_score') or 0):.0f}",
+                    f"{float(row.get('avg_growth') or 0):.0f}",
+                    str(row.get("level_label") or ""),
+                ]
+            )
         )
-    request.session["roster_csv"] = "\n".join(lines)
-    return RedirectResponse(f"/quan-tri/hoc-sinh?nhap={result['created']}", status_code=303)
+    body = "\ufeff" + "\n".join(lines) + "\n"
+    return Response(
+        body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="bao-cao-hoc-sinh.csv"'},
+    )
 
 
 @router.get("/quan-tri/hoc-sinh/mat-khau.csv")
@@ -292,11 +409,8 @@ def admin_bulk_reset(request: Request, class_id: str = Form(...)):
         return RedirectResponse("/dang-nhap", status_code=303)
     cid = int(class_id) if str(class_id).isdigit() else 0
     creds = bulk_reset(cid) if cid else []
-    lines = ["username,password,name,student_code"]
-    for acc in creds:
-        lines.append(f"{acc['username']},{acc['password']},{acc.get('name') or ''},{acc.get('student_code') or ''}")
-    request.session["roster_csv"] = "\n".join(lines)
-    return RedirectResponse(f"/quan-tri/hoc-sinh?reset={len(creds)}", status_code=303)
+    _store_password_csv(request, creds)
+    return RedirectResponse(_students_url(tab="phong-may", reset=len(creds)), status_code=303)
 
 
 @router.post("/quan-tri/lop/ma")
@@ -307,7 +421,7 @@ def admin_join_code(request: Request, class_id: str = Form(...)):
     cid = int(class_id) if str(class_id).isdigit() else 0
     if cid:
         rotate_join_code(cid)
-    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+    return RedirectResponse(_students_url(tab="phong-may"), status_code=303)
 
 
 @router.post("/quan-tri/lop/giao-vien")
@@ -318,8 +432,65 @@ def admin_set_teacher(request: Request, class_id: str = Form(...), teacher_id: s
     try:
         assign_teacher(int(class_id), int(teacher_id))
     except (ValueError, TypeError):
-        return RedirectResponse("/quan-tri/hoc-sinh?loi=1", status_code=303)
-    return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+        return RedirectResponse(_students_url(tab="phong-may", loi=1), status_code=303)
+    return RedirectResponse(_students_url(tab="phong-may"), status_code=303)
+
+
+@router.post("/quan-tri/hoc-sinh/{user_id}/mat-khau")
+def admin_reset_one(request: Request, user_id: int):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not staff_manages_student(user, user_id) and user.get("role") != "admin":
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    cred = reset_one(user_id)
+    if not cred:
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    _store_password_csv(request, [cred])
+    return RedirectResponse(_students_url(tab="danh-sach", reset=1), status_code=303)
+
+
+@router.post("/quan-tri/hoc-sinh/{user_id}/sua")
+def admin_edit_student(
+    request: Request,
+    user_id: int,
+    name: str = Form(...),
+    student_code: str = Form(""),
+    class_id: str = Form(""),
+    password: str = Form(""),
+):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if user.get("role") != "admin" and not staff_manages_student(user, user_id):
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    cid = int(class_id) if str(class_id).isdigit() else None
+    try:
+        update_account(
+            user_id,
+            name=name,
+            student_code=student_code,
+            class_id=cid,
+            password=password or None,
+        )
+    except ValueError:
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    return RedirectResponse(_students_url(tab="danh-sach", sua=1), status_code=303)
+
+
+@router.post("/quan-tri/hoc-sinh/{user_id}/xoa")
+def admin_delete_student(request: Request, user_id: int):
+    user = _session_user(request)
+    if not user or not _staff(user):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if user.get("role") != "admin" and not staff_manages_student(user, user_id):
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    try:
+        result = remove_student(user_id)
+    except ValueError:
+        return RedirectResponse(_students_url(tab="danh-sach", loi=1), status_code=303)
+    flag = "1" if result.get("deleted") else "giu"
+    return RedirectResponse(_students_url(tab="danh-sach", xoa=flag), status_code=303)
 
 
 @router.get("/quan-tri/hoc-sinh/{user_id}", response_class=HTMLResponse)

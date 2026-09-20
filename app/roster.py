@@ -168,3 +168,33 @@ def list_teachers() -> list[dict]:
     with cursor() as cur:
         cur.execute("SELECT id, username, name FROM users WHERE role = 'teacher' ORDER BY name")
         return list(cur.fetchall())
+
+
+CSV_TEMPLATE = "Họ tên,Mã HS,Tài khoản\nNguyễn Văn A,HS101,\nTrần Thị B,HS102,\n"
+
+
+def reset_one(user_id: int) -> dict | None:
+    pwd = _password()
+    with cursor() as cur:
+        cur.execute(
+            "SELECT id, username, name, student_code, role FROM users WHERE id = %s",
+            (user_id,),
+        )
+        row = cur.fetchone()
+        if not row or row["role"] != "student":
+            return None
+        cur.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hash_password(pwd), user_id))
+    return {**dict(row), "password": pwd}
+
+
+def staff_manages_student(staff: dict | None, user_id: int) -> bool:
+    if not staff:
+        return False
+    if staff.get("role") == "admin":
+        return True
+    allowed = {c["id"] for c in classes_for(staff)}
+    if not allowed:
+        return False
+    with cursor() as cur:
+        cur.execute("SELECT class_id FROM enrollments WHERE user_id = %s", (user_id,))
+        return any(row["class_id"] in allowed for row in cur.fetchall())
