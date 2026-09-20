@@ -313,9 +313,12 @@ def test_objective_group_key_from_project_id():
     hub = (
         Path(__file__).resolve().parent.parent / "desktop" / "MosDock" / "ExamHub.cs"
     ).read_text(encoding="utf-8")
-    assert 'const string prefix = "word-objective-"' in hub
+    assert 'word-objective-' in hub
+    assert 'powerpoint-objective-' in hub
     assert 'return dash > 0 ? tail[..dash] : tail' in hub
     assert 'Objective {key} · {items.Count} đề' in hub
+    assert 'kind=extra&name=' in hub
+    assert '*_results.pptx' in hub
 
 
 def _autofit_columns(inner_w: int, min_w: int, gap: int) -> int:

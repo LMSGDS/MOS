@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-4-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 4.2 — Insert and modify charts",
+  "program": "powerpoint",
+  "objective": "4.2",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P42-C01",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Có ít nhất 3 biểu đồ.",
+      "predicate": {
+        "type": "ppt_chart_min",
+        "min": 3
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Chart**.",
+        "Hoặc chèn từ PowerPoint_4-2.xlsx.",
+        "Giữ 2 chart cũ và thêm 1."
+      ]
+    },
+    {
+      "id": "P42-C02",
+      "objective": "4.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Chart thứ ba còn trong tệp.",
+      "predicate": {
+        "type": "ppt_chart_min",
+        "min": 3
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra số **chart**.",
+        "Phải đủ **3** biểu đồ.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

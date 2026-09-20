@@ -141,9 +141,8 @@ static class ExamHub
             ExamSession.BindBank(started.RootElement, ExamSession.Mode);
             var dir = Path.Combine(ExamSession.DataDir, "attempts", attemptId);
             Directory.CreateDirectory(dir);
-            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
             var local = Path.Combine(dir, string.IsNullOrWhiteSpace(chosen.Filename) ? chosen.Id + ".bin" : chosen.Filename);
-            await File.WriteAllBytesAsync(local, bytes);
+            await DownloadStarterAndExtrasAsync(chosen.Id, dir, local);
             await LoadRubricAsync(chosen.Id, dir);
             BindSession(chosen, attemptId, local);
             WriteMeta(dir);
@@ -171,10 +170,9 @@ static class ExamHub
         try
         {
             WordCom.CloseExamDocument();
-            var bytes = await Portal.GetBytesAsync(
-                $"/api/v1/projects/{Uri.EscapeDataString(ExamSession.ProjectId)}/file");
-            Directory.CreateDirectory(Path.GetDirectoryName(ExamSession.LocalPath)!);
-            await File.WriteAllBytesAsync(ExamSession.LocalPath, bytes);
+            var dir = Path.GetDirectoryName(ExamSession.LocalPath)!;
+            Directory.CreateDirectory(dir);
+            await DownloadStarterAndExtrasAsync(ExamSession.ProjectId, dir, ExamSession.LocalPath);
             WordWindow.Launch(program, ExamSession.LocalPath);
             ExamSession.HardStopReason = "";
             ExamSession.LastCheck = [];
@@ -195,9 +193,12 @@ static class ExamHub
         var path = string.IsNullOrWhiteSpace(local.LocalPath) ? Path.Combine(dir, filename) : local.LocalPath;
         if (!File.Exists(path))
         {
-            var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(chosen.Id)}/file");
             path = Path.Combine(dir, filename);
-            await File.WriteAllBytesAsync(path, bytes);
+            await DownloadStarterAndExtrasAsync(chosen.Id, dir, path);
+        }
+        else
+        {
+            await DownloadExtrasAsync(chosen.Id, dir);
         }
 
         await LoadRubricAsync(chosen.Id, dir);
@@ -315,7 +316,9 @@ static class ExamHub
                 continue;
             }
 
-            var hits = Directory.GetFiles(dir, "*_results.docx");
+            var hits = Directory.GetFiles(dir, "*_results.docx")
+                .Concat(Directory.GetFiles(dir, "*_results.pptx"))
+                .ToArray();
             if (hits.Length > 0)
             {
                 return hits[0];
@@ -335,8 +338,11 @@ static class ExamHub
             var local = Path.Combine(dir, filename);
             if (!File.Exists(local))
             {
-                var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(attempt.ProjectId)}/file");
-                await File.WriteAllBytesAsync(local, bytes);
+                await DownloadStarterAndExtrasAsync(attempt.ProjectId, dir, local);
+            }
+            else
+            {
+                await DownloadExtrasAsync(attempt.ProjectId, dir);
             }
 
             var projects = await ListProjectsAsync(attempt.Program);
@@ -372,6 +378,50 @@ static class ExamHub
         ExamSession.RubricVersion = chosen.RubricVersion;
         ExamSession.Program = chosen.Program;
         ExamSession.OpenedUtc = DateTime.UtcNow;
+    }
+
+    static async Task DownloadStarterAndExtrasAsync(string projectId, string dir, string destPath)
+    {
+        var bytes = await Portal.GetBytesAsync($"/api/v1/projects/{Uri.EscapeDataString(projectId)}/file");
+        await File.WriteAllBytesAsync(destPath, bytes);
+        await DownloadExtrasAsync(projectId, dir);
+    }
+
+    static async Task DownloadExtrasAsync(string projectId, string dir)
+    {
+        try
+        {
+            using var manifest = await Portal.GetJsonAsync($"/api/v1/projects/{Uri.EscapeDataString(projectId)}/manifest");
+            if (!manifest.RootElement.TryGetProperty("extras", out var extras) || extras.ValueKind != JsonValueKind.Array)
+            {
+                return;
+            }
+
+            foreach (var item in extras.EnumerateArray())
+            {
+                var name = item.ValueKind == JsonValueKind.String
+                    ? item.GetString()
+                    : item.TryGetProperty("filename", out var fn) ? fn.GetString() : null;
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                var dest = Path.Combine(dir, Path.GetFileName(name));
+                if (File.Exists(dest))
+                {
+                    continue;
+                }
+
+                var bytes = await Portal.GetBytesAsync(
+                    $"/api/v1/projects/{Uri.EscapeDataString(projectId)}/file?kind=extra&name={Uri.EscapeDataString(name)}");
+                await File.WriteAllBytesAsync(dest, bytes);
+            }
+        }
+        catch
+        {
+            // extras là tài nguyên kèm; thiếu file không chặn mở đề
+        }
     }
 
     static async Task LoadRubricAsync(string projectId, string dir)
@@ -729,8 +779,9 @@ static class ExamHub
     public static string ObjectiveMajor(string? projectId)
     {
         var id = projectId ?? "";
-        const string prefix = "word-objective-";
-        if (!id.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        var prefixes = new[] { "word-objective-", "powerpoint-objective-" };
+        var prefix = prefixes.FirstOrDefault(p => id.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        if (prefix is null)
         {
             return "";
         }

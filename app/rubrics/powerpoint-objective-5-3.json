@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-5-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 5.3 — Set timing for transitions",
+  "program": "powerpoint",
+  "objective": "5.3",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P53-R01",
+      "objective": "5.3",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Đặt thời gian transition (advTm 5000).",
+      "predicate": {
+        "type": "transition_named",
+        "name": "5000"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Transitions** > **Advance Slide**.",
+        "Bật **After**.",
+        "Đặt **00:05.00**."
+      ]
+    },
+    {
+      "id": "P53-R02",
+      "objective": "5.3",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Thời gian 5 giây còn trên transition.",
+      "predicate": {
+        "type": "transition_named",
+        "name": "5000"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn một slide.",
+        "Ô **After** = 00:05.",
+        "Lưu."
+      ]
+    }
+  ]
+}

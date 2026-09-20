@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-1-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 1.1 — Modify slide masters, handout masters, and note masters",
+  "program": "powerpoint",
+  "objective": "1.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P11-L01",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đặt tên layout trùng là My Slides.",
+      "predicate": {
+        "type": "layout_named",
+        "name": "My Slides"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Mở **View** > **Slide Master**.",
+        "Nhân bản layout đang dùng cho slide 2–4.",
+        "Đổi tên bản sao thành **My Slides**."
+      ]
+    },
+    {
+      "id": "P11-L02",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Áp My Slides cho slide nội dung.",
+      "predicate": {
+        "type": "layout_named",
+        "name": "My Slides"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Đóng **Slide Master**.",
+        "Chọn slide 2.",
+        "**Home** > **Layout** > **My Slides**."
+      ]
+    },
+    {
+      "id": "P11-L03",
+      "objective": "1.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "My Slides xuất hiện trên ít nhất một slide.",
+      "predicate": {
+        "type": "layout_named",
+        "name": "My Slides"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra **Layout** gallery.",
+        "Slide 2 phải là **My Slides**.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

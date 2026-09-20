@@ -1,0 +1,90 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-1-2",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 1.2 — Change presentation options and views",
+  "program": "powerpoint",
+  "objective": "1.2",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P12-S01",
+      "objective": "1.2",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Đặt cỡ slide On-screen Show (4:3).",
+      "predicate": {
+        "type": "slide_size",
+        "cx": 9144000,
+        "cy": 6858000
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Design** > **Slide Size**.",
+        "Chọn **Standard (4:3)** / On-screen Show 4:3.",
+        "Chọn **Ensure Fit**."
+      ]
+    },
+    {
+      "id": "P12-C01",
+      "objective": "1.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Title property là Vacation Ideas.",
+      "predicate": {
+        "type": "core_property",
+        "name": "title",
+        "text": "Vacation Ideas"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**File** > **Info**.",
+        "Mở **Properties** > **Advanced Properties**.",
+        "Ô **Title** gõ Vacation Ideas."
+      ]
+    },
+    {
+      "id": "P12-C02",
+      "objective": "1.2",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Status là In Progress.",
+      "predicate": {
+        "type": "core_property",
+        "name": "status",
+        "text": "In Progress"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Trong **Properties**.",
+        "Ô **Status**.",
+        "Chọn hoặc gõ **In Progress**."
+      ]
+    }
+  ]
+}

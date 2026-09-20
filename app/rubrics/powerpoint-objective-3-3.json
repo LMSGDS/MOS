@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-3-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 3.3 — Insert and format images",
+  "program": "powerpoint",
+  "objective": "3.3",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P33-P01",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Chèn ít nhất 2 ảnh (3-3a / 3-3b).",
+      "predicate": {
+        "type": "ppt_picture_min",
+        "min": 2
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Pictures**.",
+        "Chọn PowerPoint_3-3a.jpg.",
+        "Chèn thêm 3-3b.jpg."
+      ]
+    },
+    {
+      "id": "P33-P02",
+      "objective": "3.3",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Có ít nhất một ảnh trên slide.",
+      "predicate": {
+        "type": "ppt_picture_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra slide **Vacation**.",
+        "Ảnh **Insert** phải còn.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

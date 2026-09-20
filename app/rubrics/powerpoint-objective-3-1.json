@@ -1,0 +1,87 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-3-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 3.1 — Format text",
+  "program": "powerpoint",
+  "objective": "3.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P31-C01",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 50,
+      "prompt": "Áp màu nhấn accent4 cho chữ.",
+      "predicate": {
+        "type": "scheme_color",
+        "name": "accent4"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Bôi chữ cần nhấn.",
+        "**Home** > **Font Color**.",
+        "Chọn màu theme **Accent 4**."
+      ]
+    },
+    {
+      "id": "P31-C02",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Dùng accent2.",
+      "predicate": {
+        "type": "scheme_color",
+        "name": "accent2"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Chọn đoạn khác.",
+        "**Font Color**.",
+        "Accent 2."
+      ]
+    },
+    {
+      "id": "P31-C03",
+      "objective": "3.1",
+      "kind": "artifact",
+      "weight": 20,
+      "prompt": "Accent4 còn trên slide.",
+      "predicate": {
+        "type": "scheme_color",
+        "name": "accent4"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra lại màu chữ trên **Home**.",
+        "Accent **4** phải còn.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

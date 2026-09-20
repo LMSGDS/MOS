@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from app.qmatrix import attach as attach_qmatrix
+from app.ppt_xml import extract_ppt_facts
 from app.word_xml import extract_word_facts, norm, same
 
 GRADER_VERSION = "1.4.0"
@@ -487,6 +488,140 @@ def _hdphoto(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "hdphoto_missing")
 
 
+def _core_empty(facts: dict, criterion: dict) -> dict:
+    name = (criterion.get("predicate") or {}).get("name") or "title"
+    got = ((facts.get("core_properties") or {}).get(name) or "").strip()
+    if not got:
+        return _result(criterion, "pass", "core_empty")
+    return _result(criterion, "fail", "core_still_set")
+
+
+def _theme_name(facts: dict, criterion: dict) -> dict:
+    expected = norm((criterion.get("predicate") or {}).get("name") or "")
+    got = norm(facts.get("theme_name") or "")
+    if expected and expected.casefold() in got.casefold():
+        return _result(criterion, "pass", "theme_matches")
+    return _result(criterion, "fail", "theme_mismatch")
+
+
+def _slide_count(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    got = int(facts.get("slide_count") or 0)
+    count = pred.get("count")
+    if count is not None and got == int(count):
+        return _result(criterion, "pass", "slide_count_ok")
+    exact = pred.get("exact")
+    if exact is not None and not isinstance(exact, bool) and got == int(exact):
+        return _result(criterion, "pass", "slide_count_ok")
+    if pred.get("min") is not None and got >= int(pred["min"]):
+        return _result(criterion, "pass", "slide_count_ok")
+    return _result(criterion, "fail", "slide_count_mismatch")
+
+
+def _slide_size(facts: dict, criterion: dict) -> dict:
+    pred = criterion.get("predicate") or {}
+    cx = int(facts.get("slide_cx") or 0)
+    cy = int(facts.get("slide_cy") or 0)
+    want_cx = int(pred.get("cx") or 0)
+    want_cy = int(pred.get("cy") or 0)
+    if want_cx and abs(cx - want_cx) > 20000:
+        return _result(criterion, "fail", "slide_size_mismatch")
+    if want_cy and abs(cy - want_cy) > 20000:
+        return _result(criterion, "fail", "slide_size_mismatch")
+    if want_cx or want_cy:
+        return _result(criterion, "pass", "slide_size_ok")
+    return _result(criterion, "fail", "slide_size_missing")
+
+
+def _layout_named(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("name") or "")
+    names = [norm(n) for n in facts.get("layout_names") or []]
+    if needle and any(needle.casefold() in n.casefold() for n in names):
+        return _result(criterion, "pass", "layout_present")
+    return _result(criterion, "fail", "layout_missing")
+
+
+def _layout_absent(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("name") or "")
+    names = [norm(n) for n in facts.get("layout_names") or []]
+    if needle and any(needle.casefold() in n.casefold() for n in names):
+        return _result(criterion, "fail", "layout_still_present")
+    return _result(criterion, "pass", "layout_removed")
+
+
+def _ppt_count(facts: dict, criterion: dict, field: str, reason: str) -> dict:
+    minimum = int((criterion.get("predicate") or {}).get("min") or 1)
+    got = int(facts.get(field) or 0)
+    if got >= minimum:
+        return _result(criterion, "pass", reason)
+    return _result(criterion, "fail", reason + "_low")
+
+
+def _ppt_flag(facts: dict, criterion: dict, field: str, reason: str) -> dict:
+    if facts.get(field):
+        return _result(criterion, "pass", reason)
+    return _result(criterion, "fail", reason + "_missing")
+
+
+def _transition_named(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("name") or "")
+    blob = " ".join(facts.get("transitions") or [])
+    if needle and needle.casefold() in blob.casefold():
+        return _result(criterion, "pass", "transition_present")
+    return _result(criterion, "fail", "transition_missing")
+
+
+def _hyperlink_contains(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("text") or "").casefold()
+    blob = " ".join(facts.get("hyperlinks") or []).casefold()
+    notes = " ".join(facts.get("notes_texts") or []).casefold()
+    if needle and (needle in blob or needle in notes or needle in (facts.get("document_text") or "").casefold()):
+        return _result(criterion, "pass", "hyperlink_present")
+    return _result(criterion, "fail", "hyperlink_missing")
+
+
+def _notes_contains(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    blob = " ".join(facts.get("notes_texts") or [])
+    if needle and needle.casefold() in blob.casefold():
+        return _result(criterion, "pass", "notes_present")
+    return _result(criterion, "fail", "notes_missing")
+
+
+def _custom_show_named(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("name") or "")
+    names = [norm(n) for n in facts.get("custom_shows") or []]
+    if needle and any(needle.casefold() in n.casefold() for n in names):
+        return _result(criterion, "pass", "custom_show_present")
+    return _result(criterion, "fail", "custom_show_missing")
+
+
+def _section_named(facts: dict, criterion: dict) -> dict:
+    needle = norm((criterion.get("predicate") or {}).get("name") or "")
+    names = [norm(n) for n in facts.get("section_names") or []]
+    if needle and any(needle.casefold() in n.casefold() for n in names):
+        return _result(criterion, "pass", "section_present")
+    return _result(criterion, "fail", "section_missing")
+
+
+def _scheme_color(facts: dict, criterion: dict) -> dict:
+    needle = ((criterion.get("predicate") or {}).get("name") or "").casefold()
+    colors = [str(c).casefold() for c in facts.get("scheme_colors") or []]
+    if needle and needle in colors:
+        return _result(criterion, "pass", "scheme_color_present")
+    return _result(criterion, "fail", "scheme_color_missing")
+
+
+def _hidden_slide(facts: dict, criterion: dict) -> dict:
+    want = int((criterion.get("predicate") or {}).get("index") or 0)
+    hidden = facts.get("hidden_slides") or []
+    if want and want in hidden:
+        return _result(criterion, "pass", "slide_hidden")
+    if not want and hidden:
+        return _result(criterion, "pass", "slide_hidden")
+    return _result(criterion, "fail", "slide_not_hidden")
+
+
 def _action_unverified(criterion: dict) -> dict:
     return _result(criterion, "unverified", "missing_observer")
 
@@ -719,6 +854,26 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
             "revision_max": _revision_max,
             "document_protection": _document_protection,
             "hdphoto": _hdphoto,
+            "theme_name": _theme_name,
+            "core_empty": _core_empty,
+            "slide_count": _slide_count,
+            "slide_size": _slide_size,
+            "layout_named": _layout_named,
+            "layout_absent": _layout_absent,
+            "ppt_table_min": lambda f, c: _ppt_count(f, c, "table_count", "ppt_table"),
+            "ppt_chart_min": lambda f, c: _ppt_count(f, c, "chart_count", "ppt_chart"),
+            "ppt_picture_min": lambda f, c: _ppt_count(f, c, "picture_count", "ppt_picture"),
+            "ppt_smartart_min": lambda f, c: _ppt_count(f, c, "smartart_count", "ppt_smartart"),
+            "ppt_anim_min": lambda f, c: _ppt_count(f, c, "animation_count", "ppt_anim"),
+            "has_3d": lambda f, c: _ppt_flag(f, c, "has_3d", "model3d"),
+            "has_media": lambda f, c: _ppt_flag(f, c, "has_media", "media"),
+            "transition_named": _transition_named,
+            "hyperlink_contains": _hyperlink_contains,
+            "notes_contains": _notes_contains,
+            "custom_show": _custom_show_named,
+            "section_named": _section_named,
+            "hidden_slide": _hidden_slide,
+            "scheme_color": _scheme_color,
         }
         handler = dispatch.get(pred)
         if handler:
@@ -758,8 +913,11 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
 
 def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | None = None) -> dict:
     rubric = load_rubric(rubric)
+    suffix = Path(path).suffix.lower() if path else ""
     if path is None:
         facts = extract_word_facts(Path(""))
+    elif suffix == ".pptx":
+        facts = extract_ppt_facts(Path(path))
     else:
         facts = extract_word_facts(Path(path))
     return evaluate_facts(facts, rubric, evidence)

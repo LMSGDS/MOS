@@ -1,0 +1,61 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-4-5",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 4.5 — Insert and manage media",
+  "program": "powerpoint",
+  "objective": "4.5",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P45-M01",
+      "objective": "4.5",
+      "kind": "artifact",
+      "weight": 70,
+      "prompt": "Chèn video / media vào slide.",
+      "predicate": {
+        "type": "has_media"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Video** > **This Device**.",
+        "Chọn PowerPoint_4-5.mp4 trên máy.",
+        "Để trên slide My Video."
+      ]
+    },
+    {
+      "id": "P45-M02",
+      "objective": "4.5",
+      "kind": "artifact",
+      "weight": 30,
+      "prompt": "Media còn trong tệp.",
+      "predicate": {
+        "type": "has_media"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra slide **My Video**.",
+        "Clip **Video** phải còn.",
+        "Lưu tệp."
+      ]
+    }
+  ]
+}

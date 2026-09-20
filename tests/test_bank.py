@@ -70,6 +70,32 @@ def test_knowledge_tree_mo100(pg):
         assert cur.fetchone()["n"] >= 6
         cur.execute("SELECT COUNT(*) AS n FROM objective_domains WHERE subject = 'MO-300'")
         assert cur.fetchone()["n"] >= 6
+        cur.execute(
+            "SELECT code FROM objective_domains WHERE subject = 'MO-300' AND parent_id IS NOT NULL ORDER BY code"
+        )
+        assert [r["code"] for r in cur.fetchall()] == [
+            "1.1",
+            "1.2",
+            "1.3",
+            "1.4",
+            "1.5",
+            "2.1",
+            "2.2",
+            "2.3",
+            "3.1",
+            "3.2",
+            "3.3",
+            "3.4",
+            "3.5",
+            "4.1",
+            "4.2",
+            "4.3",
+            "4.4",
+            "4.5",
+            "5.1",
+            "5.2",
+            "5.3",
+        ]
 
 
 def test_exam_validator_and_autogen(pg):

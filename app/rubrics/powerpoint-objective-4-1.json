@@ -1,0 +1,63 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-4-1",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 4.1 — Insert and format tables",
+  "program": "powerpoint",
+  "objective": "4.1",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P41-B01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 60,
+      "prompt": "Chèn bảng Time Management.",
+      "predicate": {
+        "type": "ppt_table_min",
+        "min": 1
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**Insert** > **Table** hoặc dán từ Excel.",
+        "Mở PowerPoint_4-1.xlsx.",
+        "Dán vào slide."
+      ]
+    },
+    {
+      "id": "P41-T01",
+      "objective": "4.1",
+      "kind": "artifact",
+      "weight": 40,
+      "prompt": "Bảng có cột Hours.",
+      "predicate": {
+        "type": "contains_text",
+        "text": "Hours"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Kiểm tra hàng tiêu đề.",
+        "Phải có **Hours**.",
+        "Lưu."
+      ]
+    }
+  ]
+}

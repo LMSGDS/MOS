@@ -1,0 +1,61 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-1-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 1.3 — Configure print settings for presentations",
+  "program": "powerpoint",
+  "objective": "1.3",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P13-A01",
+      "objective": "1.3",
+      "kind": "action_sequence",
+      "weight": 50,
+      "prompt": "In slide 1–3 full page, Color.",
+      "predicate": {
+        "type": "print_settings"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "**File** > **Print**.",
+        "Slides **1-3**.",
+        "Color, Full Page Slides."
+      ]
+    },
+    {
+      "id": "P13-A02",
+      "objective": "1.3",
+      "kind": "action_sequence",
+      "weight": 50,
+      "prompt": "In handout 3 slide/trang Grayscale.",
+      "predicate": {
+        "type": "print_settings"
+      },
+      "evidence_policy": "required_method",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Print **Handouts** 3 slides.",
+        "Grayscale.",
+        "Notes **Pure Black and White**."
+      ]
+    }
+  ]
+}

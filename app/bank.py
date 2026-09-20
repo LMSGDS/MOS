@@ -101,32 +101,35 @@ TAXONOMY: dict[str, list[tuple[str, str, list[tuple[str, str]]]]] = {
     ],
     "MO-300": [
         ("1", "Manage Presentations", [
-            ("1.1", "Modify slide masters, layouts, and themes"),
+            ("1.1", "Modify slide masters, handout masters, and note masters"),
             ("1.2", "Change presentation options and views"),
-            ("1.3", "Configure print settings"),
+            ("1.3", "Configure print settings for presentations"),
             ("1.4", "Configure and present slideshows"),
             ("1.5", "Prepare presentations for collaboration"),
         ]),
-        ("2", "Insert and Format Text, Shapes, and Images", [
-            ("2.1", "Insert text and text boxes"),
-            ("2.2", "Format text and shapes"),
-            ("2.3", "Insert and format images"),
-            ("2.4", "Order and group objects"),
+        ("2", "Manage Slides", [
+            ("2.1", "Insert slides"),
+            ("2.2", "Modify slides"),
+            ("2.3", "Order and group slides"),
         ]),
-        ("3", "Insert Tables, Charts, SmartArt, 3D Models, and Media", [
-            ("3.1", "Insert and format tables"),
-            ("3.2", "Insert and modify charts"),
-            ("3.3", "Insert and format SmartArt"),
-            ("3.4", "Insert and modify 3D models and media"),
+        ("3", "Insert and Format Text, Shapes, and Images", [
+            ("3.1", "Format text"),
+            ("3.2", "Insert links"),
+            ("3.3", "Insert and format images"),
+            ("3.4", "Insert and format graphic elements"),
+            ("3.5", "Order and group objects on slides"),
         ]),
-        ("4", "Apply Transitions and Animations", [
-            ("4.1", "Apply and configure slide transitions"),
-            ("4.2", "Animate slide content"),
-            ("4.3", "Set timing for transitions and animations"),
+        ("4", "Insert Tables, Charts, SmartArt, 3D Models, and Media", [
+            ("4.1", "Insert and format tables"),
+            ("4.2", "Insert and modify charts"),
+            ("4.3", "Insert and format SmartArt graphics"),
+            ("4.4", "Insert and modify 3D models"),
+            ("4.5", "Insert and manage media"),
         ]),
-        ("5", "Manage Multiple Presentations", [
-            ("5.1", "Merge content from multiple presentations"),
-            ("5.2", "Track changes and resolve issues"),
+        ("5", "Apply Transitions and Animations", [
+            ("5.1", "Apply and configure slide transitions"),
+            ("5.2", "Animate slide content"),
+            ("5.3", "Set timing for transitions"),
         ]),
     ],
 }
@@ -180,6 +183,20 @@ def seed_taxonomy() -> None:
                         """,
                         (_oid(subject, ccode), subject, ccode, ctitle, ctitle, parent, j),
                     )
+        wanted = []
+        for subject, _prog, _label in SUBJECTS:
+            for code, _title, children in TAXONOMY[subject]:
+                wanted.append(_oid(subject, code))
+                wanted.extend(_oid(subject, ccode) for ccode, _n in children)
+        cur.execute(
+            """
+            DELETE FROM objective_domains d
+            WHERE d.subject = ANY(%s)
+              AND NOT (d.id = ANY(%s))
+              AND NOT EXISTS (SELECT 1 FROM bank_tasks t WHERE t.objective_id = d.id)
+            """,
+            ([s for s, _p, _l in SUBJECTS], wanted),
+        )
 
 
 def sync_existing_projects() -> None:

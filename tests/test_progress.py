@@ -33,6 +33,8 @@ def test_exercise_catalog_and_class_assignment(client):
     ids = [e["id"] for e in catalog.json()["exercises"]]
     assert "word-objective-1-1" in ids
     assert "word-objective-6-2" in ids
+    assert "powerpoint-objective-1-1" in ids
+    assert "powerpoint-objective-5-3" in ids
     roster = client.get("/api/v1/students", headers=headers)
     assert roster.status_code == 200
     names = {s["username"] for s in roster.json()["students"]}

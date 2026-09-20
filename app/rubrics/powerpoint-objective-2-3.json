@@ -1,0 +1,111 @@
+{
+  "schema": "mos-kulkul-1",
+  "project_id": "powerpoint-objective-2-3",
+  "rubric_version": "1.0.0",
+  "grader_version": "1.5.0",
+  "title": "PowerPoint Objective 2.3 — Order and group slides",
+  "program": "powerpoint",
+  "objective": "2.3",
+  "max_score": 100,
+  "capabilities": [
+    "ppt.openxml"
+  ],
+  "criteria": [
+    {
+      "id": "P23-G01",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Section Opening.",
+      "predicate": {
+        "type": "section_named",
+        "name": "Opening"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Slide Sorter.",
+        "Chuột phải > **Add Section**.",
+        "Đặt tên **Opening**."
+      ]
+    },
+    {
+      "id": "P23-G02",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Section Vision.",
+      "predicate": {
+        "type": "section_named",
+        "name": "Vision"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm section trước nhóm Vision.",
+        "Đặt tên **Vision**.",
+        "Lưu."
+      ]
+    },
+    {
+      "id": "P23-G03",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Section Review.",
+      "predicate": {
+        "type": "section_named",
+        "name": "Review"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm **Review**.",
+        "Kéo slide vào đúng nhóm.",
+        "Lưu."
+      ]
+    },
+    {
+      "id": "P23-G04",
+      "objective": "2.3",
+      "kind": "artifact",
+      "weight": 25,
+      "prompt": "Section Closing.",
+      "predicate": {
+        "type": "section_named",
+        "name": "Closing"
+      },
+      "evidence_policy": "file",
+      "feedback": {
+        "pass": "Đạt.",
+        "fail": "Chưa khớp file kết quả Study Guide.",
+        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
+        "error": "Không đọc được tệp PowerPoint."
+      },
+      "version": "1.0.0",
+      "help_steps": [
+        "Thêm **Closing**.",
+        "Kiểm tra thứ tự section.",
+        "Lưu."
+      ]
+    }
+  ]
+}
