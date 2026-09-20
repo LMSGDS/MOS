@@ -710,7 +710,12 @@ def admin_bank(request: Request):
     exam = get_exam(exam_id) if exam_id else None
     if not exam:
         exams = list_exams()
-        exam = get_exam(exams[0]["id"]) if exams else None
+        exam = next(
+            (get_exam(e["id"]) for e in exams if e.get("status") == "published" and e.get("counts", {}).get("ok")),
+            None,
+        )
+        if not exam and exams:
+            exam = get_exam(exams[0]["id"])
     return TEMPLATES.TemplateResponse(
         request,
         "admin_bank.html",
