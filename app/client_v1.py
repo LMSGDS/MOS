@@ -603,6 +603,12 @@ async def v1_start_attempt(request: Request):
     }
     record_attempt_event(started, event="start")
     _notify_live(started, row, None, "start")
+    from app.bank import session_for_project
+
+    bank = session_for_project(project_id, mode, student_id=row["id"])
+    limit = (cfg or {}).get("time_limit_sec") if cfg else None
+    if limit is None and bank.get("duration_minutes"):
+        limit = int(bank["duration_minutes"]) * 60
     return {
         "ok": True,
         "attempt_id": attempt_id,
@@ -611,8 +617,9 @@ async def v1_start_attempt(request: Request):
         "project_version_id": version["id"] if version else None,
         "rubric_version": version["rubric_version"] if version else None,
         "abandoned": closed,
-        "time_limit_sec": (cfg or {}).get("time_limit_sec") if cfg else None,
+        "time_limit_sec": limit,
         "lan_locked": bool(cfg and cfg.get("ip_allow")),
+        "bank": bank,
     }
 
 
@@ -653,6 +660,12 @@ async def v1_telemetry(request: Request, attempt_id: str):
             )
             if cur.rowcount:
                 accepted += 1
+    try:
+        from app.bank import ingest_formative_events
+
+        ingest_formative_events(row_user["id"], attempt_id, events)
+    except Exception:
+        pass
     return {"ok": True, "accepted": accepted}
 
 
@@ -989,6 +1002,45 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         payload=payload,
     )
     store_q_matrix(attempt_id, scored)
+    bank_extra: dict = {}
+    try:
+        from app.bank import apply_certiport_scale, exam_hash_ok, hard_stop_next, unlock_remedial
+
+        client_hash = request.headers.get("x-mos-bank-hash") or ""
+        with cursor() as cur:
+            cur.execute(
+                "SELECT exam_id FROM assignments WHERE project_id = %s AND exam_id IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                (attempt.get("project_id"),),
+            )
+            linked = cur.fetchone()
+        if linked and not exam_hash_ok(linked["exam_id"], client_hash):
+            raise HTTPException(status_code=409, detail="bank_hash")
+        scaled = apply_certiport_scale(scored, attempt.get("mode") or "training")
+        payload["scaled_1000"] = scaled.get("scaled_1000")
+        payload["passed"] = scaled.get("passed")
+        payload["raw_earned"] = scaled.get("raw_earned")
+        payload["cut_score"] = scaled.get("cut_score")
+        udl = unlock_remedial(row_user["id"], attempt_id, scaled=scaled.get("scaled_1000"))
+        last_tid = ""
+        with cursor() as cur:
+            cur.execute(
+                "SELECT task_id FROM student_task_results WHERE attempt_id = %s ORDER BY id DESC LIMIT 1",
+                (attempt_id,),
+            )
+            last = cur.fetchone()
+            if last:
+                last_tid = last["task_id"]
+        bank_extra = {
+            "scaled_1000": scaled.get("scaled_1000"),
+            "passed": scaled.get("passed"),
+            "udl_message": udl.get("udl_message"),
+            "hard_stop": hard_stop_next(row_user["id"], last_tid),
+            "unlocked_projects": udl.get("unlocked_projects") or [],
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        bank_extra = {}
     _notify_live({**attempt, "status": "submitted"}, row_user, payload, "submit")
     unlocked = []
     try:
@@ -1009,6 +1061,7 @@ async def _submit_attempt(request: Request, attempt_id: str, *, idempotency_key:
         "score": payload,
         "duration_sec": duration,
         "unlocked": unlocked,
+        "bank": bank_extra,
     }
 
 

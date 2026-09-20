@@ -66,7 +66,7 @@ def test_insights_api_and_pages(client):
     assert "Lỗ hổng kiến thức" in web.get("/quan-tri/lo-hong").text
     bank_page = web.get("/quan-tri/ngan-hang", follow_redirects=False)
     assert bank_page.status_code == 303
-    assert bank_page.headers["location"] == "/quan-tri/bai-tap"
+    assert bank_page.headers["location"] == "/quan-tri/kho-de"
     admin = TestClient(app)
     admin.post("/dang-nhap", data={"username": "admin", "password": "Mos@Gds2026"})
     assert "Độ tin cậy ngân hàng đề" in admin.get("/quan-tri/ngan-hang").text

@@ -48,6 +48,7 @@ def configure_assignment(
     ip_allow: str = "",
     unlock_below: float | None = None,
     unlock_project_id: str | None = None,
+    exam_id: str | None = None,
 ) -> dict:
     mode = mode if mode in ("training", "testing") else "training"
     assign_class_projects(class_id, [project_id], assigned_by=assigned_by)
@@ -59,11 +60,12 @@ def configure_assignment(
               time_limit_sec = %s,
               ip_allow = %s,
               unlock_below = %s,
-              unlock_project_id = %s
+              unlock_project_id = %s,
+              exam_id = COALESCE(%s, exam_id)
             WHERE class_id = %s AND project_id = %s
             RETURNING *
             """,
-            (mode, time_limit_sec, ip_allow or "", unlock_below, unlock_project_id or None, class_id, project_id),
+            (mode, time_limit_sec, ip_allow or "", unlock_below, unlock_project_id or None, exam_id, class_id, project_id),
         )
         row = cur.fetchone()
         if unlock_below is not None and unlock_project_id:
