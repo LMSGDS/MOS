@@ -13,7 +13,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType>none</DebugType>
-    <Version>1.21.0</Version>
+    <Version>1.21.1</Version>
     <ApplicationIcon>Assets\kulkul.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-"""Windows + macOS installer packaging stays in sync with 1.21.0."""
+"""Windows + macOS installer packaging stays in sync with 1.21.1."""
 from pathlib import Path
 import zipfile
 
@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_mac_installer_scripts_use_kulkul_names_and_version():
     version = app_version()
-    assert version == "1.21.0"
+    assert version == "1.21.1"
     plist = (ROOT / "desktop" / "MosDockMac" / "Info.plist").read_text(encoding="utf-8")
     assert f"<string>{version}</string>" in plist
     assert "mos-kulkul" in plist

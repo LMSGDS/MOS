@@ -37,7 +37,7 @@ else
   SRC="$TMP/Files"
 fi
 
-VERSION="1.21.0"
+VERSION="1.21.1"
 if [[ -f "$SRC/VERSION" ]]; then
   VERSION="$(tr -d '[:space:]' < "$SRC/VERSION")"
 fi
