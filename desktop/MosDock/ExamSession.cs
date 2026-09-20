@@ -40,12 +40,12 @@ static class ExamSession
         var prevExam = Bank.ExamId;
         var bankEl = root.TryGetProperty("bank", out var raw) ? raw : root;
         Bank = BankPayload.Parse(bankEl, mode);
-        if (root.TryGetProperty("time_limit_sec", out var tl) && tl.TryGetInt32(out var sec) && sec > 0)
+        if (root.TryGetProperty("time_limit_sec", out var tl) && tl.TryInt(out var sec) && sec > 0)
         {
             Bank.TimeLimitSec = sec;
         }
 
-        if (root.TryGetProperty("remaining_sec", out var rem) && rem.TryGetInt32(out var left))
+        if (root.TryGetProperty("remaining_sec", out var rem) && rem.TryInt(out var left))
         {
             Bank.RemainingSec = left;
         }
@@ -59,7 +59,7 @@ static class ExamSession
 
         if (root.TryGetProperty("clock", out var clock) && clock.ValueKind == JsonValueKind.Object)
         {
-            if (clock.TryGetProperty("remaining_sec", out var cr) && cr.TryGetInt32(out var cleft))
+            if (clock.TryGetProperty("remaining_sec", out var cr) && cr.TryInt(out var cleft))
             {
                 Bank.RemainingSec = cleft;
             }

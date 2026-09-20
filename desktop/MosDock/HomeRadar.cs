@@ -37,7 +37,7 @@ sealed class HomeRadar : Panel
             foreach (var axis in doc.RootElement.GetProperty("axes").EnumerateArray())
             {
                 var program = axis.TryGetProperty("program", out var p) ? p.GetString() : "";
-                var score = axis.TryGetProperty("score", out var s) && s.TryGetDouble(out var v) ? v : 0;
+                var score = axis.TryGetProperty("score", out var s) && s.TryDouble(out var v) ? v : 0;
                 if (program == "word")
                 {
                     _word = score;

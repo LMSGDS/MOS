@@ -2741,7 +2741,7 @@ sealed class MainForm : Form
         {
             using var doc = await Portal.GetJsonAsync("/api/v1/attempts/" + ExamSession.AttemptId + "/clock");
             var root = doc.RootElement;
-            if (root.TryGetProperty("remaining_sec", out var rem) && rem.TryGetInt32(out var left))
+            if (root.TryGetProperty("remaining_sec", out var rem) && rem.TryInt(out var left))
             {
                 ExamSession.Bank.RemainingSec = left;
                 _clockTicks = 0;
