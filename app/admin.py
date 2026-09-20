@@ -13,6 +13,22 @@ from app.assign import LAN_DEFAULT, configure_assignment, list_configured
 from app.db import cursor
 from app.roles import is_admin, is_staff, persona
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
+from app.superadmin import (
+    adoption_series,
+    client_version,
+    compare_classes,
+    dashboard_insight,
+    get_setting,
+    grade_radar,
+    host_load,
+    list_teacher_hub,
+    postgres_ok,
+    roster_matrix,
+    save_matrix,
+    set_active,
+    set_setting,
+    transfer_student,
+)
 from app.roster import (
     CSV_TEMPLATE,
     assign_teacher,
@@ -31,6 +47,7 @@ from app.pedagogy import (
     pedagogy_alerts,
     teacher_footprint,
 )
+from app.stafflog import record_staff_event
 from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
@@ -75,7 +92,7 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul14",
+        "asset_v": "kulkul15",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,
@@ -191,6 +208,7 @@ def _dashboard(request: Request, user: dict):
     allowed_names = {c["name"] for c in my_classes}
     roster = list_roster()
     pedagogy = pedagogy_alerts(24)
+    school_radar = grade_radar() if _leaders(user) else {}
     if user.get("role") == "teacher":
         roster = [row for row in roster if row.get("class_id") in allowed_ids]
         classes_rows = [row for row in classes_rows if row.get("class_name") in allowed_names]
@@ -222,6 +240,11 @@ def _dashboard(request: Request, user: dict):
                 "history": history,
                 "evidence_rows": evidence_rows,
                 "roster": roster[:12],
+                "load": host_load() if _leaders(user) else {},
+                "adoption": adoption_series() if _leaders(user) else {},
+                "school_radar": school_radar,
+                "insight": dashboard_insight(school_radar, skills) if _leaders(user) else "",
+                "db_ok": postgres_ok() if _leaders(user) else True,
             },
         ),
     )
@@ -654,6 +677,114 @@ def admin_bank(request: Request):
     )
 
 
+@router.get("/quan-tri/phan-cap", response_class=HTMLResponse)
+def admin_hierarchy(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri/hoc-sinh", status_code=303)
+    tab = _hierarchy_tab(request.query_params.get("tab"))
+    query = (request.query_params.get("q") or "").strip()
+    students = _filter_roster(user, None, query, "")[:80]
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_hierarchy.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "hierarchy",
+                "tab": tab,
+                "teachers": list_teacher_hub(),
+                "matrix": roster_matrix(),
+                "students": students,
+                "classes": classes_for(user),
+                "q": query,
+                "saved": request.query_params.get("ok"),
+                "error": request.query_params.get("loi"),
+            },
+        ),
+    )
+
+
+@router.post("/quan-tri/phan-cap/ma-tran")
+async def admin_save_matrix(request: Request):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    form = await request.form()
+    parsed = []
+    for raw in form.getlist("pair"):
+        parts = str(raw).split(":", 1)
+        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+            parsed.append((int(parts[0]), int(parts[1])))
+    save_matrix(parsed)
+    record_staff_event(user.get("id"), "roster_matrix", "/quan-tri/phan-cap")
+    return RedirectResponse("/quan-tri/phan-cap?tab=ma-tran&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/phan-cap/giao-vien/{user_id}/mat-khau")
+def admin_reset_teacher(request: Request, user_id: int):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    cred = reset_one(user_id, roles=("teacher",))
+    if cred:
+        _store_password_csv(request, [cred])
+        return RedirectResponse("/quan-tri/phan-cap?tab=giao-vien&ok=reset", status_code=303)
+    return RedirectResponse("/quan-tri/phan-cap?tab=giao-vien&loi=1", status_code=303)
+
+
+def _hierarchy_tab(value: str | None) -> str:
+    tab = (value or "giao-vien").strip()
+    return tab if tab in ("giao-vien", "ma-tran", "hoc-sinh") else "giao-vien"
+
+
+@router.post("/quan-tri/phan-cap/trang-thai")
+def admin_set_active(
+    request: Request,
+    user_id: str = Form(...),
+    active: str = Form("0"),
+    tab: str = Form("hoc-sinh"),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    uid = int(user_id) if str(user_id).isdigit() else 0
+    dest = _hierarchy_tab(tab)
+    if uid and set_active(uid, active == "1"):
+        record_staff_event(user.get("id"), "suspend" if active != "1" else "unsuspend", "/quan-tri/phan-cap")
+        return RedirectResponse(f"/quan-tri/phan-cap?tab={dest}&ok=1", status_code=303)
+    return RedirectResponse(f"/quan-tri/phan-cap?tab={dest}&loi=1", status_code=303)
+
+
+@router.post("/quan-tri/phan-cap/chuyen-lop")
+def admin_transfer(
+    request: Request,
+    user_id: str = Form(...),
+    class_id: str = Form(...),
+):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    try:
+        transfer_student(int(user_id), int(class_id))
+    except (ValueError, TypeError):
+        return RedirectResponse("/quan-tri/phan-cap?tab=hoc-sinh&loi=1", status_code=303)
+    record_staff_event(user.get("id"), "transfer", "/quan-tri/phan-cap")
+    return RedirectResponse("/quan-tri/phan-cap?tab=hoc-sinh&ok=1", status_code=303)
+
+
+@router.post("/quan-tri/lti/ip")
+def admin_save_ip(request: Request, exam_ip_allow: str = Form("")):
+    user = _session_user(request)
+    if not user or not _leaders(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    set_setting("exam_ip_allow", exam_ip_allow.strip())
+    return RedirectResponse("/quan-tri/lti?ok=ip", status_code=303)
+
+
 @router.get("/quan-tri/so-diem", response_class=HTMLResponse)
 def admin_grades(request: Request):
     user = _session_user(request)
@@ -690,6 +821,9 @@ def admin_pedagogy(request: Request):
     hours = request.query_params.get("gio") or "24"
     hours_n = int(hours) if str(hours).isdigit() else 24
     hours_n = max(1, min(hours_n, 168))
+    left = int(request.query_params.get("lop_a") or 0) if str(request.query_params.get("lop_a") or "").isdigit() else 0
+    right = int(request.query_params.get("lop_b") or 0) if str(request.query_params.get("lop_b") or "").isdigit() else 0
+    compared = compare_classes(left, right) if left and right else {"left": [], "right": []}
     return TEMPLATES.TemplateResponse(
         request,
         "admin_pedagogy.html",
@@ -704,6 +838,11 @@ def admin_pedagogy(request: Request):
                 "stuck": class_unresolved_stuck(hours_n),
                 "teachers": teacher_footprint(hours_n),
                 "alerts": pedagogy_alerts(hours_n),
+                "classes": classes_for(user),
+                "lop_a": left,
+                "lop_b": right,
+                "compare": compared,
+                "bank": bank_reliability(),
             },
         ),
     )
@@ -736,6 +875,9 @@ def admin_lti(request: Request):
                 "login_url": f"{base}/lti/login",
                 "launch_url": f"{base}/lti/launch",
                 "jwks_url": f"{base}/lti/jwks",
+                "exam_ip_allow": get_setting("exam_ip_allow", ""),
+                "client_version": client_version(),
+                "saved": request.query_params.get("ok"),
             },
         ),
     )
@@ -822,7 +964,7 @@ def admin_configure_assignment(
         assigned_by=row["id"] if row else None,
         mode=mode,
         time_limit_sec=limit,
-        ip_allow=LAN_DEFAULT if lan_only else "",
+        ip_allow=(get_setting("exam_ip_allow") or LAN_DEFAULT) if lan_only else "",
         unlock_below=below,
         unlock_project_id=unlock_project_id or None,
     )

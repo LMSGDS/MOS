@@ -38,17 +38,69 @@
   {% elif persona == 'admin' %}
   <p class="hint" style="margin-top:16px">Chưa có cảnh báo sư phạm trong 24 giờ. Xem <a href="/quan-tri/su-pham">chỉ số lớp</a>.</p>
   {% endif %}
+  {% if persona == 'admin' %}
+  <div class="kpi-row">
+    <article class="kpi-card">
+      <p class="kpi-label">Đang online</p>
+      <p class="kpi-value">{{ stats.live_clients }}</p>
+      <p class="hint">Client MOS-KulKul 10 phút gần đây</p>
+    </article>
+    <article class="kpi-card {% if load.cpu_pct >= 85 %}kpi-hot{% endif %}">
+      <p class="kpi-label">Tải máy chủ</p>
+      <p class="kpi-value">CPU {{ "%.0f"|format(load.cpu_pct or 0) }}%</p>
+      <p class="hint">RAM {{ load.ram_used_gb }} / {{ load.ram_total_gb }} GB</p>
+    </article>
+    <article class="kpi-card">
+      <p class="kpi-label">Lượt thực hành tháng này</p>
+      <p class="kpi-value">{{ adoption.month_n }}</p>
+      <p class="hint">{% if adoption.delta_pct > 0 %}+{{ adoption.delta_pct }}%{% else %}{{ adoption.delta_pct }}%{% endif %} so với tháng trước</p>
+    </article>
+    <article class="kpi-card {% if not db_ok %}kpi-hot{% endif %}">
+      <p class="kpi-label">Báo động kỹ thuật</p>
+      <p class="kpi-value">{% if db_ok %}0{% else %}1{% endif %}</p>
+      <p class="hint">{% if db_ok %}PostgreSQL đồng bộ ổn{% else %}PostgreSQL không trả lời{% endif %}</p>
+    </article>
+  </div>
+  <div class="macro-split">
+    <div>
+      <h2>Phủ sóng luyện tập (30 ngày)</h2>
+      {% set peak = namespace(v=1) %}
+      {% for d in adoption.days %}{% if d.n > peak.v %}{% set peak.v = d.n %}{% endif %}{% endfor %}
+      <div class="adopt-bars" aria-label="Lượt làm theo ngày">
+        {% for d in adoption.days %}
+        <span title="{{ d.day }}: {{ d.n }}"><i style="height:{{ (d.n / peak.v * 100)|int }}%"></i></span>
+        {% endfor %}
+      </div>
+    </div>
+    <div>
+      <h2>Radar toàn trường</h2>
+      {% set r10 = school_radar['10'] %}
+      {% set r11 = school_radar['11'] %}
+      {% set r12 = school_radar['12'] %}
+      <svg class="school-radar" viewBox="0 0 240 220" width="240" height="220" aria-label="Radar khối 10 11 12">
+        <polygon points="120,28 200,176 40,176" fill="none" stroke="#cbd5e1" />
+        <polygon points="120,{{ 102 - 74 * (r10.word or 0) / 100 }} {{ 120 + 80 * (r10.excel or 0) / 100 }},{{ 102 + 74 * (r10.excel or 0) / 100 }} {{ 120 - 80 * (r10.powerpoint or 0) / 100 }},{{ 102 + 74 * (r10.powerpoint or 0) / 100 }}" fill="rgba(59,130,246,0.18)" stroke="#3b82f6" />
+        <polygon points="120,{{ 102 - 74 * (r11.word or 0) / 100 }} {{ 120 + 80 * (r11.excel or 0) / 100 }},{{ 102 + 74 * (r11.excel or 0) / 100 }} {{ 120 - 80 * (r11.powerpoint or 0) / 100 }},{{ 102 + 74 * (r11.powerpoint or 0) / 100 }}" fill="rgba(249,115,22,0.18)" stroke="#f97316" />
+        <polygon points="120,{{ 102 - 74 * (r12.word or 0) / 100 }} {{ 120 + 80 * (r12.excel or 0) / 100 }},{{ 102 + 74 * (r12.excel or 0) / 100 }} {{ 120 - 80 * (r12.powerpoint or 0) / 100 }},{{ 102 + 74 * (r12.powerpoint or 0) / 100 }}" fill="rgba(22,163,74,0.18)" stroke="#16a34a" />
+        <text x="120" y="16" text-anchor="middle" font-size="12">Word</text>
+        <text x="232" y="196" text-anchor="end" font-size="12">Excel</text>
+        <text x="8" y="196" text-anchor="start" font-size="12">PowerPoint</text>
+      </svg>
+      <p class="hint">Xanh dương: khối 10 · Cam: khối 11 · Xanh lá: khối 12</p>
+    </div>
+  </div>
+  {% if insight %}
+  <p class="notice">{{ insight }}</p>
+  {% endif %}
+  {% else %}
   <div class="program-grid" style="margin-top:12px">
     <div class="program-tile"><span class="pname">Học sinh<br><strong>{{ stats.students }}</strong></span></div>
     <div class="program-tile"><span class="pname">Lớp<br><strong>{{ stats.classes }}</strong></span></div>
     <div class="program-tile"><span class="pname">Bài tập<br><strong>{{ stats.exercises }}</strong></span></div>
     <div class="program-tile"><span class="pname">Bài đã nộp<br><strong>{{ stats.submitted }}</strong></span></div>
     <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ stats.avg }}</strong></span></div>
-    {% if persona == 'admin' %}
-    <div class="program-tile"><span class="pname">MOS-KulKul đang mở<br><strong>{{ stats.live_clients }}</strong></span></div>
-    <div class="program-tile"><span class="pname">Lượt làm 7 ngày<br><strong>{{ stats.week_attempts }}</strong></span></div>
-    {% endif %}
   </div>
+  {% endif %}
 
   <h2 style="margin-top:28px;font-size:18px">Đánh giá học sinh (Word)</h2>
   <table class="grid">

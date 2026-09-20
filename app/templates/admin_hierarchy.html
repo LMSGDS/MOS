@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Tài khoản & phân công{% endblock %}
+{% block body %}
+<section class="card hero admin-wide">
+  {% include "admin_nav.html" %}
+  <div class="admin-panel">
+    <h1>Tài khoản và phân công</h1>
+    <p class="lead">Xóa mềm: thôi học / khóa giáo viên chỉ tắt đăng nhập, giữ nguyên lịch sử điểm.</p>
+    {% if saved == 'reset' %}
+    <p class="success">Đã cấp mật khẩu mới. <a href="/quan-tri/hoc-sinh/mat-khau.csv">Tải CSV mật khẩu</a></p>
+    {% elif saved %}<p class="success">Đã lưu.</p>{% endif %}
+    {% if error %}<p class="alert">Không thực hiện được thao tác.</p>{% endif %}
+    <nav class="admin-tabs" role="tablist">
+      <a href="/quan-tri/phan-cap?tab=giao-vien" role="tab" {% if tab == 'giao-vien' %}aria-selected="true"{% endif %}>Giáo viên</a>
+      <a href="/quan-tri/phan-cap?tab=ma-tran" role="tab" {% if tab == 'ma-tran' %}aria-selected="true"{% endif %}>Ma trận phân công</a>
+      <a href="/quan-tri/phan-cap?tab=hoc-sinh" role="tab" {% if tab == 'hoc-sinh' %}aria-selected="true"{% endif %}>Học sinh toàn trường</a>
+    </nav>
+
+    <div {% if tab != 'giao-vien' %}hidden{% endif %}>
+      <table class="grid">
+        <thead><tr><th>Họ tên</th><th>Tài khoản</th><th>Lớp phụ trách</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>
+          {% for t in teachers %}
+          <tr>
+            <td>{{ t.name }}</td>
+            <td>{{ t.username }}</td>
+            <td>{{ t.class_count }}</td>
+            <td>{% if t.is_active %}Đang hoạt động{% else %}Đã khóa{% endif %}</td>
+            <td>
+              <form method="post" action="/quan-tri/phan-cap/giao-vien/{{ t.id }}/mat-khau" data-confirm="Cấp mật khẩu mới cho {{ t.name }}?">
+                <button type="submit" class="btn btn-outline">Force Reset Password</button>
+              </form>
+              <form method="post" action="/quan-tri/phan-cap/trang-thai" {% if t.is_active %}data-confirm="Khóa {{ t.name }}? Giáo viên không đăng nhập được, dữ liệu lớp giữ lại."{% endif %}>
+                <input type="hidden" name="user_id" value="{{ t.id }}" />
+                <input type="hidden" name="active" value="{% if t.is_active %}0{% else %}1{% endif %}" />
+                <input type="hidden" name="tab" value="giao-vien" />
+                <button type="submit" class="btn btn-ghost">{% if t.is_active %}Khóa{% else %}Mở khóa{% endif %}</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">Chưa có giáo viên.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="hint">Tạo giáo viên mới: tab Học sinh → Thêm thủ công, chọn vai trò Giáo viên. <a href="/quan-tri/hoc-sinh">Mở danh sách chi tiết</a>.</p>
+    </div>
+
+    <div {% if tab != 'ma-tran' %}hidden{% endif %}>
+      <p class="hint">Một lớp một giáo viên chủ nhiệm. Tick rồi lưu một lần.</p>
+      <form method="post" action="/quan-tri/phan-cap/ma-tran" class="matrix-wrap">
+        <table class="grid matrix">
+          <thead>
+            <tr>
+              <th>Giáo viên</th>
+              {% for c in matrix.classes %}<th>{{ c.name }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in matrix.teachers %}
+            <tr>
+              <td>{{ t.name }}</td>
+              {% for c in matrix.classes %}
+              <td>
+                <input type="checkbox" name="pair" value="{{ t.id }}:{{ c.id }}" data-class="{{ c.id }}" {% if matrix.assigned[c.id] == t.id %}checked{% endif %} />
+              </td>
+              {% endfor %}
+            </tr>
+            {% else %}
+            <tr><td colspan="2">Chưa có giáo viên hoặc lớp.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary">Lưu ma trận</button>
+      </form>
+    </div>
+
+    <div {% if tab != 'hoc-sinh' %}hidden{% endif %}>
+      <form method="get" action="/quan-tri/phan-cap" class="roster-toolbar__filters">
+        <input type="hidden" name="tab" value="hoc-sinh" />
+        <label>Tìm kiếm <input name="q" value="{{ q }}" placeholder="Tên, mã HS, tài khoản" /></label>
+        <button type="submit" class="btn btn-outline">Lọc</button>
+        <a class="btn btn-ghost" href="/quan-tri/hoc-sinh">Danh sách đầy đủ</a>
+      </form>
+      <table class="grid">
+        <thead><tr><th>Mã</th><th>Họ tên</th><th>Lớp</th><th>Chuyển lớp</th><th>Thôi học</th></tr></thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>{{ s.student_code or "—" }}</td>
+            <td><a href="/quan-tri/hoc-sinh/{{ s.id }}">{{ s.name }}</a></td>
+            <td>{{ s.class_name or "—" }}</td>
+            <td>
+              <form method="post" action="/quan-tri/phan-cap/chuyen-lop" class="inline-row" data-confirm="Chuyển {{ s.name }} sang lớp mới? Điểm cũ giữ nguyên, lớp hiện tại không còn sĩ số em này.">
+                <input type="hidden" name="user_id" value="{{ s.id }}" />
+                <select name="class_id">
+                  {% for c in classes %}<option value="{{ c.id }}" {% if s.class_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline">Chuyển</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="/quan-tri/phan-cap/trang-thai" {% if s.is_active %}data-confirm="Đình chỉ {{ s.name }}? Tài khoản không đăng nhập được, dữ liệu giữ lại."{% endif %}>
+                <input type="hidden" name="user_id" value="{{ s.id }}" />
+                <input type="hidden" name="active" value="{% if s.is_active %}0{% else %}1{% endif %}" />
+                <input type="hidden" name="tab" value="hoc-sinh" />
+                <button type="submit" class="btn {% if s.is_active %}btn-danger-outline{% else %}btn-outline{% endif %}">{% if s.is_active %}Đình chỉ{% else %}Mở khóa{% endif %}</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5">Không có học sinh khớp.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+<dialog id="confirm-action" class="mos-modal">
+  <form method="dialog" class="modal-form">
+    <h2>Xác nhận</h2>
+    <p class="confirm-text">Bạn chắc chứ?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" data-close-modal>Hủy</button>
+      <button type="button" class="btn btn-danger-outline" data-confirm-yes>Đồng ý</button>
+    </div>
+  </form>
+</dialog>
+<script>
+(function () {
+  var confirmDlg = document.getElementById("confirm-action");
+  var pendingForm = null;
+  document.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var dlg = btn.closest("dialog");
+      if (dlg) dlg.close();
+    });
+  });
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      if (form.getAttribute("data-ok") === "1") return;
+      e.preventDefault();
+      pendingForm = form;
+      confirmDlg.querySelector(".confirm-text").textContent = form.getAttribute("data-confirm");
+      confirmDlg.showModal();
+    });
+  });
+  var yes = confirmDlg && confirmDlg.querySelector("[data-confirm-yes]");
+  if (yes) {
+    yes.addEventListener("click", function () {
+      if (!pendingForm) return;
+      pendingForm.setAttribute("data-ok", "1");
+      confirmDlg.close();
+      pendingForm.submit();
+    });
+  }
+  document.querySelectorAll(".matrix input[type=checkbox]").forEach(function (box) {
+    box.addEventListener("change", function () {
+      if (!box.checked) return;
+      var classId = box.getAttribute("data-class");
+      document.querySelectorAll('.matrix input[data-class="' + classId + '"]').forEach(function (other) {
+        if (other !== box) other.checked = false;
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}
