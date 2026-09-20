@@ -32,7 +32,7 @@ def app_version() -> str:
                 return text
         except OSError:
             continue
-    return os.environ.get("MOS_APP_VERSION") or "1.21.3"
+    return os.environ.get("MOS_APP_VERSION") or "1.21.4"
 
 
 APP_VERSION = app_version()
