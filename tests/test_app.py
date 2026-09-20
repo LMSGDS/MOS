@@ -259,7 +259,7 @@ def test_exam_chrome_help_vs_huong_dan():
     hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
     layout = (root / "LayoutMath.cs").read_text(encoding="utf-8")
     grade = (root / "WordGrade.cs").read_text(encoding="utf-8")
-    assert "Tổng quan" in form
+    assert "Overview" in form
     assert "FillObjectiveTabs" in form
     assert "RenderBrief" in form
     assert "GroupByObjective" in form
@@ -273,18 +273,23 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "Un-dock" in form
     assert "↑  Top" in form
     assert "↓  Bottom" in form
-    assert "_dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint" in form
+    assert "Dock the test runner to different positions." in form
+    assert "RunnerBtn" in ui
     assert "NavIcon.Help" in ui
-    assert "Help — mẹo giao diện" in form
-    assert "Thi không trợ giúp" in form
+    assert "Test Runner — mẹo giao diện" in form
+    assert "Testing — Help SOP đã tắt" in form
     assert "HelpOpen => _helpVisible && ExamSession.HintsAllowed" in form
     assert "ExamSession.HintsAllowed" in form
     assert "_dockHint.Visible = ExamSession.HintsAllowed" in form
     assert "BindBank" in hub
     assert "CertiportSplit" in layout
     assert "HintTier" in form
-    assert "FlashRibbonHint" in form
-    assert "Mark for Review" in form
+    assert "FlashRibbonHint" in (root / "WordWindow.cs").read_text(encoding="utf-8")
+    assert "Mark for review" in form
+    assert "Mark Completed" in form
+    assert "Grade Project" in form
+    assert "Restart Project" in form
+    assert "Save Project" in form
     assert "ForceSubmitExam" in form
     assert "RestartProjectAsync" in hub
     assert "Làm lại Project" in form
@@ -292,6 +297,7 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "HideNumericScore" in (root / "ExamSession.cs").read_text(encoding="utf-8")
     assert "ReviewMark" in (root / "ExamSession.cs").read_text(encoding="utf-8")
     assert "ToggleMark" in (root / "ExamSession.cs").read_text(encoding="utf-8")
+    assert "ToggleComplete" in (root / "ExamSession.cs").read_text(encoding="utf-8")
     assert "TryBankField" in hub
     assert 'passed ? "PASS" : "FAIL"' in hub
     assert "FlashFeedback" in (root / "WordWindow.cs").read_text(encoding="utf-8")
@@ -304,6 +310,9 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "Alt+F" in form
     assert "Alt+H" in form
     assert "public string Scenario" in grade
+    assert "Start Test" in form
+    assert "Resume Test" in form
+    assert "New Test" in form
     assert "_dockShare" in form.split("DockButtons()")[1].split("];")[0]
 
 

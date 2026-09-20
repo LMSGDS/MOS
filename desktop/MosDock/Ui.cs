@@ -1217,7 +1217,34 @@ static class Ui
     };
 
     public static string ModeLabel(string mode) =>
-        mode == "testing" ? "Thi" : "Luyện tập";
+        mode == "testing" ? "Testing" : "Training";
+
+    /// <summary>Labeled GMetrix Test Runner control — not an icon square.</summary>
+    public static Button RunnerBtn(string text, Color fill, int minWidth = 108)
+    {
+        var w = Math.Max(minWidth, MeasureW(text, SmallFont) + 20);
+        var btn = new Button
+        {
+            Text = text,
+            AutoSize = false,
+            Size = new Size(w, 32),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = fill,
+            ForeColor = Color.White,
+            Font = SmallFont,
+            Cursor = Cursors.Hand,
+            UseMnemonic = false,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Margin = new Padding(3, 4, 3, 4),
+            AccessibleName = text,
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(fill);
+        btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(fill);
+        DockTips.SetToolTip(btn, text);
+        AttachFocusRing(btn);
+        return btn;
+    }
 
     public static Button DockSquare(NavIcon icon, string tip, Color fill)
     {

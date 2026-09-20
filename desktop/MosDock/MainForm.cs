@@ -31,18 +31,32 @@ sealed class MainForm : Form
     readonly Panel _dockChrome = new();
     readonly Panel _navGrip = new();
     readonly FlowLayoutPanel _dockFlow = new();
-    readonly Button _dockHelp = Ui.DockSquare(NavIcon.Help, "Help — mẹo giao diện, không mở hướng dẫn bài", Ui.Primary);
+    readonly Panel _taskBar = new();
+    readonly FlowLayoutPanel _taskFlow = new();
+    readonly Label _projectLabel = new();
+    readonly Label _clockLabel = new();
+    readonly Button _dockHelp = Ui.DockSquare(NavIcon.Help, "Accessibility — đổi cỡ chữ đề bài (AA).", Ui.Primary);
     readonly Button _dockAaa = Ui.AaaButton();
-    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Gắn thanh bài thi: Top, Bottom hoặc Un-dock", Ui.Primary);
-    readonly Button _dockSave = Ui.DockSquare(NavIcon.Save, "Lưu và thoát bài", Ui.Primary);
-    readonly Button _dockTasks = Ui.DockSquare(NavIcon.Tasks, "Tổng hợp nhiệm vụ", Ui.Primary);
+    readonly Button _dockPos = Ui.DockSquare(NavIcon.Dock, "Dock the test runner to different positions.", Ui.Primary);
+    readonly Button _dockSave = Ui.RunnerBtn("Save Project", Ui.Primary, 118);
+    readonly Button _dockTasks = Ui.RunnerBtn("Summary", Ui.Primary, 92);
+    readonly Button _dockRestart = Ui.RunnerBtn("Restart Project", Color.FromArgb(194, 120, 3), 130);
+    readonly Button _dockGrade = Ui.RunnerBtn("Grade Project", Ui.Primary, 118);
     readonly Button _dockCheck = Ui.DockSquare(NavIcon.Refresh, "Kiểm tra nhiệm vụ", Ui.Primary);
     readonly Button _dockPin = Ui.DockSquare(NavIcon.Pin, "Ghim luôn trên cùng", Ui.Primary);
     readonly Button _dockMenu = Ui.DockSquare(NavIcon.Menu, "Menu tùy chọn thêm", Ui.Primary);
-    readonly Button _dockHint = Ui.DockSquare(NavIcon.Hint, "Hướng dẫn bài — chỉ Luyện tập, ẩn khi Thi không trợ giúp", Ui.Primary);
-    readonly Button _dockShare = Ui.DockSquare(NavIcon.Share, "Bỏ qua chấm, sang nhiệm vụ sau", Ui.Primary);
-    readonly Button _dockBack = Ui.DockSquare(NavIcon.Back, "Nhiệm vụ trước", Ui.Primary);
-    readonly Button _dockNext = Ui.DockSquare(NavIcon.Next, "Nhiệm vụ sau", Ui.Primary);
+    readonly Button _dockHint = Ui.RunnerBtn("Help", Ui.Primary, 88);
+    readonly Button _dockShare = Ui.RunnerBtn("Mark for review", Color.FromArgb(232, 156, 36), 128);
+    readonly Button _dockDone = Ui.RunnerBtn("Mark Completed", Color.FromArgb(0, 186, 181), 128);
+    readonly Button _dockBack = Ui.RunnerBtn("Previous Task", Color.FromArgb(70, 74, 80), 118);
+    readonly Button _dockNext = Ui.RunnerBtn("Next Task", Color.FromArgb(70, 74, 80), 100);
+    readonly Panel _setup = new();
+    readonly FlowLayoutPanel _setupResume = new();
+    readonly ComboBox _setupMode = new();
+    readonly Label _setupQ = new();
+    readonly Label _setupMin = new();
+    readonly Label _setupCut = new();
+    MosProject? _setupProject;
     readonly ContextMenuStrip _dockMenuStrip = new();
     readonly ContextMenuStrip _extraMenu = new();
     readonly Panel _helpPane = new();
@@ -63,7 +77,7 @@ sealed class MainForm : Form
     readonly Button _summaryCancel = Ui.PrimaryBtn("Hủy", 120);
     readonly Button _summaryGo = Ui.PrimaryBtn("Đến", 120);
     readonly Button _summarySave = Ui.PrimaryBtn("Lưu bài", 120);
-    readonly Button _summaryFinish = Ui.PrimaryBtn("Nộp bài", 120);
+    readonly Button _summaryFinish = Ui.PrimaryBtn("Finish Test", 130);
     readonly Button _summaryCheck = Ui.PrimaryBtn("Chấm lại", 120);
     readonly Button _summaryRestart = Ui.PrimaryBtn("Làm lại Project", 150);
     readonly Label _summaryStats = new();
@@ -107,7 +121,7 @@ sealed class MainForm : Form
     readonly FlowLayoutPanel _helpFooter = new();
     bool _demoRunning;
     IReadOnlyList<MosProject> _items = [];
-    enum HubPage { Home, Catalog, Resume, Done, Exam }
+    enum HubPage { Home, Catalog, Resume, Done, Setup, Exam }
     HubPage _view = HubPage.Home;
 
     public bool SignOutRequested { get; private set; }
@@ -142,6 +156,7 @@ sealed class MainForm : Form
         BuildCatalog();
         BuildListPage(_resume, _resumeList, "Tiếp tục bài", "Chọn bài đang làm dở để mở lại trên Office máy.");
         BuildListPage(_done, _doneList, "Bài đã nộp", "Điểm hiển thị phần đã xác minh. Find/Go To có thể còn chưa xác minh.");
+        BuildSetup();
         BuildExam();
         LoadNavThickness();
 
@@ -152,6 +167,7 @@ sealed class MainForm : Form
         _body.Controls.Add(_catalog);
         _body.Controls.Add(_resume);
         _body.Controls.Add(_done);
+        _body.Controls.Add(_setup);
 
         Controls.Add(_exam);
         Controls.Add(_body);
@@ -245,19 +261,19 @@ sealed class MainForm : Form
 
     Button[] DockButtons() =>
     [
-        _dockHelp, _dockAaa, _dockPos, _dockTasks, _dockHint, _dockShare, _dockBack, _dockNext, _dockSave,
+        _dockHelp, _dockAaa, _dockPos, _dockTasks, _dockRestart, _dockHint, _dockShare, _dockDone,
+        _dockBack, _dockNext, _dockSave, _dockGrade,
     ];
 
     void ApplyNavChrome(NavMetrics nav)
     {
         _nav = nav;
-        var thick = _navThickness ?? (LayoutMath.Horizontal(_state) ? nav.ClusterH : nav.ClusterW);
-        var icon = Math.Clamp(thick - 2 * nav.ChromePad, 24, 56);
-        _dockChrome.Padding = new Padding(nav.ChromePad);
-        foreach (var btn in DockButtons())
+        _dockChrome.Padding = new Padding(6, 2, 6, 2);
+        _dockChrome.Height = 40;
+        foreach (var btn in new[] { _dockHelp, _dockAaa, _dockPos })
         {
-            btn.Size = new Size(icon, icon);
-            btn.Margin = new Padding(nav.IconGap);
+            btn.Size = new Size(32, 32);
+            btn.Margin = new Padding(2, 2, 2, 2);
         }
 
         OrientNav();
@@ -265,25 +281,14 @@ sealed class MainForm : Form
 
     void OrientNav()
     {
-        if (_docking && _compact && _state is "left" or "right")
-        {
-            _dockChrome.Dock = _state == "left" ? DockStyle.Left : DockStyle.Right;
-            _dockChrome.Width = Math.Max(8, ClientSize.Width - _navGrip.Width);
-            _dockFlow.FlowDirection = FlowDirection.TopDown;
-            _dockFlow.WrapContents = false;
-            _navGrip.Visible = true;
-            _navGrip.Dock = _state == "left" ? DockStyle.Right : DockStyle.Left;
-            _navGrip.Width = 6;
-            _navGrip.Cursor = Cursors.SizeWE;
-            _navGrip.BringToFront();
-            return;
-        }
-
-        _dockChrome.Dock = _state == "top" && _docking && _compact ? DockStyle.Top : DockStyle.Bottom;
-        _dockChrome.Height = Math.Max(8, ClientSize.Height - (_docking && _compact ? _navGrip.Height : 0));
+        _dockChrome.Dock = DockStyle.Top;
+        _dockChrome.Height = 40;
+        _taskBar.Dock = DockStyle.Bottom;
+        _taskBar.Height = 42;
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
         _dockFlow.WrapContents = false;
-        _navGrip.Visible = _docking && _compact;
+        _taskFlow.FlowDirection = FlowDirection.LeftToRight;
+        _navGrip.Visible = _docking && _compact && !_summaryOpen;
         if (_navGrip.Visible)
         {
             _navGrip.Dock = _state == "top" ? DockStyle.Bottom : DockStyle.Top;
@@ -381,17 +386,17 @@ sealed class MainForm : Form
         };
         tiles.Controls.Add(Ui.Tile(
             "Bài mới",
-            "Chọn Word, Excel hoặc PowerPoint, rồi Luyện tập hoặc Thi.",
+            "Chọn môn → bài thi → New Test hoặc Resume Test → Training / Testing.",
             Ui.Primary,
             ShowCatalog));
         tiles.Controls.Add(Ui.Tile(
             "Tiếp tục bài",
-            "Mở bài đang làm dở, không tạo lần làm mới.",
+            "Resume Test — mở phiên đã lưu, không tạo lần làm mới.",
             Ui.Success,
             () => _ = ShowResume()));
         tiles.Controls.Add(Ui.Tile(
             "Bài đã nộp",
-            "Xem điểm đã xác minh và bài đã gửi lên máy chủ.",
+            "Xem điểm đã xác minh sau Grade Project / Finish Test.",
             Ui.Warning,
             () => _ = ShowCompleted()));
         var homeBody = new Panel { Dock = DockStyle.Fill, BackColor = Ui.PageBg };
@@ -401,7 +406,7 @@ sealed class MainForm : Form
         homeBody.Controls.Add(_radar);
         _home.Controls.Add(Ui.StackPage(
             "Trang chủ",
-            "Radar năng lực (Word · Excel · PowerPoint) để tự đánh giá. Bài mới tách Luyện tập (trợ giảng Q-Matrix) và Thi (khóa gợi ý, đếm giờ).",
+            "Quy trình MOS-KulKul: đăng nhập → chọn môn → chọn bài → New Test / Resume Test → Training hoặc Testing → Test Runner (thanh dock).",
             homeBody));
     }
 
@@ -426,8 +431,8 @@ sealed class MainForm : Form
         body.Controls.Add(_tests);
         body.Controls.Add(_products);
         _catalog.Controls.Add(Ui.StackPage(
-            "Bài mới",
-            "Chọn chương trình, rồi một nhóm Objective — Luyện tập hoặc Thi.",
+            "Chọn môn học",
+            "Thẻ Word / Excel / PowerPoint. Bấm Start trên bài thi, rồi New Test hoặc Resume Test.",
             body));
     }
 
@@ -449,10 +454,10 @@ sealed class MainForm : Form
         _exam.Padding = Padding.Empty;
         _exam.Visible = false;
 
-        _dockChrome.Dock = DockStyle.Bottom;
-        _dockChrome.Height = LayoutMath.ClusterH;
+        _dockChrome.Dock = DockStyle.Top;
+        _dockChrome.Height = 40;
         _dockChrome.BackColor = Ui.Primary;
-        _dockChrome.Padding = new Padding(8, 4, 8, 4);
+        _dockChrome.Padding = new Padding(6, 2, 6, 2);
 
         _dockFlow.Dock = DockStyle.Fill;
         _dockFlow.FlowDirection = FlowDirection.LeftToRight;
@@ -461,16 +466,18 @@ sealed class MainForm : Form
         _dockFlow.Padding = Padding.Empty;
         _dockFlow.Margin = Padding.Empty;
 
-        _dockHelp.Click += (_, _) => ShowTips(!_tipsOpen);
+        _dockHelp.Click += (_, _) => CycleTypeSize();
         _dockAaa.Click += (_, _) => CycleTypeSize();
-        Ui.DockTips.SetToolTip(_dockAaa, "Đổi cỡ chữ đề bài và hướng dẫn");
-        _dockAaa.AccessibleName = "Đổi cỡ chữ đề bài và hướng dẫn";
+        Ui.DockTips.SetToolTip(_dockAaa, "AA — đổi cỡ chữ hướng dẫn trong thanh dock.");
+        _dockAaa.AccessibleName = "AA — đổi cỡ chữ hướng dẫn";
         _dockPos.Click += (_, _) =>
         {
-            _dockMenuStrip.Show(_dockPos, new Point(0, 0), ToolStripDropDownDirection.AboveRight);
+            _dockMenuStrip.Show(_dockPos, new Point(0, _dockPos.Height), ToolStripDropDownDirection.BelowRight);
         };
         _dockSave.Click += (_, _) => SaveAndHome();
         _dockTasks.Click += (_, _) => ShowSummary(true);
+        _dockRestart.Click += async (_, _) => await RestartCurrentProject();
+        _dockGrade.Click += async (_, _) => await CheckTasks();
         _dockCheck.Click += async (_, _) => await CheckTasks();
         _dockPin.Click += (_, _) =>
         {
@@ -484,15 +491,51 @@ sealed class MainForm : Form
         };
         _dockHint.Click += (_, _) => ToggleHelp();
         _dockShare.Click += (_, _) => ToggleMarkForReview();
+        _dockDone.Click += (_, _) => ToggleMarkCompleted();
         _dockBack.Click += (_, _) => StepTask(-1);
         _dockNext.Click += (_, _) => StepTask(1);
 
-        foreach (var btn in DockButtons())
+        _projectLabel.AutoSize = false;
+        _projectLabel.Width = 120;
+        _projectLabel.Height = 32;
+        _projectLabel.ForeColor = Color.White;
+        _projectLabel.TextAlign = ContentAlignment.MiddleLeft;
+        _projectLabel.Font = Ui.SmallFont;
+        _projectLabel.UseMnemonic = false;
+        _clockLabel.AutoSize = false;
+        _clockLabel.Width = 88;
+        _clockLabel.Height = 32;
+        _clockLabel.ForeColor = Color.White;
+        _clockLabel.TextAlign = ContentAlignment.MiddleCenter;
+        _clockLabel.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+        _clockLabel.UseMnemonic = false;
+        _clockLabel.Text = "00:00:00";
+
+        foreach (var btn in new Control[]
+        {
+            _dockHelp, _dockAaa, _dockPos, _projectLabel, _clockLabel,
+            _dockTasks, _dockRestart, _dockSave, _dockGrade,
+        })
         {
             _dockFlow.Controls.Add(btn);
         }
 
         _dockChrome.Controls.Add(_dockFlow);
+
+        _taskBar.Dock = DockStyle.Bottom;
+        _taskBar.Height = 42;
+        _taskBar.BackColor = Color.FromArgb(45, 45, 48);
+        _taskBar.Padding = new Padding(8, 4, 8, 4);
+        _taskFlow.Dock = DockStyle.Fill;
+        _taskFlow.FlowDirection = FlowDirection.LeftToRight;
+        _taskFlow.WrapContents = false;
+        _taskFlow.BackColor = Color.Transparent;
+        foreach (var btn in new[] { _dockBack, _dockDone, _dockShare, _dockNext, _dockHint })
+        {
+            _taskFlow.Controls.Add(btn);
+        }
+
+        _taskBar.Controls.Add(_taskFlow);
 
         _navGrip.BackColor = Ui.PrimaryDark;
         _navGrip.Height = 6;
@@ -508,13 +551,6 @@ sealed class MainForm : Form
         var undockItem = new ToolStripMenuItem("Un-dock");
         undockItem.Click += (_, _) => UnDock();
         _dockMenuStrip.Items.Add(undockItem);
-        _dockMenuStrip.Items.Add(new ToolStripSeparator());
-        _dockMenuStrip.Items.Add(DockMenuItem("←  Trái", "left"));
-        _dockMenuStrip.Items.Add(DockMenuItem("→  Phải", "right"));
-        _dockMenuStrip.Items.Add(new ToolStripSeparator());
-        var dockSubmit = new ToolStripMenuItem("Nộp bài");
-        dockSubmit.Click += async (_, _) => await SubmitExam();
-        _dockMenuStrip.Items.Add(dockSubmit);
 
         _extraMenu.Font = new Font("Segoe UI", 10f);
         var extraHome = new ToolStripMenuItem("Trang chủ");
@@ -596,6 +632,7 @@ sealed class MainForm : Form
         _exam.Controls.Add(_taskPrompt);
         _exam.Controls.Add(_objTabs);
         _exam.Controls.Add(_navGrip);
+        _exam.Controls.Add(_taskBar);
         _exam.Controls.Add(_dockChrome);
         _exam.Controls.Add(_examStatus);
         _exam.Controls.Add(_examMeta);
@@ -697,7 +734,7 @@ sealed class MainForm : Form
         _tips.Padding = new Padding(28, 20, 28, 20);
         _tips.Visible = false;
 
-        _tipsTitle.Text = "Help — mẹo giao diện";
+        _tipsTitle.Text = "Test Runner — mẹo giao diện";
         _tipsTitle.Dock = DockStyle.Top;
         _tipsTitle.Font = Ui.TitleFont;
         _tipsTitle.ForeColor = Ui.Text;
@@ -705,7 +742,7 @@ sealed class MainForm : Form
         _tipsTitle.TextAlign = ContentAlignment.MiddleLeft;
         _tipsTitle.UseMnemonic = false;
 
-        _tipsLead.Text = "Help (?) giải thích các nút trên thanh bài thi. Không phải hướng dẫn từng bước. Chế độ Thi không trợ giúp: ẩn bóng đèn hướng dẫn.";
+        _tipsLead.Text = "? / AA đổi cỡ chữ. Hai ô vuông: Top, Bottom, Un-dock. Help (bóng đèn) chỉ Training — bung bước SOP ngay dưới đề. Testing ẩn Help.";
         _tipsLead.Dock = DockStyle.Top;
         _tipsLead.ForeColor = Ui.Muted;
         _tipsLead.UseMnemonic = false;
@@ -721,14 +758,14 @@ sealed class MainForm : Form
         _tipsList.Columns.Add("Phím", 80);
         foreach (var row in new[]
         {
-            ("Help ?", "Xem mẹo giao diện. Không mở hướng dẫn bài.", "Alt+F"),
-            ("AA", "Đổi cỡ chữ đề bài và hướng dẫn (nếu đang mở).", "Alt+T"),
-            ("Gắn thanh", "Top, Bottom hoặc Un-dock.", "Alt+D"),
-            ("Tổng hợp", "Danh sách nhiệm vụ của đề đang làm.", "Alt+L"),
-            ("Lưu", "Lưu bài để làm tiếp sau.", "Alt+S"),
-            ("Chấm", "Chấm đề hiện tại — Luyện tập; Thi ẩn điểm đến khi nộp.", "Alt+G"),
-            ("Trước / Sau", "Chuyển nhiệm vụ trong cùng một nhóm Objective.", "Alt+B / Alt+N"),
-            ("Hướng dẫn", "Bật/tắt trợ giúp từng bước. Chỉ Luyện tập; Thi không trợ giúp.", "Alt+H"),
+            ("? / AA", "Accessibility: đổi cỡ chữ đề bài và Help.", "Alt+F / Alt+T"),
+            ("Dock", "Dock the test runner to different positions: Top, Bottom, Un-dock.", "Alt+D"),
+            ("Summary", "Modal cây Project / Task — Viewed, Review, Complete, Finish Test.", "Alt+L"),
+            ("Restart Project", "Khôi phục file gốc của Project hiện tại.", ""),
+            ("Save Project", "Lưu snapshot để Resume Test sau.", "Alt+S"),
+            ("Grade Project", "Training: chấm ngay. Testing: nộp / ẩn điểm đến Finish Test.", "Alt+G"),
+            ("Previous / Next Task", "Điều hướng tuần tự trong Project.", "Alt+B / Alt+N"),
+            ("Help", "Training only: bung bước SOP in đậm ngay dưới đề bài.", "Alt+H"),
         })
         {
             _tipsList.Items.Add(new ListViewItem([row.Item1, row.Item2, row.Item3]));
@@ -814,8 +851,10 @@ sealed class MainForm : Form
         _summaryList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
         _summaryList.BorderStyle = BorderStyle.None;
         _summaryList.Columns.Add("#", 44);
-        _summaryList.Columns.Add("Kỹ năng", 260);
-        _summaryList.Columns.Add("Kết quả", 88);
+        _summaryList.Columns.Add("Name", 240);
+        _summaryList.Columns.Add("Viewed", 70);
+        _summaryList.Columns.Add("Review", 70);
+        _summaryList.Columns.Add("Complete", 80);
         _summaryList.DoubleClick += async (_, _) => await JumpSelectedSummary();
         _summaryList.SelectedIndexChanged += (_, _) => RenderSummaryDetail();
 
@@ -962,8 +1001,8 @@ sealed class MainForm : Form
         }
 
         _tipsOpen = false;
-        ExamSession.HintTier = ExamSession.HintTier >= 3 ? 0 : ExamSession.HintTier + 1;
-        _helpVisible = ExamSession.HintTier > 0;
+        _helpVisible = !_helpVisible;
+        ExamSession.HintTier = _helpVisible ? 3 : 0;
         if (_helpVisible)
         {
             var elapsed = Math.Max(0, (int)(DateTime.UtcNow - ExamSession.OpenedUtc).TotalMilliseconds);
@@ -974,16 +1013,11 @@ sealed class MainForm : Form
                 tier = ExamSession.HintTier,
                 task_id = CurrentTaskId(),
             });
-            if (ExamSession.HintTier == 2)
-            {
-                var work = CurrentWork();
-                var (_, word) = DockAndWord(work);
-                WordWindow.FlashRibbonHint(word);
-            }
         }
 
         RelayoutExam();
         RenderHelp();
+        HighlightDockIcons();
     }
 
     string CurrentTaskId()
@@ -1145,8 +1179,15 @@ sealed class MainForm : Form
                         continue;
                     }
 
-                    var label = marked ? "⚑ " + SkillReview.Label(status) : SkillReview.Label(status);
-                    var row = new ListViewItem([global.ToString(), $"P{block.Order} · {name}", label])
+                    var viewed = ExamSession.IsViewed(src, t);
+                    var done = ExamSession.IsCompleted(src, t);
+                    var row = new ListViewItem([
+                        global.ToString(),
+                        $"P{block.Order} · {name}",
+                        viewed ? "✓" : "",
+                        marked ? "✓" : "",
+                        done ? "✓" : "",
+                    ])
                     {
                         Tag = (src, t),
                         ForeColor = marked ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status),
@@ -1226,8 +1267,15 @@ sealed class MainForm : Form
                     continue;
                 }
 
-                var label = marked ? "⚑ " + SkillReview.Label(status) : SkillReview.Label(status);
-                var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = (currentId, i) };
+                var viewed = ExamSession.IsViewed(currentId, i);
+                var done = ExamSession.IsCompleted(currentId, i);
+                var row = new ListViewItem([
+                    (i + 1).ToString(),
+                    name,
+                    viewed ? "✓" : "",
+                    marked ? "✓" : "",
+                    done ? "✓" : "",
+                ]) { Tag = (currentId, i) };
                 row.ForeColor = marked ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status);
                 if (i == _taskIndex)
                 {
@@ -1466,11 +1514,11 @@ sealed class MainForm : Form
     {
         _objTabs.SuspendLayout();
         _objTabs.Controls.Clear();
-        _objTabs.Controls.Add(ObjectiveTab("Tổng quan", -1));
+        _objTabs.Controls.Add(ObjectiveTab("Overview", -1));
         var n = _tasks.Items.Count;
         for (var i = 0; i < n; i++)
         {
-            _objTabs.Controls.Add(ObjectiveTab("Nhiệm vụ " + (i + 1), i));
+            _objTabs.Controls.Add(ObjectiveTab("Task " + (i + 1), i));
         }
 
         _objTabs.ResumeLayout();
@@ -1517,8 +1565,14 @@ sealed class MainForm : Form
         }
 
         HighlightObjectiveTabs();
+        if (index >= 0)
+        {
+            ExamSession.MarkViewed(ExamSession.ProjectId, index);
+        }
+
         RenderBrief();
         RenderHelp();
+        HighlightDockIcons();
     }
 
     void OnTaskSelected(object? sender, EventArgs e)
@@ -1530,9 +1584,11 @@ sealed class MainForm : Form
 
         _taskIndex = _tasks.SelectedIndices[0];
         _objTab = _taskIndex;
+        ExamSession.MarkViewed(ExamSession.ProjectId, _taskIndex);
         HighlightObjectiveTabs();
         RenderBrief();
         RenderHelp();
+        HighlightDockIcons();
     }
 
     void HighlightObjectiveTabs()
@@ -1604,7 +1660,7 @@ sealed class MainForm : Form
         var criteria = ExamSession.Rubric?.Criteria;
         if (_objTab < 0)
         {
-            SetHelpBody(["Chọn Nhiệm vụ 1 để xem hướng dẫn từng bước trên Microsoft Office đã cài trên máy."], bodyPt);
+            SetHelpBody(["Chọn Task 1 để xem bước SOP ngay dưới đề bài (Training). Testing ẩn Help."], bodyPt);
             return;
         }
 
@@ -1617,21 +1673,16 @@ sealed class MainForm : Form
         _taskIndex = Math.Clamp(_taskIndex, 0, criteria.Count - 1);
         var item = criteria[_taskIndex];
         var bankTiers = ExamSession.Bank.HintTiers(_taskIndex, ExamSession.ProjectId);
-        var steps = bankTiers.Length > 0 ? bankTiers : SkillReview.HintSteps(item).ToArray();
-        if (ExamSession.HintTier > 0 && ExamSession.HintTier <= steps.Length)
+        IReadOnlyList<string> steps = item.HelpSteps is { Count: > 0 }
+            ? item.HelpSteps
+            : bankTiers.Length > 0 ? bankTiers : SkillReview.HintSteps(item);
+        if (steps.Count > 0)
         {
-            var captions = new[] { "Gợi ý định vị", "Gợi ý thao tác (Ribbon)", "Giải pháp toàn phần" };
-            var cap = captions[Math.Clamp(ExamSession.HintTier - 1, 0, 2)];
-            SetHelpBody([cap + ": " + steps[ExamSession.HintTier - 1]], bodyPt);
+            SetHelpBody(steps, bodyPt);
+            return;
         }
-        else if (item.HelpSteps is { Count: > 0 } && ExamSession.HintTier == 0)
-        {
-            SetHelpBody(["Bấm Gợi ý để mở từng tầng (định vị → Ribbon → đáp án)."], bodyPt);
-        }
-        else
-        {
-            SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
-        }
+
+        SetHelpBody(["Làm đúng yêu cầu trên đề trong Microsoft Office đã cài trên máy."], bodyPt);
     }
 
     void SetHelpBody(IReadOnlyList<string> steps, float bodyPt)
@@ -1787,19 +1838,27 @@ sealed class MainForm : Form
             btn.BackColor = Ui.Primary;
         }
 
-        Ui.DockTips.SetToolTip(_dockHelp, "Help — mẹo giao diện, không mở hướng dẫn bài");
-        Ui.DockTips.SetToolTip(_dockAaa, "Đổi cỡ chữ đề bài và hướng dẫn");
+        Ui.DockTips.SetToolTip(_dockHelp, "Accessibility / font size (AA).");
+        Ui.DockTips.SetToolTip(_dockAaa, "AA — đổi cỡ chữ hướng dẫn trong thanh dock.");
         Ui.DockTips.SetToolTip(_dockHint, !ExamSession.HintsAllowed
-            ? "Thi không trợ giúp — hướng dẫn từng bước đã tắt"
-            : HelpOpen ? "Gợi ý tiếp theo (3 tầng)" : "Gợi ý định vị");
-        Ui.DockTips.SetToolTip(_dockTasks, "Tổng hợp nhiệm vụ");
-        Ui.DockTips.SetToolTip(_dockSave, "Lưu và thoát bài");
-        Ui.DockTips.SetToolTip(_dockBack, "Nhiệm vụ trước");
-        Ui.DockTips.SetToolTip(_dockNext, "Nhiệm vụ sau");
-        Ui.DockTips.SetToolTip(_dockPos, "Gắn thanh bài thi: Top, Bottom hoặc Un-dock");
-        Ui.DockTips.SetToolTip(_dockShare, ExamSession.Bank.MarkForReview
-            ? "Đánh dấu xem lại (Mark for Review)"
-            : "Bỏ qua chấm, sang nhiệm vụ sau");
+            ? "Testing — Help SOP đã tắt"
+            : HelpOpen ? "Ẩn Help" : "Help — bước SOP ngay dưới đề bài");
+        Ui.DockTips.SetToolTip(_dockTasks, "Summary — Viewed / Review / Complete");
+        Ui.DockTips.SetToolTip(_dockRestart, "Restart Project — khôi phục file gốc");
+        Ui.DockTips.SetToolTip(_dockGrade, "Grade Project");
+        Ui.DockTips.SetToolTip(_dockSave, "Save Project — snapshot để Resume Test");
+        Ui.DockTips.SetToolTip(_dockBack, "Previous Task");
+        Ui.DockTips.SetToolTip(_dockNext, "Next Task");
+        Ui.DockTips.SetToolTip(_dockPos, "Dock the test runner to different positions.");
+        Ui.DockTips.SetToolTip(_dockDone, "Mark Completed");
+        Ui.DockTips.SetToolTip(_dockShare, "Mark for review");
+        _dockHint.BackColor = HelpOpen ? Color.FromArgb(20, 20, 24) : Ui.Primary;
+        _dockDone.BackColor = ExamSession.IsCompleted(ExamSession.ProjectId, Math.Max(0, _taskIndex))
+            ? Color.FromArgb(0, 140, 136)
+            : Color.FromArgb(0, 186, 181);
+        _dockShare.BackColor = ExamSession.IsMarked(ExamSession.ProjectId, Math.Max(0, _taskIndex))
+            ? Color.FromArgb(194, 120, 3)
+            : Color.FromArgb(232, 156, 36);
     }
 
     void ApplyExamChrome()
@@ -1815,7 +1874,8 @@ sealed class MainForm : Form
             : showTasks || showSummary || showTips ? Color.White : Color.FromArgb(245, 247, 249);
         _tips.Visible = showTips;
         _summary.Visible = showSummary;
-        _dockChrome.Visible = !showSummary;
+        _dockChrome.Visible = !showSummary && !showTips;
+        _taskBar.Visible = !showSummary && !showTips;
         _navGrip.Visible = !showSummary && !showTips && _docking && _compact;
         if (_docking && _compact && !showSummary)
         {
@@ -1851,11 +1911,14 @@ sealed class MainForm : Form
         _dockTasks.Visible = true;
         _dockHelp.Visible = true;
         _dockAaa.Visible = true;
+        _dockRestart.Visible = ExamSession.Bank.RestartProject || ExamSession.Mode == "testing";
+        _dockGrade.Visible = true;
         _dockHint.Visible = ExamSession.HintsAllowed;
         _dockCheck.Visible = false;
         _dockPin.Visible = false;
         _dockMenu.Visible = false;
-        _dockShare.Visible = ExamSession.Bank.MarkForReview;
+        _dockDone.Visible = true;
+        _dockShare.Visible = true;
         RenderBrief();
         RenderHelp();
         HighlightDockIcons();
@@ -1875,7 +1938,8 @@ sealed class MainForm : Form
         _catalog.Visible = view == HubPage.Catalog;
         _resume.Visible = view == HubPage.Resume;
         _done.Visible = view == HubPage.Done;
-        _back.Visible = view is HubPage.Catalog or HubPage.Resume or HubPage.Done;
+        _setup.Visible = view == HubPage.Setup;
+        _back.Visible = view is HubPage.Catalog or HubPage.Resume or HubPage.Done or HubPage.Setup;
         _back.Width = _back.Visible ? Math.Max(132, Ui.MeasureW("Trang chủ", Ui.BtnFont) + 24) : 0;
         _crumb.Text = title;
         _header.Visible = !exam || !_docking;
@@ -2018,13 +2082,9 @@ sealed class MainForm : Form
             WrapContents = false,
             BackColor = Ui.Card,
         };
-        var train = Ui.PrimaryBtn("Luyện tập", 120);
-        train.Click += async (_, _) => await ConfirmStart(project, "training");
-        var test = Ui.PrimaryBtn("Thi", 120);
-        test.BackColor = Ui.Orange;
-        test.Click += async (_, _) => await ConfirmStart(project, "testing");
-        actions.Controls.Add(train);
-        actions.Controls.Add(test);
+        var start = Ui.PrimaryBtn("Start", 120);
+        start.Click += async (_, _) => await OpenExamEntry(project);
+        actions.Controls.Add(start);
         var card = Ui.ListCard(
             project.Title,
             (string.IsNullOrWhiteSpace(project.Skill) ? Ui.AppName(project.Program) : project.Skill) + " · " + mins + " phút",
@@ -2117,21 +2177,220 @@ sealed class MainForm : Form
         return Ui.ListCard(attempt.Title, detail, go);
     }
 
-    async Task ConfirmStart(MosProject project, string mode)
+    async Task OpenExamEntry(MosProject project)
     {
-        var modeText = mode == "testing"
-            ? "Thi: ẩn điểm và hướng dẫn cho đến khi nộp bài."
-            : "Luyện tập: hiện hướng dẫn từng bước, nút AAA đổi cỡ chữ, Kiểm tra nhiệm vụ, và tổng hợp phân tích Đạt / Chưa đạt từng kỹ năng.";
-        var ask = MessageBox.Show(
-            "Mở «" + project.Title + "» trên " + Ui.AppName(project.Program) + " đã cài trên máy?\n\n" + modeText,
-            "Bắt đầu bài MOS",
-            MessageBoxButtons.OKCancel,
-            MessageBoxIcon.Question);
-        if (ask != DialogResult.OK)
+        _setupProject = project;
+        _setupMode.SelectedIndex = 0;
+        ShowPage(HubPage.Setup, project.Title);
+        await FillSetupPage();
+    }
+
+    void BuildSetup()
+    {
+        _setup.Dock = DockStyle.Fill;
+        _setup.Visible = false;
+        _setup.BackColor = Ui.PageBg;
+        _setupResume.WrapContents = true;
+        _setupResume.AutoScroll = true;
+        _setupResume.BackColor = Ui.PageBg;
+        _setupResume.Dock = DockStyle.Fill;
+
+        _setupMode.DropDownStyle = ComboBoxStyle.DropDownList;
+        _setupMode.Width = 220;
+        _setupMode.Items.AddRange(["Training", "Testing"]);
+        _setupMode.SelectedIndex = 0;
+        _setupMode.SelectedIndexChanged += (_, _) => RefreshSetupStats();
+
+        var stats = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 110,
+            BackColor = Ui.PageBg,
+            WrapContents = true,
+        };
+        stats.Controls.Add(StatCard(_setupQ, "Questions"));
+        stats.Controls.Add(StatCard(_setupMin, "Minutes"));
+        stats.Controls.Add(StatCard(_setupCut, "Passing Score"));
+
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 56,
+            FlowDirection = FlowDirection.RightToLeft,
+            BackColor = Ui.PageBg,
+            Padding = new Padding(0, 8, 0, 0),
+        };
+        var start = Ui.PrimaryBtn("Start Test", 140);
+        start.Click += async (_, _) => await ConfirmStartFromSetup();
+        var cancel = Ui.OutlineBtn("Cancel", Ui.Primary, 120);
+        cancel.Click += (_, _) => ShowCatalog();
+        var fresh = Ui.PrimaryBtn("New Test", 120);
+        fresh.Click += (_, _) => { _setupMode.SelectedIndex = 0; RefreshSetupStats(); };
+        actions.Controls.Add(start);
+        actions.Controls.Add(cancel);
+        actions.Controls.Add(fresh);
+
+        var modeRow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 44,
+            BackColor = Ui.PageBg,
+            WrapContents = false,
+        };
+        var modeLbl = new Label
+        {
+            Text = "Mode",
+            AutoSize = true,
+            Font = Ui.BtnFont,
+            ForeColor = Ui.Text,
+            Margin = new Padding(0, 8, 12, 0),
+        };
+        modeRow.Controls.Add(modeLbl);
+        modeRow.Controls.Add(_setupMode);
+
+        var lead = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = 48,
+            Text = "New Test tạo phiên mới. Resume Test mở bài đang làm dở. Training hiện Help SOP; Testing khóa gợi ý và đếm giờ.",
+            ForeColor = Ui.Muted,
+            UseMnemonic = false,
+        };
+        Ui.BindWrap(lead, 8);
+
+        var title = new Label
+        {
+            Dock = DockStyle.Top,
+            Height = 40,
+            Text = "Tạo mới hoặc Tiếp tục",
+            Font = Ui.TitleFont,
+            ForeColor = Ui.Text,
+            UseMnemonic = false,
+        };
+
+        _setup.Controls.Add(_setupResume);
+        _setup.Controls.Add(actions);
+        _setup.Controls.Add(stats);
+        _setup.Controls.Add(modeRow);
+        _setup.Controls.Add(lead);
+        _setup.Controls.Add(title);
+    }
+
+    static Panel StatCard(Label value, string caption)
+    {
+        value.Text = "—";
+        value.Dock = DockStyle.Top;
+        value.Height = 40;
+        value.TextAlign = ContentAlignment.MiddleCenter;
+        value.Font = new Font("Segoe UI", 18f, FontStyle.Bold);
+        value.ForeColor = Ui.Text;
+        value.UseMnemonic = false;
+        var cap = new Label
+        {
+            Text = caption,
+            Dock = DockStyle.Bottom,
+            Height = 22,
+            TextAlign = ContentAlignment.MiddleCenter,
+            ForeColor = Ui.Muted,
+            UseMnemonic = false,
+        };
+        var box = new Panel
+        {
+            Width = 160,
+            Height = 88,
+            BackColor = Color.White,
+            Margin = new Padding(0, 0, 16, 8),
+            Padding = new Padding(8),
+        };
+        box.Controls.Add(value);
+        box.Controls.Add(cap);
+        return box;
+    }
+
+    async Task FillSetupPage()
+    {
+        RefreshSetupStats();
+        _setupResume.Controls.Clear();
+        if (_setupProject is null)
         {
             return;
         }
 
+        IReadOnlyList<MosAttempt> rows;
+        try
+        {
+            rows = await ExamHub.ListAttemptsAsync();
+        }
+        catch
+        {
+            rows = [];
+        }
+
+        var open = rows.Where(a =>
+            a.Status == "running"
+            && string.Equals(a.ProjectId, _setupProject.Id, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (open.Count == 0)
+        {
+            _setupResume.Controls.Add(new Label
+            {
+                Text = "Chưa có phiên dở. Chọn Mode rồi Start Test.",
+                AutoSize = true,
+                ForeColor = Ui.Muted,
+                Margin = new Padding(4),
+            });
+            return;
+        }
+
+        foreach (var row in open)
+        {
+            var go = Ui.PrimaryBtn("Resume Test", 140);
+            go.BackColor = Ui.Success;
+            var attempt = row;
+            go.Click += async (_, _) =>
+            {
+                var (ok, msg) = await ExamHub.ResumeAttemptAsync(attempt);
+                if (!ok)
+                {
+                    MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                _app = attempt.Program;
+                ShowExamUi();
+                EnterDock(compact: true);
+            };
+            _setupResume.Controls.Add(Ui.ListCard(
+                attempt.Title,
+                $"Last saved: {attempt.StartedAt} · Mode: {Ui.ModeLabel(attempt.Mode)}",
+                go));
+        }
+
+        Ui.FitCards(_setupResume);
+    }
+
+    void RefreshSetupStats()
+    {
+        var mins = _setupProject is null ? 50 : Math.Max(1, _setupProject.TimeLimitSec / 60);
+        var testing = _setupMode.SelectedIndex == 1;
+        var questions = _setupProject is { Steps.Length: > 0 } p ? p.Steps.Length : (testing ? 35 : 0);
+        _setupQ.Text = questions > 0 ? questions.ToString() : "—";
+        _setupMin.Text = _setupProject is { TimeLimitSec: <= 0 } && testing ? "50" : mins.ToString();
+        _setupCut.Text = "700";
+    }
+
+    async Task ConfirmStartFromSetup()
+    {
+        if (_setupProject is null)
+        {
+            return;
+        }
+
+        var mode = _setupMode.SelectedIndex == 1 ? "testing" : "training";
+        await ConfirmStart(_setupProject, mode);
+    }
+
+    async Task ConfirmStart(MosProject project, string mode)
+    {
         Cursor = Cursors.WaitCursor;
         var (ok, msg) = await ExamHub.StartProjectAsync(project.Program, project.Id, mode);
         Cursor = Cursors.Default;
@@ -2172,8 +2431,8 @@ sealed class MainForm : Form
         _taskIndex = 0;
         _objTab = -1;
         _examStatus.Text = ExamSession.HintsAllowed
-            ? "Help (?): mẹo giao diện. Bóng đèn: gợi ý 3 tầng. Danh sách: tổng hợp. Đĩa: lưu."
-            : "Thi Certiport: không gợi ý. Cờ: đánh dấu xem lại. Hết giờ máy chủ tự nộp.";
+            ? "Training: Help bung SOP dưới đề. Summary / Save / Grade trên dải xanh."
+            : "Testing: Help tắt. Hết giờ máy chủ tự nộp. Finish Test trong Summary.";
         _tasks.Items.Clear();
         var lines = ExamSession.Rubric?.Criteria is { Count: > 0 } criteria
             ? criteria.Select(c => (c.Id, Ui.StripMarks(string.IsNullOrWhiteSpace(c.Prompt) ? c.Id : c.Prompt))).ToList()
@@ -2393,19 +2652,26 @@ sealed class MainForm : Form
 
     void ToggleMarkForReview()
     {
-        if (!ExamSession.Bank.MarkForReview)
-        {
-            StepTask(1);
-            return;
-        }
-
         var i = Math.Max(0, _taskIndex);
         var flagged = ExamSession.ToggleMark(ExamSession.ProjectId, i);
         FillSummary();
         HighlightObjectiveTabs();
+        HighlightDockIcons();
         _examStatus.Text = flagged
-            ? "Đã đánh dấu nhiệm vụ " + (i + 1) + " để xem lại."
-            : "Bỏ đánh dấu nhiệm vụ " + (i + 1) + ".";
+            ? "Mark for review — Task " + (i + 1)
+            : "Bỏ Mark for review — Task " + (i + 1) + ".";
+    }
+
+    void ToggleMarkCompleted()
+    {
+        var i = Math.Max(0, _taskIndex);
+        ExamSession.MarkViewed(ExamSession.ProjectId, i);
+        var done = ExamSession.ToggleComplete(ExamSession.ProjectId, i);
+        FillSummary();
+        HighlightDockIcons();
+        _examStatus.Text = done
+            ? "Mark Completed — Task " + (i + 1)
+            : "Bỏ Mark Completed — Task " + (i + 1) + ".";
     }
 
     void TickExamClock()
@@ -2422,11 +2688,13 @@ sealed class MainForm : Form
         }
 
         var caption = ExamSession.Bank.ProjectCaption(ExamSession.ProjectId);
+        _projectLabel.Text = string.IsNullOrWhiteSpace(caption) ? "Project 1 / 1" : caption;
         var prefix = Ui.AppName(ExamSession.Program) + " · " + Ui.ModeLabel(ExamSession.Mode)
             + (string.IsNullOrWhiteSpace(caption) ? "" : " · " + caption);
         if (ExamSession.Bank.ElapsedOnly || ExamSession.HintsAllowed)
         {
             _examMeta.Text = prefix + " · đã làm " + FormatClock(elapsed);
+            _clockLabel.Text = FormatClock(elapsed);
         }
         else
         {
@@ -2442,6 +2710,7 @@ sealed class MainForm : Form
             }
 
             _examMeta.Text = prefix + " · còn " + FormatClock(shown);
+            _clockLabel.Text = FormatClock(shown);
             if (shown <= TimeSpan.Zero && ExamSession.Bank.ForceSubmit)
             {
                 _ = ForceSubmitExam();
@@ -2458,7 +2727,7 @@ sealed class MainForm : Form
     static string FormatClock(TimeSpan span)
     {
         var total = Math.Max(0, (int)span.TotalSeconds);
-        return $"{total / 60:00}:{total % 60:00}";
+        return $"{total / 3600:00}:{total / 60 % 60:00}:{total % 60:00}";
     }
 
     async Task SyncExamClockAsync()
@@ -2870,7 +3139,7 @@ sealed class MainForm : Form
 
         if (keyData == (Keys.Alt | Keys.F))
         {
-            ShowTips(!_tipsOpen);
+            CycleTypeSize();
             return true;
         }
 

@@ -396,6 +396,8 @@ sealed class LoginForm : Form
         }
 
         _submit.Enabled = false;
+        var prev = _submit.Text;
+        _submit.Text = "Đang đăng nhập…";
         try
         {
             var (ok, kind, err, name, _, _) = await Portal.LoginAsync(_user.Text.Trim(), _pass.Text, "word");
@@ -421,6 +423,7 @@ sealed class LoginForm : Form
         finally
         {
             _submit.Enabled = true;
+            _submit.Text = prev;
         }
     }
 }

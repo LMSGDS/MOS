@@ -67,7 +67,7 @@ public static class LayoutMath
     public const int RefChromePad = 4;
     public const int OverlayCapPct = 16;
     /// <summary>Đề bài stays on the dock when hướng dẫn is closed.</summary>
-    public const int PromptBand = 96;
+    public const int PromptBand = 120;
     /// <summary>Task list peek when hướng dẫn is closed.</summary>
     public const int TaskPeek = 168;
 
