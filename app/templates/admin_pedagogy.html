@@ -3,8 +3,8 @@
 {% block body %}
 <section class="card hero admin-wide">
   {% include "admin_nav.html" %}
-  <h1>Chỉ số sư phạm — không phải camera</h1>
-  <p class="lead">Telemetry hành vi cả lớp: gợi ý sớm, sai lần đầu, kẹt không được cứu, và dấu vết số của giáo viên trên web quản trị (phiên + tab Giám sát, không ghi phím).</p>
+  <h1>Kiểm toán chất lượng sư phạm</h1>
+  <p class="lead">Dấu vết số giáo viên (heartbeat giám sát), gợi ý sớm, sai lần đầu, và đối sánh hai lớp trên cùng thước Q-Matrix. Không ghi phím.</p>
   <form method="get" action="/quan-tri/su-pham" class="live-filter">
     <label>Cửa sổ
       <select name="gio" onchange="this.form.submit()">
@@ -15,7 +15,67 @@
     </label>
   </form>
 
-  <h2 style="margin-top:20px;font-size:18px">Cảnh báo tự động</h2>
+  <h2 style="margin-top:20px;font-size:18px">Đối sánh hai lớp</h2>
+  <form method="get" action="/quan-tri/su-pham" class="live-filter">
+    <input type="hidden" name="gio" value="{{ hours }}" />
+    <label>Lớp A
+      <select name="lop_a">
+        <option value="0">Chọn lớp</option>
+        {% for c in classes %}<option value="{{ c.id }}" {% if lop_a == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Lớp B
+      <select name="lop_b">
+        <option value="0">Chọn lớp</option>
+        {% for c in classes %}<option value="{{ c.id }}" {% if lop_b == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="btn btn-primary">So sánh</button>
+  </form>
+  {% if compare.left or compare.right %}
+  <div class="compare-grid">
+    <table class="grid">
+      <thead><tr><th>Lớp A — kỹ năng</th><th>% sai</th></tr></thead>
+      <tbody>
+        {% for g in compare.left %}
+        <tr class="heat-{{ g.heat }}"><td>{{ g.skill }}</td><td>{{ g.fail_pct }}%</td></tr>
+        {% else %}
+        <tr><td colspan="2">Chưa có Q-Matrix.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <table class="grid">
+      <thead><tr><th>Lớp B — kỹ năng</th><th>% sai</th></tr></thead>
+      <tbody>
+        {% for g in compare.right %}
+        <tr class="heat-{{ g.heat }}"><td>{{ g.skill }}</td><td>{{ g.fail_pct }}%</td></tr>
+        {% else %}
+        <tr><td colspan="2">Chưa có Q-Matrix.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <h2 style="margin-top:20px;font-size:18px">Độ khó đề thi (IRT-lite)</h2>
+  <p class="hint">Difficulty: tỷ lệ điểm &lt; 50 toàn trường. Đề đỏ (≥ 3 bài nộp và tỷ lệ sai cao) cần Tổ trưởng rà soát file/diễn đạt — không phải lỗi học sinh.</p>
+  <table class="grid">
+    <thead><tr><th>Đề</th><th>Nộp</th><th>&lt; 50</th><th>Kết luận</th></tr></thead>
+    <tbody>
+      {% for b in bank %}
+      <tr class="{% if b.review %}heat-red{% endif %}">
+        <td>{{ b.title }}</td>
+        <td>{{ b.submits }}</td>
+        <td>{{ "%.0f"|format(b.low_pct) }}%</td>
+        <td>{% if b.review %}<strong>{{ b.verdict }}</strong>{% else %}{{ b.verdict }}{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Chưa có bài nộp để kiểm toán đề.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:20px;font-size:18px">Cảnh báo tự động</h2
   {% for a in alerts %}
   <p class="alert {% if a.risk == 'cao' %}heat-red{% endif %}">
     <strong>{{ a.class_name }}</strong> · {{ a.teacher or "—" }} · mức {{ a.risk }} — {{ a.summary }}

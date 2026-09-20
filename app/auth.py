@@ -49,12 +49,19 @@ def find_user(username: str) -> dict | None:
 
         with cursor() as cur:
             cur.execute(
-                "SELECT id, username, name, role, password_hash FROM users WHERE username = %s",
+                """
+                SELECT id, username, name, role, password_hash,
+                       COALESCE(is_active, TRUE) AS is_active
+                FROM users WHERE username = %s
+                """,
                 (uname,),
             )
             row = cur.fetchone()
         if row:
-            return dict(row)
+            data = dict(row)
+            if data.get("is_active") is False:
+                return None
+            return data
     except Exception:
         pass
     for user in load_users():

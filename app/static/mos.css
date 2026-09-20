@@ -1057,6 +1057,58 @@ body.student-app .ic-app-main { display: flex; flex-direction: column; min-heigh
 .task-mode { margin: 0 0 4px; font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .task-training { border-color: #86efac; background: #f0fdf4; }
 .task-testing { border-color: #fdba74; background: #fff7ed; }
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+@media (max-width: 900px) { .kpi-row { grid-template-columns: 1fr 1fr; } }
+.kpi-card {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.kpi-card.kpi-hot { background: #fef2f2; border-color: #fecaca; }
+.kpi-label { margin: 0; color: #64748b; font-size: 13px; font-weight: 700; }
+.kpi-value { margin: 6px 0 4px; font-size: 28px; font-weight: 900; }
+.macro-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin: 8px 0 20px;
+}
+@media (max-width: 900px) { .macro-split { grid-template-columns: 1fr; } }
+.adopt-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 140px;
+  padding: 8px 0;
+}
+.adopt-bars span {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.adopt-bars i {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  background: var(--gds);
+  border-radius: 3px 3px 0 0;
+}
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 800px) { .compare-grid { grid-template-columns: 1fr; } }
+.matrix-wrap { overflow-x: auto; }
+.matrix th, .matrix td { text-align: center; white-space: nowrap; }
+.inline-row { display: flex; gap: 6px; align-items: center; }
+.inline-row select { width: auto; }
+.school-radar { display: block; margin: 8px auto 0; }
+.school-radar text { fill: #475569; font-family: Lato, "Segoe UI", sans-serif; }
+.matrix input[type="checkbox"] { width: auto; margin: 0; }
 .join-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .join-row label { margin: 0; }
 .join-row input { width: auto; }
