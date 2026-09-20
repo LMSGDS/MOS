@@ -2311,7 +2311,7 @@ sealed class MainForm : Form
     {
         RefreshSetupStats();
         _setupResume.Controls.Clear();
-        if (_setupProject is null)
+        if (_setupProject is not { } project)
         {
             return;
         }
@@ -2328,7 +2328,7 @@ sealed class MainForm : Form
 
         var open = rows.Where(a =>
             a.Status == "running"
-            && string.Equals(a.ProjectId, _setupProject.Id, StringComparison.OrdinalIgnoreCase)).ToList();
+            && string.Equals(a.ProjectId, project.Id, StringComparison.OrdinalIgnoreCase)).ToList();
         if (open.Count == 0)
         {
             _setupResume.Controls.Add(new Label
@@ -2370,9 +2370,9 @@ sealed class MainForm : Form
 
     void RefreshSetupStats()
     {
-        var mins = _setupProject is null ? 50 : Math.Max(1, _setupProject.TimeLimitSec / 60);
+        var mins = _setupProject is { } p ? Math.Max(1, p.TimeLimitSec / 60) : 50;
         var testing = _setupMode.SelectedIndex == 1;
-        var questions = _setupProject is { Steps.Length: > 0 } p ? p.Steps.Length : (testing ? 35 : 0);
+        var questions = _setupProject is { Steps.Length: > 0 } q ? q.Steps.Length : (testing ? 35 : 0);
         _setupQ.Text = questions > 0 ? questions.ToString() : "—";
         _setupMin.Text = _setupProject is { TimeLimitSec: <= 0 } && testing ? "50" : mins.ToString();
         _setupCut.Text = "700";
@@ -2380,13 +2380,13 @@ sealed class MainForm : Form
 
     async Task ConfirmStartFromSetup()
     {
-        if (_setupProject is null)
+        if (_setupProject is not { } project)
         {
             return;
         }
 
         var mode = _setupMode.SelectedIndex == 1 ? "testing" : "training";
-        await ConfirmStart(_setupProject, mode);
+        await ConfirmStart(project, mode);
     }
 
     async Task ConfirmStart(MosProject project, string mode)
