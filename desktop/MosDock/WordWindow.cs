@@ -177,22 +177,23 @@ static class WordWindow
 
     public static IntPtr ForegroundWindow() => GetForegroundWindow();
 
-    public static void FlashRibbonHint(Rect word)
+    public static void FlashFeedback(Color color, Rect? word = null)
     {
         try
         {
+            var area = word ?? new Rect(0, 0, Screen.PrimaryScreen?.WorkingArea.Width ?? 400, 8);
             var flash = new Form
             {
                 FormBorderStyle = FormBorderStyle.None,
                 StartPosition = FormStartPosition.Manual,
-                Bounds = new Rectangle(word.X, word.Y, Math.Max(80, word.W), 48),
-                BackColor = Color.FromArgb(220, 38, 38),
+                Bounds = new Rectangle(area.X, area.Y, Math.Max(80, area.W), word is null ? 10 : 48),
+                BackColor = color,
                 TopMost = true,
                 ShowInTaskbar = false,
             };
             flash.Show();
             var ticks = 0;
-            var timer = new System.Windows.Forms.Timer { Interval = 180 };
+            var timer = new System.Windows.Forms.Timer { Interval = 160 };
             timer.Tick += (_, _) =>
             {
                 ticks++;
@@ -212,6 +213,9 @@ static class WordWindow
             // overlay is best-effort on Windows exam PCs
         }
     }
+
+    public static void FlashRibbonHint(Rect word) =>
+        FlashFeedback(Color.FromArgb(220, 38, 38), word);
 
     public static bool TitleMatchesExam(string? title, string? localPath)
     {

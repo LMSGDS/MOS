@@ -6,6 +6,9 @@ sealed class BankTask
 {
     public string TaskId { get; init; } = "";
     public string Instruction { get; init; } = "";
+    public string Locate { get; init; } = "";
+    public string Tool { get; init; } = "";
+    public string Configure { get; init; } = "";
     public string[] HintTiers { get; init; } = [];
 }
 
@@ -77,11 +80,28 @@ sealed class BankPayload
                 {
                     foreach (var t in tarr.EnumerateArray())
                     {
+                        var qm = t.TryGetProperty("q_matrix", out var qel) && qel.ValueKind == JsonValueKind.Object
+                            ? qel
+                            : default;
+                        var locate = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "locate") : "";
+                        var tool = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "tool") : "";
+                        var configure = qm.ValueKind == JsonValueKind.Object ? GetString(qm, "configure") : "";
+                        var hints = StringArray(t, "hint_tiers");
+                        if (hints.Length == 0)
+                        {
+                            hints = new[] { locate, tool, configure }
+                                .Where(s => s.Length > 0)
+                                .ToArray();
+                        }
+
                         tasks.Add(new BankTask
                         {
                             TaskId = GetString(t, "task_id"),
                             Instruction = GetString(t, "instruction"),
-                            HintTiers = StringArray(t, "hint_tiers"),
+                            Locate = locate,
+                            Tool = tool,
+                            Configure = configure,
+                            HintTiers = hints,
                         });
                     }
                 }

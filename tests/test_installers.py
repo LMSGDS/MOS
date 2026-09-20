@@ -61,3 +61,22 @@ def test_make_zip_includes_command_version_and_guide(tmp_path, monkeypatch):
     mac = (ROOT / "desktop" / "MosDockMac" / "mosdock_mac.py").read_text(encoding="utf-8")
     assert "APP_VERSION" in mac
     assert 'service": "mos-kulkul"' in mac or "mos-kulkul" in mac
+    assert "X-MOS-Bank-Hash" in mac
+    assert "CERTIPORT_OFFICE" in mac
+    assert "PASS" in mac
+    assert "scaled_1000" in mac
+
+
+def test_mac_certiport_split_65_35():
+    import importlib.util
+
+    path = ROOT / "desktop" / "MosDockMac" / "mosdock_mac.py"
+    spec = importlib.util.spec_from_file_location("mosdock_mac_layout", path)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    dock, office = mod.compute(0, 0, 1440, 900, "bottom", True, certiport=True)
+    assert office[3] == 585
+    assert dock[3] == 315
+    assert office[1] == 0
+    assert dock[1] == 585

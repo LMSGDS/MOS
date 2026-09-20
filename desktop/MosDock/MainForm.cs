@@ -67,6 +67,7 @@ sealed class MainForm : Form
     readonly Label _summaryStats = new();
     readonly ProgressBar _summaryBar = new();
     readonly ComboBox _summaryFilter = new();
+    readonly FlowLayoutPanel _reviewGrid = new();
     readonly Panel _summarySplit = new();
     readonly Panel _summaryDetail = new();
     readonly Label _detailHead = new();
@@ -777,7 +778,7 @@ sealed class MainForm : Form
         _summarySave.BackColor = Ui.Primary;
         _summaryFinish.BackColor = Ui.Primary;
         _summaryCancel.Click += (_, _) => ShowSummary(false);
-        _summaryGo.Click += (_, _) => JumpSelectedSummary();
+        _summaryGo.Click += async (_, _) => await JumpSelectedSummary();
         _summarySave.Click += (_, _) =>
         {
             ExamHub.SaveInPlace(_app);
@@ -813,7 +814,7 @@ sealed class MainForm : Form
         _summaryList.Columns.Add("#", 44);
         _summaryList.Columns.Add("Kỹ năng", 260);
         _summaryList.Columns.Add("Kết quả", 88);
-        _summaryList.DoubleClick += (_, _) => JumpSelectedSummary();
+        _summaryList.DoubleClick += async (_, _) => await JumpSelectedSummary();
         _summaryList.SelectedIndexChanged += (_, _) => RenderSummaryDetail();
 
         var listPane = new Panel { Dock = DockStyle.Left, Width = 420, Padding = new Padding(0, 0, 12, 0) };
@@ -910,6 +911,12 @@ sealed class MainForm : Form
         meta.Controls.Add(_summaryStats);
         meta.Controls.Add(_summaryBar);
 
+        _reviewGrid.Dock = DockStyle.Top;
+        _reviewGrid.AutoSize = true;
+        _reviewGrid.WrapContents = true;
+        _reviewGrid.Padding = new Padding(0, 0, 0, 8);
+        _reviewGrid.Visible = false;
+
         _summaryTitle.Dock = DockStyle.Top;
         _summaryTitle.Height = 40;
         _summaryTitle.Font = Ui.HeadFont;
@@ -930,6 +937,7 @@ sealed class MainForm : Form
         _summary.Controls.Add(actions);
         _summary.Controls.Add(searchRow);
         _summary.Controls.Add(meta);
+        _summary.Controls.Add(_reviewGrid);
         _summary.Controls.Add(_summaryGroup);
         _summary.Controls.Add(_summaryTitle);
     }
@@ -1039,8 +1047,13 @@ sealed class MainForm : Form
         if (open)
         {
             _tipsOpen = false;
-            _summaryTitle.Text = (ExamSession.ProjectTitle ?? "Danh sách kỹ năng") + " — Tổng hợp";
-            _summaryGroup.Text = "  " + (ExamSession.ProjectTitle ?? "Bài thi");
+            var examWide = ExamSession.Bank.Projects.Count > 0;
+            _summaryTitle.Text = examWide
+                ? "Exam Summary — lưới nhiệm vụ toàn đề"
+                : (ExamSession.ProjectTitle ?? "Danh sách kỹ năng") + " — Tổng hợp";
+            _summaryGroup.Text = "  " + (examWide
+                ? $"{ExamSession.Bank.Projects.Count} Project · cờ cam = Mark for Review"
+                : ExamSession.ProjectTitle ?? "Bài thi");
             _summarySearch.Text = "";
             _summaryCheck.Visible = ExamSession.Mode != "testing";
             _summaryRestart.Visible = ExamSession.Bank.RestartProject || ExamSession.Mode == "testing";
@@ -1055,122 +1068,186 @@ sealed class MainForm : Form
         var q = (_summarySearch.Text ?? "").Trim();
         var filter = _summaryFilter.SelectedItem as string ?? "Tất cả";
         var rows = ExamSession.LastCheck;
+        var currentId = ExamSession.ProjectId ?? "";
         _summaryList.BeginUpdate();
         _summaryList.Items.Clear();
         var pass = 0;
         var fail = 0;
         var pending = 0;
         var ungraded = 0;
-        for (var i = 0; i < _tasks.Items.Count; i++)
+        var markedN = 0;
+        var total = 0;
+        var examWide = ExamSession.Bank.Projects.Count > 0;
+        if (examWide)
         {
-            var src = _tasks.Items[i];
-            var name = src.Text;
-            var id = src.Tag as string ?? "";
-            var hit = SkillReview.Find(rows, id, i);
-            var status = hit.Status;
-            if (string.IsNullOrWhiteSpace(status) && src.SubItems.Count > 1)
-            {
-                status = src.SubItems[1].Text switch
-                {
-                    "Đạt" => "pass",
-                    "Chưa đạt" => "fail",
-                    "Chưa XN" => "unverified",
-                    "Lỗi" => "error",
-                    _ => "",
-                };
-            }
-
-            if (status == "pass")
-            {
-                pass++;
-            }
-            else if (status == "fail" || status == "error")
-            {
-                fail++;
-            }
-            else if (status == "unverified")
-            {
-                pending++;
-            }
-            else
-            {
-                ungraded++;
-            }
-
-            if (q.Length > 0 &&
-                name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
-                id.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
-                (i + 1).ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                continue;
-            }
-
-            var wanted = filter switch
-            {
-                "Đã đạt" => status == "pass",
-                "Chưa đạt" => status is "fail" or "error",
-                "Chưa xác minh" => status == "unverified",
-                "Chưa chấm" => string.IsNullOrWhiteSpace(status),
-                "Đánh dấu xem lại" => ExamSession.MarkedTasks.Contains(i),
-                _ => true,
-            };
-            if (!wanted)
-            {
-                continue;
-            }
-
-            var label = SkillReview.Label(status);
-            if (ExamSession.MarkedTasks.Contains(i))
-            {
-                label = "⚑ " + label;
-            }
-
-            var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = (ExamSession.ProjectId ?? "", i) };
-            row.ForeColor = ExamSession.MarkedTasks.Contains(i) ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status);
-            if (i == _taskIndex)
-            {
-                row.Selected = true;
-            }
-
-            _summaryList.Items.Add(row);
-        }
-
-        if (ExamSession.Bank.Projects.Count > 1)
-        {
-            var global = _tasks.Items.Count;
+            var global = 0;
             foreach (var block in ExamSession.Bank.Projects)
             {
                 var src = ExamSession.Bank.SourceId(block);
-                if (string.Equals(src, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase))
+                var current = string.Equals(src, currentId, StringComparison.OrdinalIgnoreCase);
+                var n = current ? Math.Max(block.Tasks.Count, _tasks.Items.Count) : block.Tasks.Count;
+                for (var t = 0; t < n; t++)
+                {
+                    global++;
+                    total++;
+                    var name = t < block.Tasks.Count && !string.IsNullOrWhiteSpace(block.Tasks[t].Instruction)
+                        ? block.Tasks[t].Instruction
+                        : current && t < _tasks.Items.Count
+                            ? _tasks.Items[t].Text
+                            : block.Title;
+                    var id = current && t < _tasks.Items.Count ? _tasks.Items[t].Tag as string ?? "" : "";
+                    var hit = current ? SkillReview.Find(rows, id, t) : default;
+                    var status = hit.Status ?? "";
+                    if (status == "pass")
+                    {
+                        pass++;
+                    }
+                    else if (status is "fail" or "error")
+                    {
+                        fail++;
+                    }
+                    else if (status == "unverified")
+                    {
+                        pending++;
+                    }
+                    else
+                    {
+                        ungraded++;
+                    }
+
+                    var marked = ExamSession.IsMarked(src, t);
+                    if (marked)
+                    {
+                        markedN++;
+                    }
+
+                    if (q.Length > 0 &&
+                        name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
+                        id.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
+                        global.ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        continue;
+                    }
+
+                    var wanted = filter switch
+                    {
+                        "Đã đạt" => status == "pass",
+                        "Chưa đạt" => status is "fail" or "error",
+                        "Chưa xác minh" => status == "unverified",
+                        "Chưa chấm" => string.IsNullOrWhiteSpace(status),
+                        "Đánh dấu xem lại" => marked,
+                        _ => true,
+                    };
+                    if (!wanted)
+                    {
+                        continue;
+                    }
+
+                    var label = marked ? "⚑ " + SkillReview.Label(status) : SkillReview.Label(status);
+                    var row = new ListViewItem([global.ToString(), $"P{block.Order} · {name}", label])
+                    {
+                        Tag = (src, t),
+                        ForeColor = marked ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status),
+                    };
+                    if (current && t == _taskIndex)
+                    {
+                        row.Selected = true;
+                    }
+
+                    _summaryList.Items.Add(row);
+                }
+            }
+        }
+        else
+        {
+            for (var i = 0; i < _tasks.Items.Count; i++)
+            {
+                var src = _tasks.Items[i];
+                var name = src.Text;
+                var id = src.Tag as string ?? "";
+                var hit = SkillReview.Find(rows, id, i);
+                var status = hit.Status;
+                if (string.IsNullOrWhiteSpace(status) && src.SubItems.Count > 1)
+                {
+                    status = src.SubItems[1].Text switch
+                    {
+                        "Đạt" => "pass",
+                        "Chưa đạt" => "fail",
+                        "Chưa XN" => "unverified",
+                        "Lỗi" => "error",
+                        _ => "",
+                    };
+                }
+
+                if (status == "pass")
+                {
+                    pass++;
+                }
+                else if (status == "fail" || status == "error")
+                {
+                    fail++;
+                }
+                else if (status == "unverified")
+                {
+                    pending++;
+                }
+                else
+                {
+                    ungraded++;
+                }
+
+                var marked = ExamSession.IsMarked(currentId, i);
+                if (marked)
+                {
+                    markedN++;
+                }
+
+                if (q.Length > 0 &&
+                    name.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
+                    id.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0 &&
+                    (i + 1).ToString().IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
 
-                for (var t = 0; t < block.Tasks.Count; t++)
+                var wanted = filter switch
                 {
-                    global++;
-                    var title = string.IsNullOrWhiteSpace(block.Tasks[t].Instruction)
-                        ? block.Title
-                        : block.Tasks[t].Instruction;
-                    var extra = new ListViewItem(
-                        [global.ToString(), $"P{block.Order} · {title}", "—"])
-                    {
-                        Tag = (src, t),
-                        ForeColor = Color.FromArgb(90, 98, 108),
-                    };
-                    _summaryList.Items.Add(extra);
+                    "Đã đạt" => status == "pass",
+                    "Chưa đạt" => status is "fail" or "error",
+                    "Chưa xác minh" => status == "unverified",
+                    "Chưa chấm" => string.IsNullOrWhiteSpace(status),
+                    "Đánh dấu xem lại" => marked,
+                    _ => true,
+                };
+                if (!wanted)
+                {
+                    continue;
                 }
+
+                var label = marked ? "⚑ " + SkillReview.Label(status) : SkillReview.Label(status);
+                var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = (currentId, i) };
+                row.ForeColor = marked ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status);
+                if (i == _taskIndex)
+                {
+                    row.Selected = true;
+                }
+
+                _summaryList.Items.Add(row);
             }
+
+            total = _tasks.Items.Count;
         }
 
         _summaryList.EndUpdate();
-        var total = _tasks.Items.Count;
+        PaintReviewGrid();
         var checkedN = pass + fail + pending;
         _summaryBar.Maximum = Math.Max(1, total);
-        _summaryBar.Value = ExamSession.HideLiveScore ? 0 : Math.Min(_summaryBar.Maximum, checkedN);
+        _summaryBar.Value = ExamSession.HideLiveScore
+            ? Math.Min(_summaryBar.Maximum, markedN)
+            : Math.Min(_summaryBar.Maximum, checkedN);
         _summaryStats.Text = ExamSession.HideLiveScore
-            ? "Chế độ thi: ẩn Đạt / Chưa đạt đến khi nộp bài. Cờ cam = đánh dấu xem lại."
-            : $"Hoàn thành kiểm tra: {checkedN}/{total} nhiệm vụ · không hiện điểm số khi đang làm.";
+            ? $"Chế độ thi: ẩn điểm. Cờ xem lại {markedN}/{Math.Max(1, total)} nhiệm vụ."
+            : $"Hoàn thành kiểm tra: {checkedN}/{Math.Max(1, total)} nhiệm vụ · không hiện điểm số khi đang làm.";
         if (_summaryList.Items.Count == 0)
         {
             RenderSummaryDetail();
@@ -1185,6 +1262,78 @@ sealed class MainForm : Form
         }
     }
 
+    void PaintReviewGrid()
+    {
+        _reviewGrid.SuspendLayout();
+        _reviewGrid.Controls.Clear();
+        var examWide = ExamSession.Bank.Projects.Count > 0;
+        _reviewGrid.Visible = examWide || ExamSession.Mode == "testing";
+        if (_reviewGrid.Visible)
+        {
+            var n = 0;
+            if (examWide)
+            {
+                foreach (var block in ExamSession.Bank.Projects)
+                {
+                    var src = ExamSession.Bank.SourceId(block);
+                    for (var t = 0; t < block.Tasks.Count; t++)
+                    {
+                        n++;
+                        _reviewGrid.Controls.Add(ReviewCell(n, src, t));
+                    }
+                }
+            }
+            else
+            {
+                var pid = ExamSession.ProjectId ?? "";
+                for (var i = 0; i < _tasks.Items.Count; i++)
+                {
+                    _reviewGrid.Controls.Add(ReviewCell(i + 1, pid, i));
+                }
+            }
+        }
+
+        _reviewGrid.ResumeLayout();
+    }
+
+    Button ReviewCell(int number, string projectId, int taskIndex)
+    {
+        var marked = ExamSession.IsMarked(projectId, taskIndex);
+        var current = string.Equals(projectId, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase)
+            && taskIndex == _taskIndex;
+        var btn = new Button
+        {
+            Text = number.ToString(),
+            Width = 36,
+            Height = 28,
+            Margin = new Padding(2),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = marked
+                ? Color.FromArgb(234, 140, 24)
+                : current ? Color.FromArgb(45, 45, 48) : Color.FromArgb(226, 230, 236),
+            ForeColor = marked || current ? Color.White : Ui.Text,
+            Tag = (projectId, taskIndex),
+        };
+        btn.FlatAppearance.BorderSize = 0;
+        btn.Click += async (_, _) =>
+        {
+            foreach (ListViewItem item in _summaryList.Items)
+            {
+                if (item.Tag is ValueTuple<string, int> pair
+                    && string.Equals(pair.Item1, projectId, StringComparison.OrdinalIgnoreCase)
+                    && pair.Item2 == taskIndex)
+                {
+                    item.Selected = true;
+                    item.EnsureVisible();
+                    break;
+                }
+            }
+
+            await JumpToTask(projectId, taskIndex);
+        };
+        return btn;
+    }
+
     void RenderSummaryDetail()
     {
         if (_summaryList.SelectedItems.Count == 0)
@@ -1197,33 +1346,41 @@ sealed class MainForm : Form
             return;
         }
 
-        var i = _summaryList.SelectedItems[0].Tag is int idx
+        var tag = _summaryList.SelectedItems[0].Tag;
+        var projectId = tag is ValueTuple<string, int> loc ? loc.Item1 : ExamSession.ProjectId ?? "";
+        var i = tag is int idx
             ? idx
-            : _summaryList.SelectedItems[0].Tag is ValueTuple<string, int> pair ? pair.Item2 : 0;
-        if (_tasks.Items.Count == 0)
+            : tag is ValueTuple<string, int> pair ? pair.Item2 : 0;
+        var current = string.Equals(projectId, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase);
+        var name = _summaryList.SelectedItems[0].SubItems.Count > 1
+            ? _summaryList.SelectedItems[0].SubItems[1].Text
+            : "";
+        if (current && _tasks.Items.Count > 0)
         {
-            return;
+            i = Math.Clamp(i, 0, Math.Max(0, _tasks.Items.Count - 1));
+            name = _tasks.Items[i].Text;
         }
 
-        i = Math.Clamp(i, 0, Math.Max(0, _tasks.Items.Count - 1));
-        var id = _tasks.Items.Count > 0 ? _tasks.Items[i].Tag as string : "";
-        var name = _tasks.Items.Count > 0 ? _tasks.Items[i].Text : "";
+        var id = current && _tasks.Items.Count > i ? _tasks.Items[i].Tag as string : "";
         var item = ExamSession.Rubric?.Criteria?.FirstOrDefault(c => c.Id == id);
-        if (item == null && ExamSession.Rubric?.Criteria is { Count: > 0 } list && i < list.Count)
+        if (current && item == null && ExamSession.Rubric?.Criteria is { Count: > 0 } list && i < list.Count)
         {
             item = list[i];
         }
 
-        var hit = SkillReview.Find(ExamSession.LastCheck, id, i);
-        _detailHead.Text = $"{i + 1}. {name}";
-        _detailStatus.Text = SkillReview.Headline(hit.Status);
-        _detailStatus.ForeColor = SkillReview.ColorOf(hit.Status);
+        var hit = current ? SkillReview.Find(ExamSession.LastCheck, id, i) : default;
+        var marked = ExamSession.IsMarked(projectId, i);
+        _detailHead.Text = $"{_summaryList.SelectedItems[0].Text}. {name}";
+        _detailStatus.Text = marked
+            ? "Đã đánh dấu xem lại — bấm Đến để nhảy về đúng Project."
+            : current ? SkillReview.Headline(hit.Status) : "Nhiệm vụ thuộc Project khác — bấm Đến để mở file đó.";
+        _detailStatus.ForeColor = marked ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(hit.Status);
         _detailScore.Text = string.IsNullOrWhiteSpace(id) ? "" : id + (hit.Possible > 0 && !SkillReview.HideScores ? $"  ·  {hit.Earned:0}/{hit.Possible:0} điểm" : "");
-        _detailAnalysis.Text = SkillReview.Analysis(hit, item);
-        _detailHint.Text = SkillReview.Hint(hit, item);
+        _detailAnalysis.Text = current ? SkillReview.Analysis(hit, item) : "Chuyển Project để xem phân tích Q-Matrix của nhiệm vụ này.";
+        _detailHint.Text = current ? SkillReview.Hint(hit, item) : "";
     }
 
-    void JumpSelectedSummary()
+    async Task JumpSelectedSummary()
     {
         if (_summaryList.SelectedItems.Count == 0)
         {
@@ -1232,24 +1389,47 @@ sealed class MainForm : Form
         }
 
         var tag = _summaryList.SelectedItems[0].Tag;
-        if (tag is ValueTuple<string, int> jump &&
-            !string.IsNullOrWhiteSpace(jump.Item1) &&
-            !string.Equals(jump.Item1, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase))
+        if (tag is ValueTuple<string, int> jump)
+        {
+            await JumpToTask(jump.Item1, jump.Item2);
+            return;
+        }
+
+        var i = tag is int idx ? idx : 0;
+        if (_tasks.Items.Count > 0)
+        {
+            i = Math.Clamp(i, 0, _tasks.Items.Count - 1);
+            _tasks.SelectedIndices.Clear();
+            _tasks.Items[i].Selected = true;
+            _tasks.EnsureVisible(i);
+            _taskIndex = i;
+            _objTab = i;
+            HighlightObjectiveTabs();
+            RenderBrief();
+            RenderHelp();
+        }
+
+        ShowSummary(false);
+    }
+
+    async Task JumpToTask(string projectId, int taskIndex)
+    {
+        if (!string.IsNullOrWhiteSpace(projectId)
+            && !string.Equals(projectId, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase))
         {
             ShowSummary(false);
-            var block = ExamSession.Bank.BlockFor(jump.Item1);
+            var block = ExamSession.Bank.BlockFor(projectId);
             if (block is not null)
             {
-                _ = SwitchBankProject(block);
+                await SwitchBankProject(block, taskIndex);
             }
 
             return;
         }
 
-        var i = tag is int idx ? idx : tag is ValueTuple<string, int> pair ? pair.Item2 : 0;
         if (_tasks.Items.Count > 0)
         {
-            i = Math.Clamp(i, 0, _tasks.Items.Count - 1);
+            var i = Math.Clamp(taskIndex, 0, _tasks.Items.Count - 1);
             _tasks.SelectedIndices.Clear();
             _tasks.Items[i].Selected = true;
             _tasks.EnsureVisible(i);
@@ -1363,10 +1543,14 @@ sealed class MainForm : Form
             }
 
             var on = idx == _objTab;
-            btn.BackColor = on ? Color.FromArgb(45, 45, 48) : Color.FromArgb(110, 116, 124);
-            btn.FlatAppearance.MouseOverBackColor = on
-                ? Color.FromArgb(32, 32, 36)
-                : Color.FromArgb(90, 96, 104);
+            var marked = ExamSession.IsMarked(ExamSession.ProjectId, idx);
+            btn.BackColor = marked
+                ? Color.FromArgb(234, 140, 24)
+                : on ? Color.FromArgb(45, 45, 48) : Color.FromArgb(110, 116, 124);
+            btn.ForeColor = Color.White;
+            btn.FlatAppearance.MouseOverBackColor = marked
+                ? Color.FromArgb(194, 120, 3)
+                : on ? Color.FromArgb(32, 32, 36) : Color.FromArgb(90, 96, 104);
         }
     }
 
@@ -1491,7 +1675,7 @@ sealed class MainForm : Form
         SelectObjectiveTab(Math.Clamp(next, -1, last));
     }
 
-    async Task SwitchBankProject(BankProjectBlock block)
+    async Task SwitchBankProject(BankProjectBlock block, int taskIndex = 0)
     {
         var source = ExamSession.Bank.SourceId(block);
         if (string.IsNullOrWhiteSpace(source))
@@ -1510,6 +1694,7 @@ sealed class MainForm : Form
 
         ShowExamUi();
         EnterDock(compact: true);
+        SelectTaskIndex(taskIndex);
         _examStatus.Text = "Đã chuyển " + ExamSession.Bank.ProjectCaption(ExamSession.ProjectId);
     }
 
@@ -1623,7 +1808,9 @@ sealed class MainForm : Form
         var showBrief = !showSummary && !showTips;
         var showHelp = !showSummary && !showTips && HelpOpen;
         _exam.Padding = showTasks || showSummary || showTips ? new Padding(12, 8, 12, 0) : Padding.Empty;
-        _exam.BackColor = showTasks || showSummary || showTips ? Color.White : Color.FromArgb(245, 247, 249);
+        _exam.BackColor = ExamSession.Bank.CertiportSplit && !showSummary && !showTips
+            ? Color.FromArgb(196, 200, 204)
+            : showTasks || showSummary || showTips ? Color.White : Color.FromArgb(245, 247, 249);
         _tips.Visible = showTips;
         _summary.Visible = showSummary;
         _dockChrome.Visible = !showSummary;
@@ -2155,13 +2342,25 @@ sealed class MainForm : Form
         }
 
         var failed = criteria.Any(c => c.Status is "fail" or "error");
-        if (ExamSession.HintsAllowed && (failed || !string.IsNullOrWhiteSpace(ExamSession.HardStopReason)))
+        var allPass = criteria.Count > 0 && criteria.All(c => c.Status == "pass");
+        var partial = criteria.Any(c => c.Status == "pass") && failed;
+        if (ExamSession.HintsAllowed)
         {
-            ExamSession.HintTier = 1;
-            _helpVisible = true;
-            _ = ExamHub.TrackAsync("hint", new { tier = 1, source = "auto_wrong_check", task_id = CurrentTaskId() });
-            RelayoutExam();
-            RenderHelp();
+            if (allPass)
+            {
+                System.Media.SystemSounds.Asterisk.Play();
+                WordWindow.FlashFeedback(Ui.Success);
+            }
+            else if (failed || !string.IsNullOrWhiteSpace(ExamSession.HardStopReason))
+            {
+                System.Media.SystemSounds.Hand.Play();
+                WordWindow.FlashFeedback(partial ? Ui.Warning : Ui.Danger);
+                ExamSession.HintTier = 1;
+                _helpVisible = true;
+                _ = ExamHub.TrackAsync("hint", new { tier = 1, source = "auto_wrong_check", task_id = CurrentTaskId() });
+                RelayoutExam();
+                RenderHelp();
+            }
         }
 
         ShowSummary(true);
@@ -2199,14 +2398,10 @@ sealed class MainForm : Form
         }
 
         var i = Math.Max(0, _taskIndex);
-        if (!ExamSession.MarkedTasks.Add(i))
-        {
-            ExamSession.MarkedTasks.Remove(i);
-        }
-
+        var flagged = ExamSession.ToggleMark(ExamSession.ProjectId, i);
         FillSummary();
         HighlightObjectiveTabs();
-        _examStatus.Text = ExamSession.MarkedTasks.Contains(i)
+        _examStatus.Text = flagged
             ? "Đã đánh dấu nhiệm vụ " + (i + 1) + " để xem lại."
             : "Bỏ đánh dấu nhiệm vụ " + (i + 1) + ".";
     }

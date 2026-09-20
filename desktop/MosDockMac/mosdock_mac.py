@@ -17,6 +17,7 @@ CONTROLS_W = 248
 BOTTOM_RATIO = 0.28
 SIDE_RATIO = 0.30
 MIN_WORD = 400
+CERTIPORT_OFFICE = 0.65
 
 
 def app_version() -> str:
@@ -43,9 +44,24 @@ APPS = {
 }
 
 
-def compute(x: int, y: int, w: int, h: int, state: str, compact: bool):
+def compute(x: int, y: int, w: int, h: int, state: str, compact: bool, certiport: bool | None = None):
     state = (state or "bottom").lower()
     compact = compact or state == "minimized"
+    certiport = State.certiport if certiport is None else certiport
+    if certiport and state in ("bottom", "top", ""):
+        office_h = max(MIN_WORD, int(h * CERTIPORT_OFFICE))
+        office_h = min(office_h, h - 72)
+        dock_h = max(72, h - office_h)
+        if state == "top":
+            dock = (x, y, w, dock_h)
+            office = (x, y + dock_h, w, office_h)
+        else:
+            dock = (x, y + office_h, w, dock_h)
+            office = (x, y, w, office_h)
+        ox, oy, ow, oh = office
+        ow = max(MIN_WORD, min(ow, w))
+        oh = max(MIN_WORD, min(oh, h))
+        return dock, (ox, oy, ow, oh)
     if state == "left":
         dw = CONTROLS_W if compact else max(280, int(w * SIDE_RATIO))
         dock = (x, y, dw, h)
@@ -128,6 +144,10 @@ class State:
     mode = "training"
     attempt_id = ""
     local_path = ""
+    version_hash = ""
+    certiport = False
+    elapsed_only = True
+    cut_score = 700
 
 
 def apply(launch: bool = False, file_url: str | None = None) -> dict:
@@ -266,6 +286,8 @@ def _api(method: str, path: str, data: bytes | None = None, content_type: str | 
     headers = {"User-Agent": f"MOS-KulKul/{APP_VERSION}"}
     if State.token:
         headers["Authorization"] = "Bearer " + State.token
+    if State.version_hash:
+        headers["X-MOS-Bank-Hash"] = State.version_hash
     if content_type:
         headers["Content-Type"] = content_type
     req = urllib.request.Request(portal_origin() + path, data=data, headers=headers, method=method)
@@ -299,8 +321,13 @@ def exam_open(root=None) -> None:
             json.dumps({"project_id": pid, "mode": State.mode}).encode("utf-8"),
             "application/json",
         )
+        bank = started.get("bank") if isinstance(started.get("bank"), dict) else started
         State.attempt_id = started.get("attempt_id") or ""
         State.local_path = dest
+        State.version_hash = str((bank or {}).get("version_hash") or "")
+        State.certiport = (bank or {}).get("ui") == "certiport_split" or State.mode == "testing"
+        State.elapsed_only = bool((bank or {}).get("elapsed_only", State.mode != "testing"))
+        State.cut_score = int((bank or {}).get("cut_score") or 700)
         State.compact = True
         apply(launch=True, file_url=dest)
         if root is not None:
@@ -323,12 +350,34 @@ def exam_submit(root=None) -> None:
             f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\n"
             "Content-Type: application/octet-stream\r\n\r\n"
         ).encode("utf-8") + payload + f"\r\n--{boundary}--\r\n".encode("utf-8")
-        _api(
+        data = _api(
             "POST",
             f"/api/v1/attempts/{State.attempt_id}/submit",
             body,
             f"multipart/form-data; boundary={boundary}",
         )
+        bank = data.get("bank") if isinstance(data, dict) and isinstance(data.get("bank"), dict) else {}
+        score = data.get("score") if isinstance(data, dict) and isinstance(data.get("score"), dict) else {}
+        scaled = bank.get("scaled_1000")
+        if scaled is None:
+            scaled = score.get("scaled_1000")
+        passed = bank.get("passed")
+        if passed is None:
+            passed = score.get("passed")
+        if passed is None and isinstance(scaled, int):
+            passed = scaled >= State.cut_score
+        udl = bank.get("udl_message") or ""
+        badge = "PASS" if passed else "FAIL"
+        msg = f"{scaled}/1000 {badge}" if scaled is not None else badge
+        if udl:
+            msg += "\n" + str(udl)
+        if root is not None:
+            def _show():
+                from tkinter import messagebox
+
+                messagebox.showinfo("MOS-KulKul", msg)
+
+            root.after(0, _show)
     except Exception:
         return
 

@@ -2,6 +2,8 @@ using System.Text.Json;
 
 namespace MosDock;
 
+readonly record struct ReviewMark(string ProjectId, int TaskIndex);
+
 static class ExamSession
 {
     public static string Mode { get; set; } = "training";
@@ -18,7 +20,7 @@ static class ExamSession
     public static DateTime OpenedUtc { get; set; } = DateTime.UtcNow;
     public static BankPayload Bank { get; set; } = BankPayload.FromMode("training");
     public static int FocusStrikes { get; set; }
-    public static HashSet<int> MarkedTasks { get; } = [];
+    public static HashSet<ReviewMark> MarkedTasks { get; } = [];
     public static int HintTier { get; set; }
     public static string HardStopReason { get; set; } = "";
 
@@ -33,6 +35,7 @@ static class ExamSession
 
     public static void BindBank(JsonElement root, string mode)
     {
+        var prevExam = Bank.ExamId;
         var bankEl = root.TryGetProperty("bank", out var raw) ? raw : root;
         Bank = BankPayload.Parse(bankEl, mode);
         if (root.TryGetProperty("time_limit_sec", out var tl) && tl.TryGetInt32(out var sec) && sec > 0)
@@ -68,9 +71,28 @@ static class ExamSession
         }
 
         HintTier = 0;
-        FocusStrikes = 0;
         HardStopReason = "";
-        MarkedTasks.Clear();
+        if (!string.Equals(prevExam, Bank.ExamId, StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(Bank.ExamId))
+        {
+            FocusStrikes = 0;
+            MarkedTasks.Clear();
+        }
+    }
+
+    public static bool IsMarked(string? projectId, int taskIndex) =>
+        MarkedTasks.Contains(new ReviewMark(projectId ?? "", taskIndex));
+
+    public static bool ToggleMark(string? projectId, int taskIndex)
+    {
+        var mark = new ReviewMark(projectId ?? "", taskIndex);
+        if (!MarkedTasks.Add(mark))
+        {
+            MarkedTasks.Remove(mark);
+            return false;
+        }
+
+        return true;
     }
 
     public static void ClearExam()

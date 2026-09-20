@@ -435,24 +435,26 @@ static class ExamHub
                 EvidenceFields(),
                 Portal.SyncHeaders(path));
             LocalExamStore.MarkSubmitted(ExamSession.AttemptId!);
-            var scoreEl = submitted.RootElement.GetProperty("score");
+            var root = submitted.RootElement;
+            var scoreEl = root.GetProperty("score");
             var score = scoreEl.TryGetProperty("verified", out var ver) && ver.TryGetDouble(out var v)
                 ? v
                 : scoreEl.GetProperty("score").GetDouble();
             var pending = scoreEl.TryGetProperty("pending", out var pe) && pe.TryGetDouble(out var p) ? p : 0;
             var max = scoreEl.TryGetProperty("max_score", out var mx) && mx.TryGetDouble(out var m) ? m : 100;
-            var udl = submitted.RootElement.TryGetProperty("udl_message", out var um) && um.ValueKind == JsonValueKind.String
-                ? um.GetString()
-                : "";
             var line = $"{score}/{max} đã xác minh" + (pending > 0 ? $" · {pending} chưa xác minh" : "");
-            if (submitted.RootElement.TryGetProperty("scaled_1000", out var sc) && sc.TryGetInt32(out var scaled))
+            if (TryBankField(root, "scaled_1000", out var sc) && sc.TryGetInt32(out var scaled))
             {
-                line += $" · {scaled}/1000";
+                var passed = TryBankField(root, "passed", out var pd)
+                    ? pd.ValueKind == JsonValueKind.True
+                    : scaled >= ExamSession.Bank.CutScore;
+                line += $" · {scaled}/1000 {(passed ? "PASS" : "FAIL")}";
             }
 
-            if (!string.IsNullOrWhiteSpace(udl))
+            if (TryBankField(root, "udl_message", out var um) && um.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(um.GetString()))
             {
-                line += "\n" + udl;
+                line += "\n" + um.GetString();
             }
 
             return (true, line);
@@ -662,6 +664,23 @@ static class ExamHub
         }
 
         return list;
+    }
+
+    static bool TryBankField(JsonElement root, string name, out JsonElement value)
+    {
+        if (root.TryGetProperty("bank", out var bank) && bank.ValueKind == JsonValueKind.Object
+            && bank.TryGetProperty(name, out value))
+        {
+            return true;
+        }
+
+        if (root.TryGetProperty("score", out var score) && score.ValueKind == JsonValueKind.Object
+            && score.TryGetProperty(name, out value))
+        {
+            return true;
+        }
+
+        return root.TryGetProperty(name, out value);
     }
 
     static double GetDouble(JsonElement el, string name, double fallback)
