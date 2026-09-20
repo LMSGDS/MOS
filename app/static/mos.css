@@ -1036,6 +1036,16 @@ body.student-app .ic-app-main { display: flex; flex-direction: column; min-heigh
   padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
+.today-classes a.btn {
+  width: auto;
+  margin-top: 0;
+  text-decoration: none;
+  background: var(--gds);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+}
 .task-list { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
 .task-card {
   border: 1px solid var(--line);
