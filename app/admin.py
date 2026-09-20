@@ -74,7 +74,7 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul12",
+        "asset_v": "kulkul13",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,

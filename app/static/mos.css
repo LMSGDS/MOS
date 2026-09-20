@@ -510,6 +510,7 @@ body.exam-running .word-sim-page {
 }
 @media (max-width: 720px) {
   .eval-split { grid-template-columns: 1fr; }
+  .roster-toolbar { grid-template-columns: 1fr; }
 }
 .skill-list { margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
 .grid a { color: var(--gds-dark); font-weight: 700; text-decoration: none; }
@@ -848,11 +849,10 @@ body.ic-app .card.login { width: min(640px, 100%); }
 }
 .admin-panel .btn-block { width: 100%; }
 .roster-toolbar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: end;
 }
 .roster-toolbar__filters {
   display: flex;
