@@ -9,10 +9,22 @@ import json
 import random
 import secrets
 from datetime import datetime, timezone
+from functools import wraps
 from itertools import combinations
 from pathlib import Path
 
-from app.db import cursor
+from app.db import as_service, cursor
+
+
+def _engine(fn):
+    """Chấm / compile payload: đọc ngân hàng dù request đang là học sinh."""
+
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        with as_service():
+            return fn(*args, **kwargs)
+
+    return wrapped
 
 ROOT = Path(__file__).resolve().parent.parent
 BANK_FILES = ROOT / "data" / "projects" / "bank"
@@ -698,6 +710,7 @@ def auto_generate_exam(*, program: str, title: str, user_id: int | None = None) 
     )
 
 
+@_engine
 def compile_payload(exam_id: str, student_id: int | None = None) -> dict:
     exam = get_exam(exam_id)
     if not exam:
@@ -775,6 +788,7 @@ def compile_payload(exam_id: str, student_id: int | None = None) -> dict:
     return payload
 
 
+@_engine
 def session_for_project(project_id: str, mode: str, student_id: int | None = None) -> dict:
     """Cờ luyện tập / thi khi MOS-KulKul mở một project hiện có."""
     training = mode != "testing"
@@ -882,6 +896,7 @@ def attach_task(project_id: str, task_id: str) -> None:
         )
 
 
+@_engine
 def record_task_results(attempt_id: str, scored: dict | None) -> int:
     """Traceback Tầng 3 → Tầng 1: ghi nhật ký task, thi = zero partial."""
     items = (scored or {}).get("criteria") or (scored or {}).get("results") or []
@@ -1051,6 +1066,7 @@ def telemetry_hits_path(events: list, valid_paths: list[str]) -> bool:
     return False
 
 
+@_engine
 def record_formative(*, student_id: int, attempt_id: str, event: str, task_id: str = "") -> None:
     if event not in ("hint1", "hint2", "hint3", "wrong_check", "check_pass"):
         return
@@ -1066,6 +1082,7 @@ def record_formative(*, student_id: int, attempt_id: str, event: str, task_id: s
         refresh_empirical_difficulty()
 
 
+@_engine
 def ingest_formative_events(student_id: int, attempt_id: str, events: list) -> int:
     n = 0
     for ev in events:
@@ -1098,6 +1115,7 @@ def ingest_formative_events(student_id: int, attempt_id: str, events: list) -> i
     return n
 
 
+@_engine
 def refresh_empirical_difficulty() -> int:
     """80% học sinh khối 10 dùng hint cấp 3 → High_Difficulty."""
     with cursor() as cur:
@@ -1129,6 +1147,7 @@ def refresh_empirical_difficulty() -> int:
         return cur.rowcount or 0
 
 
+@_engine
 def hard_stop_next(student_id: int, task_id: str) -> dict | None:
     """Sai 3 lần liên tiếp → không sang task khác objective; đưa bài cùng Objective."""
     if not task_id:
@@ -1170,6 +1189,7 @@ def hard_stop_next(student_id: int, task_id: str) -> dict | None:
     }
 
 
+@_engine
 def unlock_remedial(
     student_id: int, attempt_id: str, scaled: int | None = None, *, assign: bool = True
 ) -> dict:
@@ -1278,6 +1298,7 @@ def objective_gaps(class_id: int = 0) -> list[dict]:
     return out
 
 
+@_engine
 def exam_hash_ok(exam_id: str, client_hash: str) -> bool:
     if not client_hash:
         return True
@@ -1345,6 +1366,7 @@ def final_state_matches(path: Path | None, final: dict) -> bool:
     return bool(needles) and all(n in blob for n in needles[:4])
 
 
+@_engine
 def apply_q_matrix_engine(attempt_id: str, scored: dict | None, submitted_path: Path | None = None) -> dict:
     """Valid_Paths (telemetry) + Final State (OpenXML) + destructive penalty."""
     data = dict(scored or {})
@@ -1396,6 +1418,7 @@ def apply_q_matrix_engine(attempt_id: str, scored: dict | None, submitted_path: 
     return data
 
 
+@_engine
 def attempt_clock(attempt: dict) -> dict:
     created = attempt.get("created_at") or attempt.get("started_at")
     if isinstance(created, str):
@@ -1427,6 +1450,7 @@ def attempt_clock(attempt: dict) -> dict:
     }
 
 
+@_engine
 def student_certiport_card(student_id: int) -> dict:
     with cursor() as cur:
         cur.execute(

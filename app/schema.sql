@@ -547,3 +547,144 @@ CREATE INDEX IF NOT EXISTS idx_student_task_results ON student_task_results(stud
 CREATE INDEX IF NOT EXISTS idx_exam_flags ON exam_issue_flags(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bank_tasks_qmatrix ON bank_tasks USING GIN (q_matrix_rules);
 CREATE INDEX IF NOT EXISTS idx_formative_task ON formative_telemetry(task_id, event);
+
+-- RLS ngân hàng đề: học sinh 0 hàng; giáo viên chỉ published; Super Admin / service đủ quyền.
+-- FORCE: user kết nối (owner) không được bypass.
+CREATE OR REPLACE FUNCTION mos_persona() RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(NULLIF(current_setting('app.persona', true), ''), 'anon')
+$$;
+
+CREATE OR REPLACE FUNCTION mos_is_bank_admin() RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT mos_persona() IN ('service', 'admin', 'leadership')
+$$;
+
+CREATE OR REPLACE FUNCTION mos_is_teacher() RETURNS boolean
+LANGUAGE sql STABLE AS $$
+  SELECT mos_persona() = 'teacher'
+$$;
+
+CREATE OR REPLACE FUNCTION mos_user_id() RETURNS text
+LANGUAGE sql STABLE AS $$
+  SELECT COALESCE(current_setting('app.user_id', true), '')
+$$;
+
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'objective_domains',
+    'bank_tasks',
+    'bank_projects',
+    'bank_project_tasks',
+    'bank_exams',
+    'bank_exam_projects',
+    'exam_issue_flags',
+    'student_task_results',
+    'formative_telemetry'
+  ]
+  LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+  END LOOP;
+END $$;
+
+DROP POLICY IF EXISTS objective_domains_admin ON objective_domains;
+DROP POLICY IF EXISTS objective_domains_teacher_sel ON objective_domains;
+CREATE POLICY objective_domains_admin ON objective_domains
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY objective_domains_teacher_sel ON objective_domains
+  FOR SELECT USING (mos_is_teacher());
+
+DROP POLICY IF EXISTS bank_tasks_admin ON bank_tasks;
+DROP POLICY IF EXISTS bank_tasks_teacher_sel ON bank_tasks;
+CREATE POLICY bank_tasks_admin ON bank_tasks
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY bank_tasks_teacher_sel ON bank_tasks
+  FOR SELECT USING (mos_is_teacher() AND status = 'published');
+
+DROP POLICY IF EXISTS bank_projects_admin ON bank_projects;
+DROP POLICY IF EXISTS bank_projects_teacher_sel ON bank_projects;
+CREATE POLICY bank_projects_admin ON bank_projects
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY bank_projects_teacher_sel ON bank_projects
+  FOR SELECT USING (mos_is_teacher() AND status = 'published');
+
+DROP POLICY IF EXISTS bank_exams_admin ON bank_exams;
+DROP POLICY IF EXISTS bank_exams_teacher_sel ON bank_exams;
+CREATE POLICY bank_exams_admin ON bank_exams
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY bank_exams_teacher_sel ON bank_exams
+  FOR SELECT USING (mos_is_teacher() AND status = 'published');
+
+DROP POLICY IF EXISTS bank_project_tasks_admin ON bank_project_tasks;
+DROP POLICY IF EXISTS bank_project_tasks_teacher_sel ON bank_project_tasks;
+CREATE POLICY bank_project_tasks_admin ON bank_project_tasks
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY bank_project_tasks_teacher_sel ON bank_project_tasks
+  FOR SELECT USING (
+    mos_is_teacher() AND EXISTS (
+      SELECT 1 FROM bank_projects p WHERE p.id = project_id AND p.status = 'published'
+    )
+  );
+
+DROP POLICY IF EXISTS bank_exam_projects_admin ON bank_exam_projects;
+DROP POLICY IF EXISTS bank_exam_projects_teacher_sel ON bank_exam_projects;
+CREATE POLICY bank_exam_projects_admin ON bank_exam_projects
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY bank_exam_projects_teacher_sel ON bank_exam_projects
+  FOR SELECT USING (
+    mos_is_teacher() AND EXISTS (
+      SELECT 1 FROM bank_exams e WHERE e.id = exam_id AND e.status = 'published'
+    )
+  );
+
+DROP POLICY IF EXISTS exam_issue_flags_admin ON exam_issue_flags;
+DROP POLICY IF EXISTS exam_issue_flags_teacher ON exam_issue_flags;
+CREATE POLICY exam_issue_flags_admin ON exam_issue_flags
+  FOR ALL USING (mos_is_bank_admin()) WITH CHECK (mos_is_bank_admin());
+CREATE POLICY exam_issue_flags_teacher ON exam_issue_flags
+  FOR ALL USING (mos_is_teacher()) WITH CHECK (mos_is_teacher());
+
+DROP POLICY IF EXISTS student_task_results_staff ON student_task_results;
+DROP POLICY IF EXISTS student_task_results_own ON student_task_results;
+CREATE POLICY student_task_results_staff ON student_task_results
+  FOR ALL USING (mos_is_bank_admin() OR mos_is_teacher())
+  WITH CHECK (mos_is_bank_admin() OR mos_is_teacher());
+CREATE POLICY student_task_results_own ON student_task_results
+  FOR SELECT USING (
+    mos_persona() = 'student' AND student_id::text = mos_user_id()
+  );
+
+DROP POLICY IF EXISTS formative_telemetry_staff ON formative_telemetry;
+DROP POLICY IF EXISTS formative_telemetry_own ON formative_telemetry;
+CREATE POLICY formative_telemetry_staff ON formative_telemetry
+  FOR ALL USING (mos_is_bank_admin() OR mos_is_teacher())
+  WITH CHECK (mos_is_bank_admin() OR mos_is_teacher());
+CREATE POLICY formative_telemetry_own ON formative_telemetry
+  FOR SELECT USING (
+    mos_persona() = 'student' AND student_id::text = mos_user_id()
+  );
+
+-- Superuser (POSTGRES_USER trên CI) luôn bypass RLS. Role mos_app không BYPASSRLS.
+-- Local / production: mos thường không superuser — FORCE RLS đủ, không cần CREATE ROLE.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = current_user AND (rolsuper OR rolcreaterole)
+  ) THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mos_app') THEN
+      CREATE ROLE mos_app NOINHERIT NOBYPASSRLS;
+    END IF;
+    ALTER ROLE mos_app NOBYPASSRLS;
+    EXECUTE format('GRANT mos_app TO %I', current_user);
+    GRANT USAGE ON SCHEMA public TO mos_app;
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO mos_app;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO mos_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mos_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO mos_app;
+  END IF;
+END $$;

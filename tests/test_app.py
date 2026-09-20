@@ -380,6 +380,16 @@ def test_home_requires_login():
     assert "/dang-nhap" in r.headers["location"]
 
 
+def test_logout_get_is_not_405():
+    c = TestClient(app)
+    r = c.get("/dang-xuat", follow_redirects=False)
+    assert r.status_code == 303
+    assert r.headers["location"] == "/dang-nhap"
+    posted = c.post("/dang-xuat", follow_redirects=False)
+    assert posted.status_code == 303
+    assert posted.headers["location"] == "/dang-nhap"
+
+
 def test_template_office_files():
     c = TestClient(app)
     for path in (
