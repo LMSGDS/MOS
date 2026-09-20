@@ -21,7 +21,7 @@ static class ExcelXml
 
         try
         {
-            using var zip = ZipFile.OpenRead(path);
+            using var zip = LockedFile.OpenZip(path);
             var names = zip.Entries.Select(e => e.FullName.Replace('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var facts = new WordFacts();
             var shared = new List<string>();

@@ -642,7 +642,14 @@ static class ExamHub
         var snapDir = Path.Combine(Path.GetDirectoryName(ExamSession.LocalPath)!, "snapshots");
         Directory.CreateDirectory(snapDir);
         var snap = Path.Combine(snapDir, DateTime.UtcNow.ToString("yyyyMMddHHmmss") + Path.GetExtension(path));
-        File.Copy(path, snap, overwrite: true);
+        try
+        {
+            LockedFile.Copy(path, snap);
+        }
+        catch (Exception ex) when (LockedFile.IsSharing(ex))
+        {
+            return (false, "Office đang giữ tệp bài thi. Bấm Save trong Office rồi Chấm lại.", []);
+        }
 
         var local = WordGrade.Evaluate(snap, ExamSession.Rubric, ActionEvidence.Events);
         try
