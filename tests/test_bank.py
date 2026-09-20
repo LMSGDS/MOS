@@ -284,3 +284,131 @@ def test_client_start_includes_bank_flags(client):
     assert flags["hints"] is False
     assert flags["ui"] == "certiport_split"
     assert flags["focus_lock"] is True
+    assert exam.json().get("clock")
+    clock = client.get(
+        f"/api/v1/attempts/{exam.json()['attempt_id']}/clock",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert clock.status_code == 200
+    assert clock.json()["elapsed_only"] is False
+    assert clock.json()["remaining_sec"] is not None
+
+
+def test_q_matrix_valid_paths_and_destructive(pg):
+    from pathlib import Path
+
+    from app.bank import apply_q_matrix_engine, is_destructive, save_task, telemetry_hits_path
+    from app.scoring import extract_text
+
+    assert telemetry_hits_path(
+        [{"skill": "", "action": "copy", "detail": {"source": "Shortcut_CtrlC"}}],
+        ["Ribbon_Copy", "Shortcut_CtrlC"],
+    )
+    assert not telemetry_hits_path(
+        [{"skill": "", "action": "open", "detail": {}}],
+        ["Ribbon_Copy"],
+    )
+    starter = Path("tests/fixtures/word-objective-1-1")
+    docs = list(starter.glob("*.docx")) if starter.is_dir() else []
+    orig = next((p for p in docs if "_results" not in p.name), None)
+    results = next((p for p in docs if "_results" in p.name), None)
+    if orig and results:
+        empty = Path("/tmp/mos-empty.docx")
+        empty.write_bytes(b"PK\x05\x06" + b"\x00" * 18)
+        assert is_destructive(orig, empty) or len(extract_text(orig)) < 80
+    tid = save_task(
+        task_id="bt-word-objective-1-1-c-copy",
+        objective_id="mo-100-1-1",
+        instruction="Dùng Ctrl+C",
+        valid_paths=["Shortcut_CtrlC", "Ribbon_Copy"],
+    )
+    with cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE username = 'hocsinh'")
+        uid = cur.fetchone()["id"]
+        aid = "att-bank-path-1"
+        cur.execute("DELETE FROM telemetry WHERE attempt_id = %s", (aid,))
+        cur.execute("DELETE FROM attempts WHERE id = %s", (aid,))
+        cur.execute(
+            """
+            INSERT INTO attempts (id, user_id, project_id, mode, status)
+            VALUES (%s, %s, 'word-objective-1-1', 'training', 'running')
+            """,
+            (aid, uid),
+        )
+        cur.execute(
+            """
+            INSERT INTO telemetry (attempt_id, skill, action, detail)
+            VALUES (%s, '', 'copy', '{"source":"Shortcut_CtrlC"}'::jsonb)
+            """,
+            (aid,),
+        )
+    scored = apply_q_matrix_engine(
+        aid,
+        {"criteria": [{"criterion_id": "c-copy", "status": "fail", "earned": 0, "possible": 1}]},
+    )
+    item = scored["criteria"][0]
+    assert item["status"] == "pass"
+    assert item["reason_code"] == "valid_path"
+    assert tid == "bt-word-objective-1-1-c-copy"
+
+
+def test_assignment_window_and_teacher_times(pg, client):
+    from datetime import datetime, timedelta, timezone
+
+    from app.assign import configure_assignment, window_open
+
+    future = datetime.now(timezone.utc) + timedelta(days=2)
+    past = datetime.now(timezone.utc) - timedelta(days=2)
+    assert window_open({"opens_at": past, "closes_at": future})
+    assert not window_open({"opens_at": future})
+    assert not window_open({"closes_at": past})
+    configure_assignment(1, "word-objective-1-1", mode="training", opens_at=future)
+    token = _token(client, "hocsinh")
+    blocked = client.post(
+        "/api/v1/attempts",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"project_id": "word-objective-1-1", "mode": "training"},
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["detail"] == "window"
+    configure_assignment(1, "word-objective-1-1", mode="training", opens_at=past, closes_at=future)
+    teacher = TestClient(app)
+    teacher.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"})
+    catalog = teacher.get("/quan-tri/kho-de")
+    assert "opens_at" in catalog.text
+    assert "datetime-local" in catalog.text
+    admin = TestClient(app)
+    admin.post("/dang-nhap", data={"username": "admin", "password": "Mos@Gds2026"})
+    tree = admin.get("/quan-tri/ngan-hang?tab=cay&obj=mo-100-1-1")
+    assert "tree-drop" in tree.text
+    assert "drop-zone" in tree.text
+    assembler = admin.get("/quan-tri/ngan-hang?tab=lap-rap")
+    assert "filter-hard" in assembler.text
+    assert "Lọc các Project có độ khó cao" in assembler.text
+
+
+def test_student_progress_shows_certiport_badge(pg, client):
+    from app.bank import student_certiport_card
+
+    with cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE username = 'hocsinh'")
+        uid = cur.fetchone()["id"]
+        cur.execute(
+            """
+            INSERT INTO student_task_results
+              (student_id, task_id, attempt_id, is_correct, raw_earned, raw_possible, scaled_1000)
+            SELECT %s, t.id, NULL, FALSE, 0, 1, 800
+            FROM bank_tasks t
+            LIMIT 1
+            """,
+            (uid,),
+        )
+    card = student_certiport_card(uid)
+    assert card["scaled_1000"] == 800
+    assert card["badge"] == "PASS"
+    student = TestClient(app)
+    student.post("/dang-nhap", data={"username": "hocsinh", "password": "Mos@Gds2026"})
+    page = student.get("/tien-do")
+    assert page.status_code == 200
+    assert "PASS" in page.text
+    assert "800/1000" in page.text

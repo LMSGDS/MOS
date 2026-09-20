@@ -151,6 +151,68 @@ static class WordWindow
         }
     }
 
+    public static bool IsOfficeOrDock(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = GetWindowThreadProcessId(hwnd, out var pid);
+            if (pid == 0)
+            {
+                return false;
+            }
+
+            var name = Process.GetProcessById(pid).ProcessName.ToLowerInvariant();
+            return name is "winword" or "excel" or "powerpnt" or "mos-kulkul" or "mosdock";
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static IntPtr ForegroundWindow() => GetForegroundWindow();
+
+    public static void FlashRibbonHint(Rect word)
+    {
+        try
+        {
+            var flash = new Form
+            {
+                FormBorderStyle = FormBorderStyle.None,
+                StartPosition = FormStartPosition.Manual,
+                Bounds = new Rectangle(word.X, word.Y, Math.Max(80, word.W), 48),
+                BackColor = Color.FromArgb(220, 38, 38),
+                TopMost = true,
+                ShowInTaskbar = false,
+            };
+            flash.Show();
+            var ticks = 0;
+            var timer = new System.Windows.Forms.Timer { Interval = 180 };
+            timer.Tick += (_, _) =>
+            {
+                ticks++;
+                flash.Visible = ticks % 2 == 1;
+                if (ticks >= 6)
+                {
+                    timer.Stop();
+                    flash.Close();
+                    flash.Dispose();
+                    timer.Dispose();
+                }
+            };
+            timer.Start();
+        }
+        catch
+        {
+            // overlay is best-effort on Windows exam PCs
+        }
+    }
+
     public static bool TitleMatchesExam(string? title, string? localPath)
     {
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(localPath))
@@ -377,6 +439,12 @@ static class WordWindow
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr hWnd, out int lpdwProcessId);
 
     [DllImport("user32.dll")]
     static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);

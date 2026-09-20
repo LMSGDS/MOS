@@ -211,7 +211,7 @@ def test_windows_sources_include_action_demo():
     assert "RunSaveShare" in demo
     assert "RunInspect" in demo
     assert "Demo tất cả bài tập" in form
-    assert "1.21.1" in (root / "MosDock.csproj").read_text(encoding="utf-8")
+    assert "1.21.2" in (root / "MosDock.csproj").read_text(encoding="utf-8")
     assert 'TrackAsync("hint"' in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "HomeRadar" in (root / "MainForm.cs").read_text(encoding="utf-8")
     assert "/api/v1/progress/adaptive" in (root / "HomeRadar.cs").read_text(encoding="utf-8")
@@ -245,7 +245,7 @@ def test_windows_sources_include_action_demo():
     lockf = (root / "LockedFile.cs").read_text(encoding="utf-8")
     assert "FileShare.ReadWrite" in lockf
     assert "LockedFile.ReadAllBytes" in portal
-    assert 'MyAppVersion "1.21.1"' in (
+    assert 'MyAppVersion "1.21.2"' in (
         Path(__file__).resolve().parent.parent / "desktop" / "installer" / "windows" / "mosdock.iss"
     ).read_text(encoding="utf-8")
 
@@ -277,14 +277,20 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "NavIcon.Help" in ui
     assert "Help — mẹo giao diện" in form
     assert "Thi không trợ giúp" in form
-    assert "HelpOpen => _helpVisible && ExamSession.Mode != \"testing\"" in form
-    assert "if (ExamSession.Mode == \"testing\")" in form
-    assert "_dockHint.Visible = ExamSession.Mode != \"testing\"" in form
+    assert "HelpOpen => _helpVisible && ExamSession.HintsAllowed" in form
+    assert "ExamSession.HintsAllowed" in form
+    assert "_dockHint.Visible = ExamSession.HintsAllowed" in form
+    assert "BindBank" in hub
+    assert "CertiportSplit" in layout
+    assert "HintTier" in form
+    assert "FlashRibbonHint" in form
+    assert "Mark for Review" in form
+    assert "ForceSubmitExam" in form
     assert "ShowTips" in form
     assert "Alt+F" in form
     assert "Alt+H" in form
     assert "public string Scenario" in grade
-    assert "_dockShare" not in form.split("DockButtons()")[1].split("];")[0]
+    assert "_dockShare" in form.split("DockButtons()")[1].split("];")[0]
 
 
 def test_objective_group_key_from_project_id():

@@ -319,6 +319,19 @@ public static class LayoutMath
         return ClampWord(word, work);
     }
 
+    /// <summary>Certiport: Office 65% trên, khung câu hỏi 35% dưới.</summary>
+    public const int CertiportOfficePct = 65;
+
+    public static (Rect Dock, Rect Word) CertiportSplit(Rect work)
+    {
+        var office = Math.Max(MinWord, (int)Math.Round(work.H * CertiportOfficePct / 100.0));
+        office = Math.Min(office, work.H - OverlayMinH);
+        var dockH = Math.Max(OverlayMinH, work.H - office);
+        var word = new Rect(work.X, work.Y, work.W, office);
+        var dock = new Rect(work.X, work.Y + office, work.W, dockH);
+        return (dock, word);
+    }
+
     public static Rect Cluster(Rect work, string state, float scale = 1f)
     {
         var nav = Measure(ScaleWork(work, scale));

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ipaddress
+from datetime import datetime, timedelta, timezone
 
 from app.db import cursor
 from app.progress import assign_class_projects, recompute_evaluation
@@ -38,6 +39,45 @@ def ip_allowed(ip: str, allow: str) -> bool:
     return False
 
 
+def parse_window(value: str | None):
+    """datetime-local của giáo viên (giờ Việt Nam) → UTC."""
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        try:
+            from zoneinfo import ZoneInfo
+
+            zone = ZoneInfo("Asia/Ho_Chi_Minh")
+        except Exception:
+            zone = timezone(timedelta(hours=7))
+        dt = dt.replace(tzinfo=zone)
+    return dt.astimezone(timezone.utc)
+
+
+def window_open(cfg: dict | None, now: datetime | None = None) -> bool:
+    if not cfg:
+        return True
+    now = now or datetime.now(timezone.utc)
+    opens = cfg.get("opens_at")
+    closes = cfg.get("closes_at")
+    if isinstance(opens, datetime):
+        if opens.tzinfo is None:
+            opens = opens.replace(tzinfo=timezone.utc)
+        if now < opens:
+            return False
+    if isinstance(closes, datetime):
+        if closes.tzinfo is None:
+            closes = closes.replace(tzinfo=timezone.utc)
+        if now > closes:
+            return False
+    return True
+
+
 def configure_assignment(
     class_id: int,
     project_id: str,
@@ -49,6 +89,8 @@ def configure_assignment(
     unlock_below: float | None = None,
     unlock_project_id: str | None = None,
     exam_id: str | None = None,
+    opens_at=None,
+    closes_at=None,
 ) -> dict:
     mode = mode if mode in ("training", "testing") else "training"
     assign_class_projects(class_id, [project_id], assigned_by=assigned_by)
@@ -61,11 +103,24 @@ def configure_assignment(
               ip_allow = %s,
               unlock_below = %s,
               unlock_project_id = %s,
-              exam_id = COALESCE(%s, exam_id)
+              exam_id = COALESCE(%s, exam_id),
+              opens_at = COALESCE(%s, opens_at),
+              closes_at = COALESCE(%s, closes_at)
             WHERE class_id = %s AND project_id = %s
             RETURNING *
             """,
-            (mode, time_limit_sec, ip_allow or "", unlock_below, unlock_project_id or None, exam_id, class_id, project_id),
+            (
+                mode,
+                time_limit_sec,
+                ip_allow or "",
+                unlock_below,
+                unlock_project_id or None,
+                exam_id,
+                opens_at,
+                closes_at,
+                class_id,
+                project_id,
+            ),
         )
         row = cur.fetchone()
         if unlock_below is not None and unlock_project_id:

@@ -12,6 +12,13 @@
   {% if join_error %}
   <p class="alert" role="alert">Mã lớp không đúng.</p>
   {% endif %}
+  {% if certiport and certiport.scaled_1000 is not none %}
+  <div class="certiport-card">
+    <p><span class="badge badge-{{ 'pass' if certiport.passed else 'fail' }}">{{ certiport.badge }}</span>
+       {{ certiport.scaled_1000 }}/1000 · qua môn {{ certiport.cut_score }}</p>
+    {% if certiport.udl_message %}<p class="lead">{{ certiport.udl_message }}</p>{% endif %}
+  </div>
+  {% endif %}
   {% if adaptive %}
   <h2>Lộ trình thích ứng</h2>
   {% for c in adaptive %}

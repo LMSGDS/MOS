@@ -553,7 +553,7 @@ async def v1_start_attempt(request: Request):
     if mode not in ("training", "testing"):
         mode = "training"
     row = _require_user(user)
-    from app.assign import assignment_for, client_ip, ip_allowed, student_project_ids
+    from app.assign import assignment_for, client_ip, ip_allowed, student_project_ids, window_open
 
     if row.get("role") == "student":
         allowed = student_project_ids(row["id"])
@@ -561,6 +561,8 @@ async def v1_start_attempt(request: Request):
             raise HTTPException(status_code=403, detail="not_assigned")
     cfg = assignment_for(row["id"], project_id)
     if cfg:
+        if not window_open(cfg):
+            raise HTTPException(status_code=403, detail="window")
         if cfg.get("mode") == "testing":
             mode = "testing"
         allow = cfg.get("ip_allow") or ""
@@ -609,6 +611,18 @@ async def v1_start_attempt(request: Request):
     limit = (cfg or {}).get("time_limit_sec") if cfg else None
     if limit is None and bank.get("duration_minutes"):
         limit = int(bank["duration_minutes"]) * 60
+    from app.bank import attempt_clock
+    from datetime import datetime, timezone
+
+    clock = attempt_clock(
+        {
+            "id": attempt_id,
+            "project_id": project_id,
+            "mode": mode,
+            "created_at": datetime.now(timezone.utc),
+            "time_limit_sec": limit,
+        }
+    )
     return {
         "ok": True,
         "attempt_id": attempt_id,
@@ -619,7 +633,10 @@ async def v1_start_attempt(request: Request):
         "abandoned": closed,
         "time_limit_sec": limit,
         "lan_locked": bool(cfg and cfg.get("ip_allow")),
+        "started_at": clock.get("started_at"),
+        "remaining_sec": clock.get("remaining_sec"),
         "bank": bank,
+        "clock": clock,
     }
 
 
@@ -666,7 +683,25 @@ async def v1_telemetry(request: Request, attempt_id: str):
         ingest_formative_events(row_user["id"], attempt_id, events)
     except Exception:
         pass
-    return {"ok": True, "accepted": accepted}
+    clock = {}
+    try:
+        from app.bank import attempt_clock
+
+        clock = attempt_clock(attempt)
+    except Exception:
+        clock = {}
+    return {"ok": True, "accepted": accepted, "clock": clock}
+
+
+@router.get("/attempts/{attempt_id}/clock")
+def v1_attempt_clock(request: Request, attempt_id: str):
+    user = bearer_user(request)
+    row_user = _require_user(user)
+    attempt = _load_attempt(attempt_id)
+    _assert_owner(attempt, row_user, write=False)
+    from app.bank import attempt_clock
+
+    return {"ok": True, **attempt_clock(attempt)}
 
 
 @router.post("/attempts/{attempt_id}/evidence")
@@ -778,7 +813,14 @@ def _latest_artifact(attempt_id: str) -> Path | None:
 
 def _score_saved(path: Path | None, attempt: dict, evidence: list | None = None) -> dict:
     rubric = _locked_rubric(attempt)
-    return score_file(path, rubric, evidence)
+    scored = score_file(path, rubric, evidence)
+    try:
+        from app.bank import apply_q_matrix_engine
+
+        scored = apply_q_matrix_engine(str(attempt["id"]), scored, path)
+    except Exception:
+        pass
+    return scored
 
 
 def _refresh_latest_submission(attempt_id: str, scored: dict, payload: dict) -> None:
