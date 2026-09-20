@@ -40,8 +40,11 @@ def test_macro_dashboard_and_hierarchy(pg):
     assert "Lưu ma trận" in matrix.text
     data = roster_matrix()
     assert data["teachers"]
-    saved = save_matrix([(data["teachers"][0]["id"], data["classes"][0]["id"])])
-    assert saved == 1
+    pairs = [(tid, cid) for cid, tid in data["assigned"].items() if tid]
+    if not pairs:
+        pairs = [(data["teachers"][0]["id"], data["classes"][0]["id"])]
+    saved = save_matrix(pairs)
+    assert saved == len({cid for _tid, cid in pairs})
 
     students = admin.get("/quan-tri/phan-cap", params={"tab": "hoc-sinh"})
     assert "Học sinh toàn trường" in students.text

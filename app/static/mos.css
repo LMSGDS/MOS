@@ -810,6 +810,7 @@ body.ic-app .card.login { width: min(640px, 100%); }
   border-bottom-color: #0374b5;
 }
 .admin-panel .btn,
+.admin-wide .btn,
 .mos-modal .btn {
   display: inline-flex;
   align-items: center;
@@ -828,14 +829,17 @@ body.ic-app .card.login { width: min(640px, 100%); }
   font-family: inherit;
 }
 .admin-panel .btn-primary,
+.admin-wide .btn-primary,
 .mos-modal .btn-primary {
   background: var(--gds);
   color: #fff;
   border-color: var(--gds);
 }
 .admin-panel .btn-primary:hover,
+.admin-wide .btn-primary:hover,
 .mos-modal .btn-primary:hover { background: var(--gds-dark); }
 .admin-panel .btn-outline,
+.admin-wide .btn-outline,
 .mos-modal .btn-outline {
   background: #fff;
   color: var(--gds-dark);
