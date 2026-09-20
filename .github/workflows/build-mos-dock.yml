@@ -104,3 +104,70 @@ jobs:
             dist-installer/MOS-KulKul-Setup-macOS.zip
             dist-installer/MOS-KulKul-Setup-macOS.pkg
             dist-installer/SHA256-macOS.txt
+
+  release:
+    name: Publish GitHub Release
+    needs: [windows, macos, macos-zip]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: MOS-KulKul-Setup-Windows
+          path: release/windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: MOS-KulKul-Setup-macOS
+          path: release/macos
+      - name: Collect release assets
+        id: assets
+        run: |
+          set -euo pipefail
+          version="$(grep -oP '(?<=<Version>)[^<]+' desktop/MosDock/MosDock.csproj | head -n1)"
+          test -n "$version" || { echo "Version missing in MosDock.csproj"; exit 1; }
+          mkdir -p release/assets
+          cp release/windows/dist-installer/MOS-KulKul-Setup-Windows-Full.exe release/assets/
+          cp release/windows/dist-installer/MOS-KulKul-Setup-Windows-Full.zip release/assets/
+          cp release/windows/dist-installer/MOS-KulKul-Setup-Windows.exe release/assets/
+          cp release/windows/dist-installer/MOS-KulKul-Setup-Windows.zip release/assets/
+          cp release/macos/MOS-KulKul-Setup-macOS.pkg release/assets/
+          cp release/macos/MOS-KulKul-Setup-macOS.zip release/assets/
+          (cd release/assets && sha256sum ./* | sed 's#  \./#  #' > SHA256-release.txt)
+          cat release/assets/SHA256-release.txt
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.assets.outputs.version }}
+          SUBJECT: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          tag="$VERSION"
+          title="MOS-KulKul $VERSION"
+          summary="$(printf '%s' "$SUBJECT" | head -n1)"
+          [ -n "$summary" ] || summary="Bản build từ nhánh main."
+          notes="$(cat <<EOF
+          $summary
+
+          Cài **MOS-KulKul-Setup-Windows-Full.exe** (bản đầy đủ, không cần Admin). File MOS-KulKul-Setup-Windows.exe ~2MB chỉ là stub tải về, không dùng khi cài offline.
+          macOS: mở **MOS-KulKul-Setup-macOS.pkg** hoặc giải nén **MOS-KulKul-Setup-macOS.zip**.
+
+          Commit: ${GITHUB_SHA}
+          EOF
+          )"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag exists; replacing assets."
+            gh release upload "$tag" release/assets/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --title "$title" --notes "$notes" --latest
+          else
+            gh release create "$tag" release/assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$title" \
+              --notes "$notes" \
+              --latest
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName,url,assets --jq '{tagName,url,assets:[.assets[].name]}'

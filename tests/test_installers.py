@@ -36,6 +36,14 @@ def test_mac_installer_scripts_use_kulkul_names_and_version():
     assert "push:" in on_block
     assert "branches: [main]" in on_block
     assert "pull_request:" not in on_block
+    release_job = workflow.split("\n  release:", 1)[1]
+    assert "needs: [windows, macos, macos-zip]" in release_job
+    assert "contents: write" in release_job
+    assert "gh release create" in release_job
+    assert "gh release upload" in release_job and "--clobber" in release_job
+    assert "MOS-KulKul-Setup-Windows-Full.exe" in release_job
+    assert "MOS-KulKul-Setup-macOS.pkg" in release_job
+    assert "SHA256-release.txt" in release_job
 
 
 def test_make_zip_includes_command_version_and_guide(tmp_path, monkeypatch):
