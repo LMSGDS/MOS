@@ -623,7 +623,8 @@ def install_macos_file(name: str):
     return FileResponse(path, filename=name)
 
 
-@app.api_route("/dang-xuat", methods=["GET", "POST"])
+@app.get("/dang-xuat")
+@app.post("/dang-xuat")
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/dang-nhap", status_code=303)
