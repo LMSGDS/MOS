@@ -127,6 +127,8 @@ try:
 except Exception as exc:
     print("LTI chua san sang:", exc)
 app.include_router(admin_router)
+# Identity innermost so SessionMiddleware fills scope["session"] first.
+app.add_middleware(RequestIdentityMiddleware)
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
@@ -135,7 +137,6 @@ app.add_middleware(
     https_only=os.environ.get("MOS_HTTPS_ONLY", "0") == "1",
     max_age=60 * 60 * 12,
 )
-app.add_middleware(RequestIdentityMiddleware)
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
 
 

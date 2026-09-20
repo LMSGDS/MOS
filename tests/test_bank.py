@@ -438,12 +438,14 @@ def test_rls_student_zero_bank_teacher_hides_drafts(pg):
         cur.execute("SELECT id FROM users WHERE username = 'giaovien'")
         tid = cur.fetchone()["id"]
     assert total > 0
+    packed = pack_exam_projects("word")
+    assert len(packed) >= 5
     draft_id = save_exam(
         exam_id=None,
         title="Draft RLS pytest",
         exam_type="PRACTICE_EXAM",
         program="word",
-        project_ids=[p["id"] for p in pack_exam_projects("word")[:5]],
+        project_ids=packed[:5],
         user_id=tid,
     )
     st = bind_request_identity({"id": sid, "role": "student", "username": "hocsinh"})
