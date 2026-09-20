@@ -3,17 +3,39 @@
 {% block body %}
 <section class="card hero admin-wide">
   {% include "admin_nav.html" %}
-  <h1>Trung tâm chỉ huy MOS</h1>
-  <p class="lead">Command Center tinh gọn: roster, giao bài MOS có điều kiện, giám sát phòng máy, bản đồ Q-Matrix. Không forum, luận, quiz.</p>
+  {% if persona == 'admin' %}
+  <h1>Tổng quan trường</h1>
+  <p class="lead">Trung tâm chỉ huy cấp trường: sĩ số, độ phủ bài tập, chất lượng sư phạm. Không forum, không tự tạo đề lệch chuẩn.</p>
+  {% else %}
+  <h1>Bảng tin</h1>
+  <p class="lead">Hôm nay dạy lớp nào, ai cần can thiệp — không có cài đặt hệ thống.</p>
+  {% if my_classes %}
+  <h2 style="margin-top:16px;font-size:18px">Lớp được phân công</h2>
+  <ul class="today-classes">
+    {% for c in my_classes %}
+    <li>
+      <strong>{{ c.name }}</strong>
+      <a class="btn btn-primary" href="/quan-tri/giam-sat?lop={{ c.id }}">Vào phòng máy ngay</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% endif %}
+  {% if inactive %}
+  <h2 style="margin-top:20px;font-size:18px">Cảnh báo đăng nhập</h2>
+  {% for s in inactive %}
+  <p class="notice">{{ s.name }} ({{ s.student_code or s.username }}) · {{ s.class_name or "Chưa xếp lớp" }} — chưa vào hệ thống hơn 7 ngày.</p>
+  {% endfor %}
+  {% endif %}
   {% if pedagogy_alerts %}
   <h2 style="margin-top:20px;font-size:18px">Cảnh báo sư phạm (tự động)</h2>
   {% for a in pedagogy_alerts %}
   <p class="alert {% if a.risk == 'cao' %}heat-red{% endif %}">
-    <a href="/quan-tri/su-pham"><strong>{{ a.class_name }}</strong></a>
+    <a href="{% if persona == 'admin' %}/quan-tri/su-pham{% else %}/quan-tri/lo-hong?lop={{ a.class_id }}{% endif %}"><strong>{{ a.class_name }}</strong></a>
     · {{ a.teacher or "—" }} · mức {{ a.risk }} — {{ a.summary }}
   </p>
   {% endfor %}
-  {% elif user.role == 'admin' %}
+  {% elif persona == 'admin' %}
   <p class="hint" style="margin-top:16px">Chưa có cảnh báo sư phạm trong 24 giờ. Xem <a href="/quan-tri/su-pham">chỉ số lớp</a>.</p>
   {% endif %}
   <div class="program-grid" style="margin-top:12px">
@@ -22,6 +44,10 @@
     <div class="program-tile"><span class="pname">Bài tập<br><strong>{{ stats.exercises }}</strong></span></div>
     <div class="program-tile"><span class="pname">Bài đã nộp<br><strong>{{ stats.submitted }}</strong></span></div>
     <div class="program-tile"><span class="pname">Điểm TB<br><strong>{{ stats.avg }}</strong></span></div>
+    {% if persona == 'admin' %}
+    <div class="program-tile"><span class="pname">MOS-KulKul đang mở<br><strong>{{ stats.live_clients }}</strong></span></div>
+    <div class="program-tile"><span class="pname">Lượt làm 7 ngày<br><strong>{{ stats.week_attempts }}</strong></span></div>
+    {% endif %}
   </div>
 
   <h2 style="margin-top:28px;font-size:18px">Đánh giá học sinh (Word)</h2>
@@ -74,6 +100,7 @@
     </tbody>
   </table>
 
+  {% if persona == 'admin' %}
   <h2 style="margin-top:28px;font-size:18px">Lịch sử bài làm</h2>
   <table class="grid">
     <thead><tr><th>Học sinh</th><th>Bài</th><th>Chế độ</th><th>Đã XN</th><th>Chưa XN</th><th>Bằng chứng</th></tr></thead>
@@ -109,5 +136,6 @@
       {% endfor %}
     </tbody>
   </table>
+  {% endif %}
 </section>
 {% endblock %}

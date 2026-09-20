@@ -438,7 +438,7 @@ def test_kulkul_home_after_login():
     c = TestClient(app)
     r = c.post("/dang-nhap", data={"username": "giaovien", "password": "Mos@Gds2026"}, follow_redirects=True)
     assert r.status_code == 200
-    assert "Trung tâm chỉ huy MOS" in r.text
+    assert "Bảng tin" in r.text
     assert "Trường GDS" not in r.text
     assert "mos.gds.edu.vn" in r.text
     assert "program-menu" not in r.text
@@ -450,9 +450,13 @@ def test_kulkul_home_after_login():
     assert "ic-app-header" in r.text
     assert "menu-canvas" in r.text
     assert "Bảng tin" in r.text
-    assert "Lớp học" in r.text
-    assert "Giám sát" in r.text
+    assert "Danh sách Học sinh" in r.text
+    assert "Giám sát phòng thi" in r.text
     assert "ic-course-nav" in r.text
+    assert 'ic-app-header__menu-list-item-text">Lớp học</span>' not in r.text
+    assert 'ic-app-header__menu-list-item-text">Giám sát</span>' not in r.text
+    assert "LTI 1.3" not in r.text
+    assert "Tiến độ của tôi" not in r.text
     assert "ic-app-header" not in TestClient(app).get("/dang-nhap").text
 
 
@@ -466,18 +470,29 @@ def test_admin_sees_full_canvas_menus():
     assert "menu-canvas" in page.text
     assert "ic-app-header" in page.text
     assert "ic-course-nav" in page.text
-    for label in ("Bảng tin", "Lớp học", "Bài tập", "Giám sát", "Phân tích", "Điểm", "Trợ giúp"):
-        assert label in page.text
-    for label in ("Tổng quan", "Học sinh", "Sư phạm lớp", "LTI 1.3"):
-        assert label in page.text
+    assert "Tổng quan trường" in page.text
+    assert "Tài khoản &amp; phân công" in page.text or "Tài khoản & phân công" in page.text
+    assert "Ngân hàng đề" in page.text
+    assert "Chất lượng sư phạm" in page.text
+    assert "Cấu hình hệ thống" in page.text
+    assert "Trợ giúp" in page.text
+    assert "Tiến độ của tôi" not in page.text
+    assert "Giao bài tập" not in page.text
     assert "inbox" not in page.text.lower()
     student = TestClient(app)
     student.post("/dang-nhap", data={"username": "hocsinh", "password": "Mos@Gds2026"})
-    home = student.get("/")
-    assert "menu-canvas" in home.text
-    assert "Bảng tin" in home.text
+    home = student.get("/", follow_redirects=True)
+    assert home.status_code == 200
+    assert "student-top" in home.text
+    assert "Tiến độ của tôi" in home.text
+    assert "Nhiệm vụ cần làm" in home.text
+    assert "Lịch sử bài nộp" in home.text
+    assert "menu-canvas" not in home.text
+    assert "ic-app-header" not in home.text
     assert "Giám sát" not in home.text
     assert "ic-course-nav" not in home.text
+    assert "Bảng tin" not in home.text
+    assert "Lớp học" not in home.text
     inner = c.get("/khung/word")
     assert inner.status_code == 200
     assert "Mở Word trên máy" in inner.text

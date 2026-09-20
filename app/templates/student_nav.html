@@ -1,0 +1,14 @@
+<header class="student-top" aria-label="Cổng học sinh">
+  <a class="student-top__brand" href="/tien-do">
+    <img src="/static/kulkul.png?v={{ asset_v }}" width="28" height="28" alt="" />
+    <span>MOS-KulKul</span>
+  </a>
+  <nav class="student-top__nav">
+    <a href="/tien-do" {% if student_nav == 'progress' %}aria-current="page"{% endif %}>Tiến độ của tôi</a>
+    <a href="/tien-do/nhiem-vu" {% if student_nav == 'tasks' %}aria-current="page"{% endif %}>Nhiệm vụ cần làm</a>
+    <a href="/tien-do/lich-su" {% if student_nav == 'history' %}aria-current="page"{% endif %}>Lịch sử bài nộp</a>
+  </nav>
+  <form class="student-top__out" method="post" action="/dang-xuat">
+    <button type="submit">Đăng xuất</button>
+  </form>
+</header>

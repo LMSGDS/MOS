@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 from app.accounts import create_account, remove_student, update_account
 from app.assign import LAN_DEFAULT, configure_assignment, list_configured
 from app.db import cursor
+from app.roles import is_admin, is_staff, persona
 from app.insights import annotate_sessions, bank_reliability, class_radar, skill_gaps
 from app.roster import (
     CSV_TEMPLATE,
@@ -53,11 +54,11 @@ def _session_user(request: Request) -> dict | None:
 
 
 def _staff(user: dict | None) -> bool:
-    return bool(user and user.get("role") in ("admin", "teacher", "leadership"))
+    return is_staff(user)
 
 
 def _leaders(user: dict | None) -> bool:
-    return bool(user and user.get("role") == "admin")
+    return is_admin(user)
 
 
 def _jsonish(value):
@@ -74,11 +75,12 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul13",
+        "asset_v": "kulkul14",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,
         "status_labels": STATUS_LABELS,
+        "persona": persona(user),
     }
     if extra:
         data.update(extra)
@@ -169,8 +171,32 @@ def _dashboard(request: Request, user: dict):
             """
         )
         evidence_rows = cur.fetchall()
-    roster = list_roster()[:12]
-    pedagogy = pedagogy_alerts(24) if _leaders(user) else []
+        cur.execute(
+            """
+            SELECT COUNT(*) AS n FROM users
+            WHERE role = 'student' AND last_client = 'kulkul'
+              AND last_seen_at > now() - interval '10 minutes'
+            """
+        )
+        live_clients = cur.fetchone()["n"]
+        cur.execute(
+            """
+            SELECT COUNT(*) AS n FROM attempts
+            WHERE started_at > now() - interval '7 days'
+            """
+        )
+        week_attempts = cur.fetchone()["n"]
+    my_classes = classes_for(user)
+    allowed_ids = {c["id"] for c in my_classes}
+    allowed_names = {c["name"] for c in my_classes}
+    roster = list_roster()
+    pedagogy = pedagogy_alerts(24)
+    if user.get("role") == "teacher":
+        roster = [row for row in roster if row.get("class_id") in allowed_ids]
+        classes_rows = [row for row in classes_rows if row.get("class_name") in allowed_names]
+        pedagogy = [a for a in pedagogy if a.get("class_id") in allowed_ids]
+        history = []
+        evidence_rows = []
     return TEMPLATES.TemplateResponse(
         request,
         "admin.html",
@@ -180,18 +206,22 @@ def _dashboard(request: Request, user: dict):
             {
                 "nav": "home",
                 "pedagogy_alerts": pedagogy,
+                "my_classes": my_classes,
+                "inactive": [row for row in roster if row.get("flag_inactive")][:8],
                 "stats": {
-                    "students": students,
-                    "classes": classes,
+                    "students": students if _leaders(user) else len(roster),
+                    "classes": classes if _leaders(user) else len(my_classes),
                     "exercises": exercises,
                     "submitted": submitted,
                     "avg": avg,
+                    "live_clients": live_clients,
+                    "week_attempts": week_attempts,
                 },
                 "skills": skills,
                 "classes_rows": classes_rows,
                 "history": history,
                 "evidence_rows": evidence_rows,
-                "roster": roster,
+                "roster": roster[:12],
             },
         ),
     )
@@ -281,7 +311,7 @@ def admin_students(request: Request):
                 "lop": lop,
                 "muc": muc,
                 "classes": classes_for(user),
-                "teachers": list_teachers() if user.get("role") == "admin" else [],
+                "teachers": list_teachers() if _leaders(user) else [],
                 "imported": request.query_params.get("nhap"),
                 "reset_n": request.query_params.get("reset"),
                 "error": request.query_params.get("loi"),
@@ -316,7 +346,7 @@ def admin_create_student(
             password=password,
             role=(
                 "teacher"
-                if role == "teacher" and user.get("role") == "admin"
+                if role == "teacher" and _leaders(user)
                 else "student"
             ),
             student_code=student_code,
@@ -427,7 +457,7 @@ def admin_join_code(request: Request, class_id: str = Form(...)):
 @router.post("/quan-tri/lop/giao-vien")
 def admin_set_teacher(request: Request, class_id: str = Form(...), teacher_id: str = Form(...)):
     user = _session_user(request)
-    if not user or user.get("role") != "admin":
+    if not user or not _leaders(user):
         return RedirectResponse("/quan-tri", status_code=303)
     try:
         assign_teacher(int(class_id), int(teacher_id))
@@ -615,10 +645,38 @@ def admin_bank(request: Request):
         return RedirectResponse("/dang-nhap", status_code=303)
     if not _staff(user):
         return RedirectResponse("/tien-do", status_code=303)
+    if not _leaders(user):
+        return RedirectResponse("/quan-tri/bai-tap", status_code=303)
     return TEMPLATES.TemplateResponse(
         request,
         "admin_bank.html",
         _ctx(request, user, {"nav": "bank", "bank": bank_reliability()}),
+    )
+
+
+@router.get("/quan-tri/so-diem", response_class=HTMLResponse)
+def admin_grades(request: Request):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if not _staff(user):
+        return RedirectResponse("/tien-do", status_code=303)
+    lop = request.query_params.get("lop") or ""
+    cid = int(lop) if str(lop).isdigit() else None
+    roster = _filter_roster(user, cid, "", "")
+    return TEMPLATES.TemplateResponse(
+        request,
+        "admin_grades.html",
+        _ctx(
+            request,
+            user,
+            {
+                "nav": "grades",
+                "roster": roster,
+                "classes": classes_for(user),
+                "lop": lop,
+            },
+        ),
     )
 
 
@@ -771,23 +829,43 @@ def admin_configure_assignment(
     return RedirectResponse("/quan-tri/bai-tap", status_code=303)
 
 
-@router.get("/tien-do", response_class=HTMLResponse)
-def my_progress(request: Request):
-    user = _session_user(request)
-    if not user:
-        return RedirectResponse("/dang-nhap", status_code=303)
+def _student_user_id(user: dict) -> int | None:
     with cursor() as cur:
         cur.execute("SELECT id FROM users WHERE username = %s", (user.get("username"),))
         row = cur.fetchone()
-    if not row:
-        return RedirectResponse("/", status_code=303)
-    user_id = row["id"]
+    return int(row["id"]) if row else None
+
+
+def _radar_scores(user_id: int) -> dict:
+    scores = {}
+    for program in ("word", "excel", "powerpoint"):
+        ev = get_evaluation(user_id, program)
+        scores[program] = float((ev or {}).get("overall_score") or 0)
+    return scores
+
+
+def _student_page(request: Request, view: str):
+    user = _session_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    if _staff(user):
+        return RedirectResponse("/quan-tri", status_code=303)
+    user_id = _student_user_id(user)
+    if not user_id:
+        return RedirectResponse("/dang-nhap", status_code=303)
     evaluation = get_evaluation(user_id, "word") or recompute_evaluation(user_id, "word")
     if evaluation:
         evaluation["weak_skills"] = _jsonish(evaluation.get("weak_skills"))
         evaluation["strong_skills"] = _jsonish(evaluation.get("strong_skills"))
     from app.adaptive import adaptive_cards
 
+    exercises = list_student_exercises(user_id)
+    tasks = [row for row in exercises if row.get("assignment_id")]
+    done = [
+        row
+        for row in exercises
+        if row.get("status") in ("submitted", "mastered") or (row.get("best_verified") or 0) > 0
+    ]
     return TEMPLATES.TemplateResponse(
         request,
         "progress.html",
@@ -795,13 +873,31 @@ def my_progress(request: Request):
             request,
             user,
             {
-                "nav": "mine",
+                "student_nav": view,
                 "evaluation": evaluation,
+                "radar": _radar_scores(user_id),
                 "adaptive": adaptive_cards(user_id),
                 "join_error": request.query_params.get("lop"),
-                "exercises": list_student_exercises(user_id, "word"),
+                "exercises": exercises,
+                "tasks": tasks,
+                "done": done,
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),
             },
         ),
     )
+
+
+@router.get("/tien-do", response_class=HTMLResponse)
+def my_progress(request: Request):
+    return _student_page(request, "progress")
+
+
+@router.get("/tien-do/nhiem-vu", response_class=HTMLResponse)
+def my_tasks(request: Request):
+    return _student_page(request, "tasks")
+
+
+@router.get("/tien-do/lich-su", response_class=HTMLResponse)
+def my_history(request: Request):
+    return _student_page(request, "history")

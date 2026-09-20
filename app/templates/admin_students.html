@@ -184,7 +184,7 @@
           </tbody>
         </table>
       </div>
-      {% if user.role == 'admin' and teachers %}
+      {% if persona == 'admin' and teachers %}
       <form method="post" action="/quan-tri/lop/giao-vien" class="assign-card">
         <label>Phân công giáo viên
           <select name="class_id">{% for c in classes %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
@@ -215,7 +215,7 @@
         {% endfor %}
       </select>
     </label>
-    {% if user.role == 'admin' %}
+    {% if persona == 'admin' %}
     <label>Vai trò
       <select name="role">
         <option value="student">Học sinh</option>
