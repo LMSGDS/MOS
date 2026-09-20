@@ -597,14 +597,14 @@ def test_dock_numeric_json_reads_tolerate_null():
 def test_dock_reads_office_files_with_share_readwrite():
     # Word/Excel/PowerPoint keep the exam file open; File.Copy and
     # ZipFile.OpenRead use FileShare.Read and fail with a sharing violation.
+    import re
     from pathlib import Path
 
     root = Path(__file__).resolve().parent.parent / "desktop" / "MosDock"
     for src in root.glob("*.cs"):
         text = src.read_text(encoding="utf-8")
         assert "ZipFile.OpenRead(" not in text, src.name
-        if src.name != "LockedFile.cs":
-            assert "File.Copy(" not in text, src.name
+        assert not re.search(r"(?<![\w.])File\.Copy\(", text), src.name
     hub = (root / "ExamHub.cs").read_text(encoding="utf-8")
     assert "LockedFile.Copy(path, snap)" in hub
     assert "LockedFile.IsSharing(ex)" in hub
