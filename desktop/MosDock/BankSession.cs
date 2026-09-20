@@ -136,6 +136,40 @@ sealed class BankPayload
         return [];
     }
 
+    public BankProjectBlock? BlockFor(string? projectId)
+    {
+        if (Projects.Count == 0)
+        {
+            return null;
+        }
+
+        return Projects.FirstOrDefault(p =>
+                   string.Equals(p.SourceProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+               ?? Projects[0];
+    }
+
+    public BankProjectBlock? NextBlock(string? projectId)
+    {
+        if (Projects.Count < 2)
+        {
+            return null;
+        }
+
+        var idx = Projects.FindIndex(p =>
+            string.Equals(p.SourceProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(p.ProjectId, projectId, StringComparison.OrdinalIgnoreCase));
+        if (idx < 0 || idx + 1 >= Projects.Count)
+        {
+            return null;
+        }
+
+        return Projects[idx + 1];
+    }
+
+    public string SourceId(BankProjectBlock block) =>
+        string.IsNullOrWhiteSpace(block.SourceProjectId) ? block.ProjectId : block.SourceProjectId;
+
     public string ProjectCaption(string? projectId)
     {
         if (Projects.Count == 0)

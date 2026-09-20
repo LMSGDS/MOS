@@ -20,9 +20,11 @@ static class ExamSession
     public static int FocusStrikes { get; set; }
     public static HashSet<int> MarkedTasks { get; } = [];
     public static int HintTier { get; set; }
+    public static string HardStopReason { get; set; } = "";
 
     public static bool HintsAllowed => Bank.Hints && Mode != "testing";
-    public static bool HideLiveScore => Mode == "testing" || !Bank.Hints;
+    public static bool HideLiveScore => Mode == "testing";
+    public static bool HideNumericScore => true;
 
     public static string DataDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -67,6 +69,7 @@ static class ExamSession
 
         HintTier = 0;
         FocusStrikes = 0;
+        HardStopReason = "";
         MarkedTasks.Clear();
     }
 
@@ -84,6 +87,7 @@ static class ExamSession
         Bank = BankPayload.FromMode("training");
         HintTier = 0;
         FocusStrikes = 0;
+        HardStopReason = "";
         MarkedTasks.Clear();
         ActionEvidence.Clear();
         WordActionProbe.Reset();

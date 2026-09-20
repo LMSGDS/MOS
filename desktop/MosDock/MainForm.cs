@@ -63,6 +63,7 @@ sealed class MainForm : Form
     readonly Button _summarySave = Ui.PrimaryBtn("Lưu bài", 120);
     readonly Button _summaryFinish = Ui.PrimaryBtn("Nộp bài", 120);
     readonly Button _summaryCheck = Ui.PrimaryBtn("Chấm lại", 120);
+    readonly Button _summaryRestart = Ui.PrimaryBtn("Làm lại Project", 150);
     readonly Label _summaryStats = new();
     readonly ProgressBar _summaryBar = new();
     readonly ComboBox _summaryFilter = new();
@@ -788,12 +789,15 @@ sealed class MainForm : Form
             await SubmitExam();
         };
         _summaryCheck.Click += async (_, _) => await CheckTasks();
+        _summaryRestart.Click += async (_, _) => await RestartCurrentProject();
         Ui.DockTips.SetToolTip(_summaryGo, "Đến nhiệm vụ đang chọn");
         Ui.DockTips.SetToolTip(_summarySave, "Lưu bài, chưa nộp");
         Ui.DockTips.SetToolTip(_summaryFinish, "Nộp bài và kết thúc");
         Ui.DockTips.SetToolTip(_summaryCheck, "Chấm lại tệp Word và phân tích từng kỹ năng");
+        Ui.DockTips.SetToolTip(_summaryRestart, "Restart Project — khôi phục file gốc nếu lỡ làm hỏng");
         _summaryCheck.BackColor = Ui.Success;
-        foreach (var btn in new[] { _summaryCancel, _summaryGo, _summaryCheck, _summarySave, _summaryFinish })
+        _summaryRestart.BackColor = Color.FromArgb(194, 120, 3);
+        foreach (var btn in new[] { _summaryCancel, _summaryGo, _summaryCheck, _summaryRestart, _summarySave, _summaryFinish })
         {
             btn.Margin = new Padding(0, 0, 10, 0);
             btn.Height = 40;
@@ -1039,6 +1043,7 @@ sealed class MainForm : Form
             _summaryGroup.Text = "  " + (ExamSession.ProjectTitle ?? "Bài thi");
             _summarySearch.Text = "";
             _summaryCheck.Visible = ExamSession.Mode != "testing";
+            _summaryRestart.Visible = ExamSession.Bank.RestartProject || ExamSession.Mode == "testing";
             FillSummary();
         }
 
@@ -1120,7 +1125,7 @@ sealed class MainForm : Form
                 label = "⚑ " + label;
             }
 
-            var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = i };
+            var row = new ListViewItem([(i + 1).ToString(), name, label]) { Tag = (ExamSession.ProjectId ?? "", i) };
             row.ForeColor = ExamSession.MarkedTasks.Contains(i) ? Color.FromArgb(194, 120, 3) : SkillReview.ColorOf(status);
             if (i == _taskIndex)
             {
@@ -1130,13 +1135,42 @@ sealed class MainForm : Form
             _summaryList.Items.Add(row);
         }
 
+        if (ExamSession.Bank.Projects.Count > 1)
+        {
+            var global = _tasks.Items.Count;
+            foreach (var block in ExamSession.Bank.Projects)
+            {
+                var src = ExamSession.Bank.SourceId(block);
+                if (string.Equals(src, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                for (var t = 0; t < block.Tasks.Count; t++)
+                {
+                    global++;
+                    var title = string.IsNullOrWhiteSpace(block.Tasks[t].Instruction)
+                        ? block.Title
+                        : block.Tasks[t].Instruction;
+                    var extra = new ListViewItem(
+                        [global.ToString(), $"P{block.Order} · {title}", "—"])
+                    {
+                        Tag = (src, t),
+                        ForeColor = Color.FromArgb(90, 98, 108),
+                    };
+                    _summaryList.Items.Add(extra);
+                }
+            }
+        }
+
         _summaryList.EndUpdate();
         var total = _tasks.Items.Count;
+        var checkedN = pass + fail + pending;
         _summaryBar.Maximum = Math.Max(1, total);
-        _summaryBar.Value = SkillReview.HideScores ? 0 : Math.Min(_summaryBar.Maximum, pass);
-        _summaryStats.Text = SkillReview.HideScores
-            ? "Chế độ thi: ẩn Đạt / Chưa đạt đến khi nộp bài."
-            : $"Tiến độ: {pass}/{total} đạt  ·  {fail} chưa đạt  ·  {pending} chưa xác minh  ·  {ungraded} chưa chấm";
+        _summaryBar.Value = ExamSession.HideLiveScore ? 0 : Math.Min(_summaryBar.Maximum, checkedN);
+        _summaryStats.Text = ExamSession.HideLiveScore
+            ? "Chế độ thi: ẩn Đạt / Chưa đạt đến khi nộp bài. Cờ cam = đánh dấu xem lại."
+            : $"Hoàn thành kiểm tra: {checkedN}/{total} nhiệm vụ · không hiện điểm số khi đang làm.";
         if (_summaryList.Items.Count == 0)
         {
             RenderSummaryDetail();
@@ -1163,7 +1197,14 @@ sealed class MainForm : Form
             return;
         }
 
-        var i = _summaryList.SelectedItems[0].Tag is int idx ? idx : 0;
+        var i = _summaryList.SelectedItems[0].Tag is int idx
+            ? idx
+            : _summaryList.SelectedItems[0].Tag is ValueTuple<string, int> pair ? pair.Item2 : 0;
+        if (_tasks.Items.Count == 0)
+        {
+            return;
+        }
+
         i = Math.Clamp(i, 0, Math.Max(0, _tasks.Items.Count - 1));
         var id = _tasks.Items.Count > 0 ? _tasks.Items[i].Tag as string : "";
         var name = _tasks.Items.Count > 0 ? _tasks.Items[i].Text : "";
@@ -1190,7 +1231,22 @@ sealed class MainForm : Form
             return;
         }
 
-        var i = _summaryList.SelectedItems[0].Tag is int idx ? idx : 0;
+        var tag = _summaryList.SelectedItems[0].Tag;
+        if (tag is ValueTuple<string, int> jump &&
+            !string.IsNullOrWhiteSpace(jump.Item1) &&
+            !string.Equals(jump.Item1, ExamSession.ProjectId, StringComparison.OrdinalIgnoreCase))
+        {
+            ShowSummary(false);
+            var block = ExamSession.Bank.BlockFor(jump.Item1);
+            if (block is not null)
+            {
+                _ = SwitchBankProject(block);
+            }
+
+            return;
+        }
+
+        var i = tag is int idx ? idx : tag is ValueTuple<string, int> pair ? pair.Item2 : 0;
         if (_tasks.Items.Count > 0)
         {
             i = Math.Clamp(i, 0, _tasks.Items.Count - 1);
@@ -1414,8 +1470,74 @@ sealed class MainForm : Form
 
     void StepTask(int delta)
     {
+        if (delta > 0 && !string.IsNullOrWhiteSpace(ExamSession.HardStopReason))
+        {
+            _examStatus.Text = ExamSession.HardStopReason;
+            return;
+        }
+
         var last = Math.Max(-1, _tasks.Items.Count - 1);
-        SelectObjectiveTab(Math.Clamp(_objTab + delta, -1, last));
+        var next = _objTab + delta;
+        if (delta > 0 && next > last)
+        {
+            var nxt = ExamSession.Bank.NextBlock(ExamSession.ProjectId);
+            if (nxt is not null)
+            {
+                _ = SwitchBankProject(nxt);
+                return;
+            }
+        }
+
+        SelectObjectiveTab(Math.Clamp(next, -1, last));
+    }
+
+    async Task SwitchBankProject(BankProjectBlock block)
+    {
+        var source = ExamSession.Bank.SourceId(block);
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return;
+        }
+
+        Cursor = Cursors.WaitCursor;
+        var (ok, msg) = await ExamHub.StartProjectAsync(ExamSession.Program, source, ExamSession.Mode);
+        Cursor = Cursors.Default;
+        if (!ok)
+        {
+            MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        ShowExamUi();
+        EnterDock(compact: true);
+        _examStatus.Text = "Đã chuyển " + ExamSession.Bank.ProjectCaption(ExamSession.ProjectId);
+    }
+
+    async Task RestartCurrentProject()
+    {
+        if (!ExamSession.Bank.RestartProject && ExamSession.Mode != "testing")
+        {
+            return;
+        }
+
+        var ask = MessageBox.Show(
+            "Xóa bài làm hiện tại và mở lại file gốc của Project này?",
+            "Restart Project",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Question);
+        if (ask != DialogResult.OK)
+        {
+            return;
+        }
+
+        Cursor = Cursors.WaitCursor;
+        var (ok, msg) = await ExamHub.RestartProjectAsync(_app);
+        Cursor = Cursors.Default;
+        _examStatus.Text = msg;
+        if (!ok)
+        {
+            MessageBox.Show(msg, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     void MoveDock(string state)
@@ -2030,6 +2152,16 @@ sealed class MainForm : Form
         if (!ok)
         {
             MessageBox.Show(summary, "MOS-KulKul", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        var failed = criteria.Any(c => c.Status is "fail" or "error");
+        if (ExamSession.HintsAllowed && (failed || !string.IsNullOrWhiteSpace(ExamSession.HardStopReason)))
+        {
+            ExamSession.HintTier = 1;
+            _helpVisible = true;
+            _ = ExamHub.TrackAsync("hint", new { tier = 1, source = "auto_wrong_check", task_id = CurrentTaskId() });
+            RelayoutExam();
+            RenderHelp();
         }
 
         ShowSummary(true);

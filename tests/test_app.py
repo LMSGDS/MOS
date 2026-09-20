@@ -286,6 +286,10 @@ def test_exam_chrome_help_vs_huong_dan():
     assert "FlashRibbonHint" in form
     assert "Mark for Review" in form
     assert "ForceSubmitExam" in form
+    assert "RestartProjectAsync" in hub
+    assert "Làm lại Project" in form
+    assert "HardStopReason" in form
+    assert "HideNumericScore" in (root / "ExamSession.cs").read_text(encoding="utf-8")
     assert "ShowTips" in form
     assert "Alt+F" in form
     assert "Alt+H" in form
