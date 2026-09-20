@@ -667,3 +667,24 @@ CREATE POLICY formative_telemetry_own ON formative_telemetry
   FOR SELECT USING (
     mos_persona() = 'student' AND student_id::text = mos_user_id()
   );
+
+-- Superuser (POSTGRES_USER trên CI) luôn bypass RLS. Role mos_app không BYPASSRLS.
+-- Local / production: mos thường không superuser — FORCE RLS đủ, không cần CREATE ROLE.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_roles
+    WHERE rolname = current_user AND (rolsuper OR rolcreaterole)
+  ) THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mos_app') THEN
+      CREATE ROLE mos_app NOINHERIT NOBYPASSRLS;
+    END IF;
+    ALTER ROLE mos_app NOBYPASSRLS;
+    EXECUTE format('GRANT mos_app TO %I', current_user);
+    GRANT USAGE ON SCHEMA public TO mos_app;
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO mos_app;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO mos_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mos_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO mos_app;
+  END IF;
+END $$;
