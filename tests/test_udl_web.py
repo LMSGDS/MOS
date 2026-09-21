@@ -262,3 +262,18 @@ def test_no_rubric_has_unreachable_mastery():
         assert MASTERY_RATIO * auto <= auto, path
         if auto > 0:  # trần 0 (chỉ toàn thao tác chết) thì chỉ giáo viên đánh dấu mastered
             assert level_for("in_progress", auto, Path(path).stem) == "mastered", path
+
+
+# ------------------------------------------------------- cờ Secure của cookie
+def test_lang_cookie_secure_follows_https_only(monkeypatch):
+    monkeypatch.setattr("app.main.HTTPS_ONLY", True)
+    c = TestClient(app)
+    r = c.get("/dang-nhap?lang=en")
+    dat = [v for k, v in r.headers.items() if k.lower() == "set-cookie" and "mos_lang" in v]
+    assert dat and "Secure" in dat[0]
+
+    monkeypatch.setattr("app.main.HTTPS_ONLY", False)
+    c = TestClient(app)
+    r = c.get("/dang-nhap?lang=en")
+    dat = [v for k, v in r.headers.items() if k.lower() == "set-cookie" and "mos_lang" in v]
+    assert dat and "Secure" not in dat[0]
