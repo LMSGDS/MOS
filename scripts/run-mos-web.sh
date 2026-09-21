@@ -3,6 +3,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 export DATABASE_URL="${DATABASE_URL:-postgresql://mos:mos@127.0.0.1:5432/mos}"
+# Máy cá nhân chạy http://127.0.0.1 nên tắt cờ Secure của cookie phiên.
+export MOS_HTTPS_ONLY="${MOS_HTTPS_ONLY:-0}"
 if [[ ! -d .venv ]]; then
   python3 -m venv .venv
 fi
