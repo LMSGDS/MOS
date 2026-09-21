@@ -425,6 +425,31 @@ def _footnote_min(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "footnotes_missing")
 
 
+def _styled_text(facts: dict, criterion: dict) -> dict:
+    """Chuỗi phải nằm trong đoạn MANG ĐÚNG STYLE này.
+
+    Dùng khi chuỗi cần tìm là KẾT QUẢ do Word sinh ra ở một vùng cụ thể —
+    ví dụ đổi kiểu citation thì mục danh mục phải hiện "Grimm, Jacob, and
+    Wilhelm Grimm". Quét cả thân bài thì gõ tay vào đoạn văn thường cũng đỗ;
+    buộc đúng style thì học sinh phải để Word dựng ra đoạn đó.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    style = str(pred.get("style") or "").strip()
+    minimum = int(pred.get("min") or 1)
+    if not needle or not style:
+        return _result(criterion, "fail", "styled_text_missing")
+    hits = 0
+    for para in facts.get("paragraphs") or []:
+        if str(para.get("style") or "") != style:
+            continue
+        if needle.casefold() in norm(para.get("text")).casefold():
+            hits += 1
+    if hits >= minimum:
+        return _result(criterion, "pass", "styled_text_present")
+    return _result(criterion, "fail", "styled_text_missing")
+
+
 def _heading_text(facts: dict, criterion: dict) -> dict:
     """Một heading mang đúng chữ này có tồn tại không.
 
@@ -1077,6 +1102,7 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang
             "footnote_min": _footnote_min,
             "field_contains": _field_contains,
             "heading_text": _heading_text,
+            "styled_text": _styled_text,
             "style_used": _style_used,
             "drawing_kind": _drawing_kind,
             "drawing_text": _drawing_text,

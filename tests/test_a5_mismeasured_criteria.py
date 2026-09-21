@@ -341,3 +341,63 @@ def test_w42a_and_w42c_answer_files_still_score_100():
         folder = FIXTURES / f"word-objective-{n}"
         assert grade_path(folder / f"Word_{n}.docx", rubric)["score"] == 0.0, n
         assert grade_path(folder / f"Word_{n}_results.docx", rubric)["score"] == 100.0, n
+
+
+# ------------------------------------------------------------ W42C-C01
+
+OLD["W42C-C01"] = {"type": "contains_text", "text": "Grimm, Jacob, and Wilhelm Grimm"}
+
+
+def test_w42cc01_old_predicate_passes_the_string_typed_into_ordinary_prose():
+    """contains_text quét cả thân bài: gõ tay vào đoạn văn thường cũng đỗ,
+    mà kỹ năng cần đo là để Word dựng lại danh mục theo kiểu citation mới."""
+    typed = _styled_doc([
+        ("Heading1", "References"),
+        ("", "Grimm, Jacob, and Wilhelm Grimm. 2013. The Complete Grimm's Fairy Tales."),
+    ])
+    crit = _criterion("word-objective-4-2c", "W42C-C01")
+    assert _status(_with_old_predicate(crit), typed) == "pass"   # 30 điểm cho không
+    assert _status(crit, typed) == "fail"
+
+
+def test_w42cc01_new_predicate_needs_the_string_inside_a_bibliography_paragraph():
+    generated = _styled_doc([
+        ("Heading1", "References"),
+        ("Bibliography", "Grimm, Jacob, and Wilhelm Grimm. 2013. The Complete Grimm's Fairy Tales."),
+    ])
+    assert _status(_criterion("word-objective-4-2c", "W42C-C01"), generated) == "pass"
+
+
+def test_w42cc01_rejects_a_bibliography_still_in_the_old_citation_style():
+    """Có danh mục nhưng chưa đổi kiểu — đúng ca cần phân biệt."""
+    old_style = _styled_doc([
+        ("Heading1", "References"),
+        ("Bibliography", "Grimm, J., and W. Grimm. 2013. The Complete Grimm's Fairy Tales."),
+    ])
+    assert _status(_criterion("word-objective-4-2c", "W42C-C01"), old_style) == "fail"
+
+
+def test_styled_text_needs_both_style_and_text():
+    doc = _styled_doc([("Bibliography", "Grimm, Jacob, and Wilhelm Grimm. 2013.")])
+    base = {"id": "X", "kind": "artifact", "weight": 10, "feedback": {"fail": "f"}}
+    assert _status({**base, "predicate": {"type": "styled_text", "text": "Grimm, Jacob"}}, doc) == "fail"
+    assert _status({**base, "predicate": {"type": "styled_text", "style": "Bibliography"}}, doc) == "fail"
+    assert _status({**base, "predicate": {"type": "styled_text", "style": "Bibliography",
+                                          "text": "Grimm, Jacob"}}, doc) == "pass"
+
+
+def test_styled_text_honours_min():
+    doc = _styled_doc([("Bibliography", "Grimm, Jacob. 2013."), ("Bibliography", "Grimm, Jacob. 2019.")])
+    base = {"id": "X", "kind": "artifact", "weight": 10, "feedback": {"fail": "f"}}
+    pred = {"type": "styled_text", "style": "Bibliography", "text": "Grimm, Jacob"}
+    assert _status({**base, "predicate": {**pred, "min": 2}}, doc) == "pass"
+    assert _status({**base, "predicate": {**pred, "min": 3}}, doc) == "fail"
+
+
+def test_word_42c_has_no_remaining_rule_errors():
+    """4-2c nay sạch hoàn toàn — không còn predicate yếu nào."""
+    import json as _json
+    from scripts.rubric_tool import check_rubric
+    rubric = _json.loads((RUBRICS / "word-objective-4-2c.json").read_text(encoding="utf-8"))
+    errors, _warns = check_rubric(rubric, "word-objective-4-2c")
+    assert errors == [], errors

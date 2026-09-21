@@ -223,6 +223,12 @@ Làm xong ngày 21/09/2026. Cả bốn đều **không phải sửa JSON thuần
 | `W33-R01` | `style_used: ListParagraph, min: 20` | `list_instances: "The Journey", min: 3` | 20 |
 | `W61-A01` | `comment_author: "Joan Lambert"` | `comment_reply, min: 1` | 15 |
 | `W62-L01` | `document_protection` (boolean) | `document_protection, edit: "trackedChanges"` | 15 |
+| `W42C-H01` | `contains_text: "References"` | `heading_text: "References"` | 30 |
+| `W42C-C01` | `contains_text` chuỗi citation | `styled_text` trong đoạn `Bibliography` | 30 |
+| `W42A-T01` | `field_contains: "TOC"` | `field_contains: "TOC \o"` | 40 |
+| `W42A-E01` | `style_used: TOC1` | `style_used: TOC3` | 30 |
+
+Tổng cộng **7 tiêu chí, 195 điểm** đã chuyển từ "đo nhầm" sang "đo đúng".
 
 Mỗi ca đều có test dựng một tài liệu **làm sai mà luật cũ vẫn cho đỗ**, rồi chứng minh luật mới bắt được (`tests/test_a5_mismeasured_criteria.py`). Cả 4 file đáp án của Study Guide vẫn đạt đúng 100, file đề vẫn 0.
 
@@ -271,9 +277,19 @@ Kết quả: ba tiêu chí của 4.2a nay **bất đồng được với nhau**,
 | Custom TOC, bỏ heading | ✓ | ✗ | ✓ | 70 |
 | Gõ mục lục bằng tay | ✗ | ✗ | ✗ | 0 |
 
-### Còn lại một tiêu chí trong 4-2c
+### `W42C-C01` — đã siết predicate vào đoạn mang style Bibliography
 
-`W42C-C01` (30 điểm, `contains_text: "Grimm, Jacob, and Wilhelm Grimm"`) vẫn là predicate yếu và là lỗi duy nhất còn lại của file này. Nó **gần** với ca miễn trừ `weak_ok` — kết quả của việc đổi kiểu citation *chính là* chuỗi đó — nhưng vẫn quét cả thân bài nên gõ tay vào đoạn văn thường cũng đỗ. Cách sửa gọn: giới hạn phép so vào **đoạn mang style `Bibliography`**. Chưa làm vì đây là quyết định nội dung. Để thầy quyết giữa `weak_ok` (ghi lý do) hay siết lại predicate.
+| Tiêu chí | Predicate cũ | Predicate mới | Điểm |
+|---|---|---|---:|
+| `W42C-C01` | `contains_text: "Grimm, Jacob, and Wilhelm Grimm"` | `styled_text: style Bibliography` | 30 |
+
+Chọn siết predicate thay vì `weak_ok`. Lý do: chuỗi đó đúng là **kết quả** của việc đổi kiểu citation, nhưng `contains_text` quét cả thân bài nên **gõ tay vào một đoạn văn thường cũng đỗ** — mà kỹ năng cần đo là để Word dựng lại danh mục theo kiểu mới. Predicate mới `styled_text` đòi chuỗi nằm trong đoạn mang đúng style `Bibliography`, tức là đoạn do chính Word sinh ra.
+
+Ca phân biệt quan trọng nhất là danh mục **có** nhưng **chưa đổi kiểu**: `Grimm, J., and W. Grimm.` — đúng style Bibliography nhưng sai dạng, nay trượt. Đó là ca mà `weak_ok` sẽ bỏ qua hoàn toàn.
+
+`styled_text` nhận thêm `min` để đếm số đoạn khớp, dùng lại được cho các rubric khác khi cần đo "chuỗi do Word sinh ra ở đúng vùng" thay vì "chuỗi có mặt đâu đó".
+
+**`word-objective-4-2c` nay sạch hoàn toàn** — không còn predicate yếu nào. Baseline hạ 52 → 51 → **50**.
 
 ---
 
@@ -323,5 +339,5 @@ CI chỉ gãy khi có **lỗi MỚI**. Lỗi tồn đọng hiện dấu `·` tha
 | `scripts/build_word_rubric.py` | Script đã dựng bản song ngữ 1-1, dùng làm khuôn cho file tiếp theo |
 | `rubric-baseline.json` | 52 lỗi tồn đọng đã chốt, để CI chỉ chặn lỗi mới |
 | `tests/test_rubric_tool.py` | test cho bộ luật, gồm 2 test đối chiếu thẳng mã C# |
-| `tests/test_a5_mismeasured_criteria.py` | 21 test cho 6 tiêu chí đo nhầm, mỗi ca dựng tài liệu làm sai mà luật cũ cho đỗ |
+| `tests/test_a5_mismeasured_criteria.py` | 27 test cho 7 tiêu chí đo nhầm, mỗi ca dựng tài liệu làm sai mà luật cũ cho đỗ |
 | `tests/test_i18n.py` | 15 test cho lớp song ngữ, gồm test chấm `vi`/`en` ra cùng điểm |

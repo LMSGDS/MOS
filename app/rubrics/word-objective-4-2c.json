@@ -65,23 +65,24 @@
       "objective": "4.2",
       "kind": "artifact",
       "weight": 30,
-      "prompt": "Đổi kiểu citation sang dạng Grimm, Jacob, and Wilhelm Grimm.",
+      "prompt": "Đổi kiểu citation để mục danh mục hiện dạng Grimm, Jacob, and Wilhelm Grimm.",
       "predicate": {
-        "type": "contains_text",
+        "type": "styled_text",
+        "style": "Bibliography",
         "text": "Grimm, Jacob, and Wilhelm Grimm"
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Citation còn trong bài.",
-        "fail": "Mất trường CITATION.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Mục danh mục đã hiện đúng dạng Grimm, Jacob, and Wilhelm Grimm.",
+        "fail": "Mục trong danh mục tài liệu chưa hiện dạng Grimm, Jacob, and Wilhelm Grimm. Đổi Style trên nhóm Citations & Bibliography rồi Update Citations and Bibliography — gõ tay vào đoạn văn thường không tính.",
+        "unverified": "Chưa đọc được danh mục tài liệu.",
+        "error": "Không đọc được danh mục tài liệu trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
         "Không xóa các citation đã chèn.",
-        "Có thể **Style** (APA/Chicago) trên nhóm **Citations & Bibliography**.",
-        "Rồi **Update Citations and Bibliography**."
+        "Đổi **Style** (Chicago) trên nhóm **Citations & Bibliography**.",
+        "Bấm **Update Citations and Bibliography** để danh mục dựng lại."
       ]
     }
   ]

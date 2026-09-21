@@ -108,9 +108,6 @@
     ],
     "word-objective-4-1.json": [
       "W41-C02 dùng contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
-    ],
-    "word-objective-4-2c.json": [
-      "W42C-C01 dùng contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
     ]
   }
 }
