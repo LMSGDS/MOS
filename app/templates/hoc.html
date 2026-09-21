@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% set en = lang == 'en' %}
+{% block title %}{% if lesson %}{{ lesson.title | t(lang) }}{% else %}{{ 'Learn' if en else 'Học' }}{% endif %} · MOS-KulKul{% endblock %}
+{% block body %}
+{% macro node(n, current=None) -%}
+  {% set m = mastery.get(n.project_id) %}
+  {% set level = m.level if m else 'new' %}
+  <li>
+    <a class="skill-node" href="/hoc/{{ n.project_id }}" data-level="{{ level }}"
+       {% if current == n.project_id %}aria-current="page"{% endif %}>
+      <span class="skill-node__code">{{ n.objective }}</span>
+      <span class="skill-node__title">{{ n.short[lang] or n.short['vi'] }}</span>
+      <span class="skill-node__state">{{ level_labels[level][lang] }}{% if n.ceiling.manual %} · {{ ('auto ' ~ n.ceiling.auto ~ '/' ~ n.ceiling.max) if en else ('tự chấm ' ~ n.ceiling.auto ~ '/' ~ n.ceiling.max) }}{% endif %}</span>
+    </a>
+  </li>
+{%- endmacro %}
+
+<section class="card hero student-shell">
+{% if not lesson %}
+  <h1>{{ 'Learn' if en else 'Học' }}</h1>
+  <p class="lead">
+    {% if en %}Pick a skill to see the task and how to do it, step by step. No scores on this page.
+    {% else %}Chọn một kỹ năng để xem đề bài và cách làm từng bước. Trang này không hiện điểm số.{% endif %}
+  </p>
+  <nav class="explore__meta" aria-label="{{ 'Program' if en else 'Chương trình' }}">
+    {% for pid in programs_available %}
+    <a href="/hoc?chuong-trinh={{ pid }}" {% if pid == program_id %}aria-current="page"{% endif %}
+       class="btn {% if pid == program_id %}btn-primary{% endif %}" style="width:auto;margin:0">{{ program_names[pid][lang] }}</a>
+    {% endfor %}
+  </nav>
+  <ul class="skill-legend" aria-hidden="true">
+    {% for lv in level_order %}<li data-level="{{ lv }}">{{ level_labels[lv][lang] }}</li>{% endfor %}
+  </ul>
+  <ul class="skill-map" aria-label="{{ 'Skill map' if en else 'Bản đồ Năng lực' }}">
+    {% for g in groups %}
+    <li class="skill-map__group">{{ g.id }}. {{ g.title[lang] }}</li>
+    {% for n in g.nodes %}{{ node(n) }}{% endfor %}
+    {% endfor %}
+  </ul>
+  <table class="visually-hidden">
+    <caption>{{ 'Skill map as a table' if en else 'Bản đồ Năng lực dạng bảng' }}</caption>
+    <thead><tr><th>{{ 'Objective' if en else 'Objective' }}</th><th>{{ 'Skill' if en else 'Kỹ năng' }}</th><th>{{ 'State' if en else 'Trạng thái' }}</th></tr></thead>
+    <tbody>
+    {% for g in groups %}{% for n in g.nodes %}
+      {% set m = mastery.get(n.project_id) %}
+      <tr><td>{{ n.objective }}</td><td>{{ n.short[lang] }}</td><td>{{ level_labels[m.level if m else 'new'][lang] }}</td></tr>
+    {% endfor %}{% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="explore">
+    <aside class="explore__tree" aria-label="{{ 'Objectives' if en else 'Cây objective' }}">
+      <p class="skill-map__group" style="margin:0">{{ lesson.program_name[lang] }}</p>
+      <ul class="skill-map">
+        {% for g in groups %}
+        <li class="skill-map__group">{{ g.id }}. {{ g.title[lang] }}</li>
+        {% for n in g.nodes %}{{ node(n, lesson.project_id) }}{% endfor %}
+        {% endfor %}
+      </ul>
+      <p><a href="/hoc?chuong-trinh={{ lesson.program }}">{{ '← Skill map' if en else '← Bản đồ Năng lực' }}</a></p>
+    </aside>
+    <article class="explore__lesson">
+      <h1>{{ lesson.title | t(lang) }}</h1>
+      <p class="explore__meta">
+        <span>{{ lesson.steps | length }} {{ 'tasks' if en else 'nhiệm vụ' }}</span>
+        {% if lesson.source_file %}<span>{{ 'File' if en else 'Tệp' }}: <code>{{ lesson.source_file }}</code></span>{% endif %}
+        {% if en and lesson.en < 100 %}<span class="badge">EN {{ lesson.en }}%</span>{% endif %}
+      </p>
+      {% if lesson.ceiling.manual %}
+      <div class="coach">
+        <p class="coach__what"><strong>{{ 'Heads-up about grading' if en else 'Lưu ý về chấm điểm' }}</strong></p>
+        <p class="coach__why">{{ ceiling_text }}</p>
+      </div>
+      {% endif %}
+      {% for s in lesson.steps %}
+      <section class="lesson-step" id="{{ s.id }}">
+        <h2>{{ loop.index }}. {{ s.prompt | t(lang) | bold }}</h2>
+        {% if s.kc %}<p class="lesson-step__kc">{{ s.kc | join(' · ') }}</p>{% endif %}
+        {% set steps = s.help_steps | tlist(lang) %}
+        {% if steps %}
+        <ol>
+          {% for step in steps %}<li>{{ step | bold }}</li>{% endfor %}
+        </ol>
+        {% else %}
+        <p class="hint" style="margin-top:0">{{ 'No step-by-step guide yet.' if en else 'Chưa có hướng dẫn từng bước.' }}</p>
+        {% endif %}
+        {% if s.media %}
+        <figure class="lesson-step__media">
+          {% if s.media.endswith('.mp4') %}
+          <video src="{{ s.media }}" controls muted playsinline width="640"></video>
+          {% else %}
+          <img src="{{ s.media }}" alt="{{ ('How to: ' if en else 'Thao tác: ') ~ (s.prompt | t(lang)) }}" loading="lazy" />
+          {% endif %}
+        </figure>
+        {% endif %}
+      </section>
+      {% endfor %}
+      <p class="hint">
+        {% if en %}Practice in MOS-KulKul on your computer: open <code>{{ lesson.project_id }}</code> in Training mode.
+        {% else %}Luyện trên máy với MOS-KulKul: mở bài <code>{{ lesson.project_id }}</code> ở chế độ Training.{% endif %}
+      </p>
+    </article>
+  </div>
+{% endif %}
+</section>
+{% endblock %}

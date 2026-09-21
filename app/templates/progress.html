@@ -22,7 +22,10 @@
   {% if adaptive %}
   <h2>Lộ trình thích ứng</h2>
   {% for c in adaptive %}
-  <p class="alert heat-red"><strong>{{ c.title }}</strong> — {{ c.reason }}</p>
+  <div class="coach">
+    <p class="coach__what"><strong>{{ c.title }}</strong></p>
+    <p class="coach__why">{{ c.reason }}</p>
+  </div>
   {% endfor %}
   {% endif %}
   <div class="student-radar">
@@ -52,6 +55,27 @@
     {% endfor %}
   </ul>
   {% endif %}
+  {% if skill_map %}
+  <h2>Bản đồ Năng lực — Word</h2>
+  <p class="lead">Bấm một ô để xem đề bài và cách làm từng bước (không hiện điểm).</p>
+  <ul class="skill-legend" aria-hidden="true">
+    <li data-level="new">Chưa khám phá</li><li data-level="learning">Đang học</li><li data-level="mastered">Đã làm chủ</li>
+  </ul>
+  <ul class="skill-map" aria-label="Bản đồ Năng lực">
+    {% for g in skill_map %}
+    <li class="skill-map__group">{{ g.id }}. {{ g.title[lang] }}</li>
+    {% for n in g.nodes %}
+    {% set m = mastery.get(n.project_id) if mastery else none %}
+    {% set level = m.level if m else 'new' %}
+    <li><a class="skill-node" href="/hoc/{{ n.project_id }}" data-level="{{ level }}">
+      <span class="skill-node__code">{{ n.objective }}</span>
+      <span class="skill-node__title">{{ n.short[lang] }}</span>
+      <span class="skill-node__state">{{ level_labels[level][lang] }}</span>
+    </a></li>
+    {% endfor %}
+    {% endfor %}
+  </ul>
+  {% endif %}
 
   {% elif student_nav == 'tasks' %}
   <h1>Nhiệm vụ cần làm</h1>
@@ -62,7 +86,11 @@
       <p class="task-mode">{% if ex.assign_mode == 'testing' %}Thi{% else %}Luyện tập{% endif %}</p>
       <h2>{{ ex.title }}</h2>
       <p>{{ ex.status_label }}{% if ex.best_verified %} · {{ "%.0f"|format(ex.best_verified) }} điểm{% endif %}</p>
-      <p class="hint">Mở MOS-KulKul, bài <code>{{ ex.project_id }}</code>.</p>
+      {% set cap = ceilings.get(ex.project_id) if ceilings else none %}
+      {% if cap and cap.manual %}
+      <p class="ceiling">Chấm tự động: <strong>{{ cap.auto }}/{{ cap.max }}</strong> điểm. {{ cap.manual }} điểm còn lại cô/thầy chấm tay.</p>
+      {% endif %}
+      <p class="hint">Mở MOS-KulKul, bài <code>{{ ex.project_id }}</code>. <a href="/hoc/{{ ex.project_id }}">Xem cách làm</a>.</p>
     </li>
     {% else %}
     <li class="hint">Chưa có bài giáo viên giao. Nhập mã vào lớp nếu thầy/cô vừa phát mã.</li>

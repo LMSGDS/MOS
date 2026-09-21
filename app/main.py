@@ -26,9 +26,14 @@ from app.progress_api import router as progress_router
 from app.programs import MENU, normalize, resolve
 from app.roles import is_staff as _staff_web
 from app.roles import is_student, persona
+from app.web_lang import COOKIE_MAX_AGE as LANG_COOKIE_MAX_AGE
+from app.web_lang import COOKIE_NAME as LANG_COOKIE
+from app.web_lang import install as install_lang
+from app.web_lang import lang_ctx
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = Jinja2Templates(directory=str(ROOT / "app" / "templates"))
+install_lang(TEMPLATES)
 STATIC = ROOT / "app" / "static"
 
 def _session_secret() -> str:
@@ -45,7 +50,7 @@ def _session_secret() -> str:
     return value
 
 
-ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul15")
+ASSET_V = os.environ.get("MOS_ASSET_V", "kulkul17")
 SESSION_SECRET = _session_secret()
 
 
@@ -134,17 +139,46 @@ app.add_middleware(
     secret_key=SESSION_SECRET,
     session_cookie="mos_session",
     same_site="lax",
-    https_only=os.environ.get("MOS_HTTPS_ONLY", "0") == "1",
+    # Mặc định bật cờ Secure: server thật chạy sau nginx + Cloudflare.
+    # Chỉ tắt (MOS_HTTPS_ONLY=0) khi chạy http://127.0.0.1 trên máy cá nhân.
+    https_only=os.environ.get("MOS_HTTPS_ONLY", "1") != "0",
     max_age=60 * 60 * 12,
 )
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
+
+
+# 'unsafe-inline' cho script vì login.html, install.html và 6 template admin_*
+# còn <script> nội tuyến + onclick=. Gỡ dần rồi siết về 'self' + nonce.
+CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data:; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "script-src 'self' 'unsafe-inline'; "
+    "connect-src 'self'; "
+    "frame-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
 
 
 @app.middleware("http")
 async def frame_same_origin(request, call_next):
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
-    response.headers["Content-Security-Policy"] = "frame-ancestors 'self'"
+    response.headers["Content-Security-Policy"] = CSP
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "same-origin"
+    lang_cookie = getattr(request.state, "lang_cookie", None)
+    if lang_cookie:
+        response.set_cookie(
+            LANG_COOKIE,
+            lang_cookie,
+            max_age=LANG_COOKIE_MAX_AGE,
+            samesite="lax",
+            secure=request.url.scheme == "https",
+        )
     path = request.url.path
     if request.method == "GET" and path.startswith("/quan-tri"):
         user = request.session.get("user")
@@ -178,6 +212,7 @@ def _ctx(request: Request, extra: dict | None = None) -> dict:
         "asset_v": ASSET_V,
         "app_version": app_version(),
         "persona": persona(user),
+        **lang_ctx(request),
     }
     if extra:
         data.update(extra)
@@ -336,6 +371,76 @@ def home(request: Request):
         except Exception:
             cards = []
     return TEMPLATES.TemplateResponse(request, template, _ctx(request, {"adaptive": cards}))
+
+
+def _student_id(user: dict | None) -> int | None:
+    if not user:
+        return None
+    if user.get("id"):
+        try:
+            return int(user["id"])
+        except (TypeError, ValueError):
+            pass
+    try:
+        from app.db import cursor
+
+        with cursor() as cur:
+            cur.execute("SELECT id FROM users WHERE username = %s", (user.get("username"),))
+            row = cur.fetchone()
+        return int(row["id"]) if row else None
+    except Exception:
+        return None
+
+
+def _explore_page(request: Request, project_id: str | None):
+    from app import explore
+    from app.ceiling import ceiling_label
+
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    lang = lang_ctx(request)["lang"]
+    lesson = None
+    if project_id:
+        lesson = explore.lesson(project_id)
+        if lesson is None:
+            return HTMLResponse("Không có bài này.", status_code=404)
+        program_id = lesson["program"]
+    else:
+        q = request.query_params.get("chuong-trinh") or request.query_params.get("app")
+        program_id = normalize(q) if q else current_program(request)["id"]
+        if program_id not in explore.PROGRAMS:
+            program_id = "word"
+    available = [p for p in explore.PROGRAMS if explore.catalog(p)]
+    return TEMPLATES.TemplateResponse(
+        request,
+        "hoc.html",
+        _ctx(
+            request,
+            {
+                "student_nav": "explore",
+                "lesson": lesson,
+                "groups": explore.catalog(program_id),
+                "program_id": program_id,
+                "programs_available": available,
+                "program_names": explore.PROGRAM_NAMES,
+                "mastery": explore.mastery(_student_id(user) if is_student(user) else None, program_id),
+                "level_labels": explore.LEVEL_LABELS,
+                "level_order": list(explore.LEVELS),
+                "ceiling_text": ceiling_label(lesson["ceiling"], lang) if lesson else "",
+            },
+        ),
+    )
+
+
+@app.get("/hoc", response_class=HTMLResponse)
+def explore_index(request: Request):
+    return _explore_page(request, None)
+
+
+@app.get("/hoc/{project_id}", response_class=HTMLResponse)
+def explore_lesson(request: Request, project_id: str):
+    return _explore_page(request, project_id)
 
 
 @app.get("/khung/word", response_class=HTMLResponse)

@@ -73,6 +73,8 @@ from app.pedagogy import (
     teacher_footprint,
 )
 from app.stafflog import record_staff_event
+from app.web_lang import install as install_lang
+from app.web_lang import lang_ctx
 from app.live import list_class_sessions
 from app.progress import (
     LEVELS,
@@ -87,6 +89,7 @@ from app.progress import (
 )
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
+install_lang(TEMPLATES)
 router = APIRouter()
 
 
@@ -117,12 +120,13 @@ def _ctx(request: Request, user: dict, extra: dict | None = None) -> dict:
     data = {
         "user": user,
         "host": request.headers.get("host", "mos.gds.edu.vn"),
-        "asset_v": "kulkul16",
+        "asset_v": "kulkul17",
         "program": {"id": "word", "short": "Word"},
         "programs": [],
         "levels": LEVELS,
         "status_labels": STATUS_LABELS,
         "persona": persona(user),
+        **lang_ctx(request),
     }
     if extra:
         data.update(extra)
@@ -1352,6 +1356,24 @@ def _student_page(request: Request, view: str):
 
     exercises = list_student_exercises(user_id)
     tasks = [row for row in exercises if row.get("assignment_id")]
+    from app import explore
+    from app.ceiling import ceiling
+    from app.grade import load_rubric
+
+    ceilings: dict[str, dict] = {}
+    for row in tasks:
+        pid = str(row.get("project_id") or "")
+        if pid and explore.valid_slug(pid) and pid not in ceilings:
+            try:
+                ceilings[pid] = ceiling(load_rubric(pid))
+            except Exception:
+                continue
+    mastery = {}
+    for row in exercises:
+        pid = str(row.get("project_id") or "")
+        if pid:
+            best = float(row.get("best_verified") or 0)
+            mastery[pid] = {"level": explore.level_for(row.get("status"), best), "best": best}
     done = [
         row
         for row in exercises
@@ -1375,6 +1397,10 @@ def _student_page(request: Request, view: str):
                 "timeline": student_timeline(user_id),
                 "skills": student_skills(user_id, "word"),
                 "certiport": student_certiport_card(user_id),
+                "ceilings": ceilings,
+                "skill_map": explore.catalog("word") if view == "progress" else [],
+                "mastery": mastery,
+                "level_labels": explore.LEVEL_LABELS,
             },
         ),
     )
