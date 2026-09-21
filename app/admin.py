@@ -1373,7 +1373,7 @@ def _student_page(request: Request, view: str):
         pid = str(row.get("project_id") or "")
         if pid:
             best = float(row.get("best_verified") or 0)
-            mastery[pid] = {"level": explore.level_for(row.get("status"), best), "best": best}
+            mastery[pid] = {"level": explore.level_for(row.get("status"), best, pid), "best": best}
     done = [
         row
         for row in exercises

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 
 from app import i18n
@@ -59,7 +60,8 @@ LEVEL_LABELS = {
     "learning": {"vi": "Đang học", "en": "Learning"},
     "mastered": {"vi": "Đã làm chủ", "en": "Mastered"},
 }
-MASTERY_SCORE = 70
+MASTERY_SCORE = 70      # giữ lại: ngưỡng khi không tra được trần điểm
+MASTERY_RATIO = 0.7     # đạt 70% trần điểm THẬT thì coi là làm chủ
 
 _SLUG = re.compile(r"^(word|excel|powerpoint)-objective-[0-9a-z-]+$")
 
@@ -190,8 +192,24 @@ def lesson(project_id: str) -> dict | None:
     }
 
 
-def level_for(status: str | None, best: float | None) -> str:
-    if status == "mastered" or (best or 0) >= MASTERY_SCORE:
+@lru_cache(maxsize=None)
+def auto_ceiling(project_id: str) -> int:
+    """Trần điểm chấm tự động của một rubric. Trả 100 nếu không tra được."""
+    if not valid_slug(project_id):
+        return 100
+    rubric = _load(RUBRIC_DIR / f"{project_id}.json")
+    if not rubric:
+        return 100
+    return int(ceiling(rubric).get("auto") or 100) or 100
+
+
+def level_for(status: str | None, best: float | None, project_id: str | None = None) -> str:
+    """Ngưỡng "đã làm chủ" tính theo trần điểm THẬT của rubric: bài 1-3 chỉ chấm
+    tự động được 55/100, nên làm đúng hết phần máy chấm phải là mastered chứ
+    không kẹt ở 'đang học' vì ngưỡng cứng 70."""
+    tran = auto_ceiling(project_id) if project_id else MASTERY_SCORE / MASTERY_RATIO
+    nguong = MASTERY_RATIO * tran
+    if status == "mastered" or (best or 0) >= nguong:
         return "mastered"
     if status in ("in_progress", "submitted") or (best or 0) > 0:
         return "learning"
@@ -214,7 +232,7 @@ def mastery(user_id: int | None, program: str | None = None) -> dict[str, dict]:
         if not pid:
             continue
         best = float(row.get("best_verified") or 0)
-        out[pid] = {"level": level_for(row.get("status"), best), "best": best}
+        out[pid] = {"level": level_for(row.get("status"), best, pid), "best": best}
     return out
 
 

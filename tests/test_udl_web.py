@@ -226,3 +226,39 @@ def test_study_guide_starters_already_inspected_so_1_4_keeps_action_kind():
     assert starter["personal_info_removed"] is True and starter["compatibility_mode"] == "15"
     rubric = (ROOT / "app" / "rubrics" / "word-objective-1-4.json").read_text(encoding="utf-8")
     assert re.search(r'"id":\s*"W14-I01"[\s\S]*?"kind":\s*"action_sequence"', rubric)
+
+
+# ------------------------------------------------ ngưỡng làm chủ theo trần điểm
+def test_mastery_threshold_follows_real_ceiling():
+    from app.explore import auto_ceiling, level_for
+
+    # 1-3 trần 55: làm hết phần máy chấm được thì phải là mastered
+    assert auto_ceiling("word-objective-1-3") == 55
+    assert level_for("in_progress", 55, "word-objective-1-3") == "mastered"
+    assert level_for("in_progress", 38, "word-objective-1-3") == "learning"
+    # rubric trọn vẹn giữ nguyên ngưỡng 70
+    assert level_for(None, 70, "word-objective-1-2") == "mastered"
+    assert level_for(None, 69, "word-objective-1-2") == "learning"
+    # không truyền project_id thì giữ hành vi cũ
+    assert level_for(None, 70) == "mastered"
+    assert level_for(None, 69) == "learning"
+    assert level_for(None, 0) == "new"
+    # slug lạ / rubric không tồn tại → coi như trần 100
+    assert auto_ceiling("word-objective-9-9") == 100
+    assert auto_ceiling("../etc/passwd") == 100
+
+
+def test_no_rubric_has_unreachable_mastery():
+    """Không rubric nào được đặt ngưỡng cao hơn trần điểm của chính nó."""
+    import glob
+    import json
+
+    from app.ceiling import ceiling
+    from app.explore import MASTERY_RATIO, level_for
+
+    for path in glob.glob(str(ROOT / "app" / "rubrics" / "*-objective-*.json")):
+        rubric = json.load(open(path, encoding="utf-8"))
+        auto = ceiling(rubric)["auto"]
+        assert MASTERY_RATIO * auto <= auto, path
+        if auto > 0:  # trần 0 (chỉ toàn thao tác chết) thì chỉ giáo viên đánh dấu mastered
+            assert level_for("in_progress", auto, Path(path).stem) == "mastered", path
