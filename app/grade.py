@@ -606,6 +606,33 @@ def _document_protection(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "pass", "tracking_lock_present")
 
 
+def _personal_info_removed(facts: dict, criterion: dict) -> dict:
+    """Inspect Document đã gỡ thuộc tính cá nhân: cờ trong settings.xml
+    và dc:creator rỗng. Chỉ dùng khi TỆP ĐỀ chưa sẵn có cờ này, nếu không
+    học sinh được điểm miễn phí."""
+    creator = ((facts.get("core_properties") or {}).get("creator") or "").strip()
+    if facts.get("personal_info_removed") and not creator:
+        return _result(criterion, "pass", "personal_info_removed")
+    if facts.get("personal_info_removed"):
+        return _result(criterion, "fail", "creator_still_set")
+    return _result(criterion, "fail", "personal_info_present")
+
+
+def _compatibility_mode(facts: dict, criterion: dict) -> dict:
+    """compatSetting compatibilityMode: 15 = Word 2013+, 14 = 2010, 12 = 2007."""
+    pred = criterion.get("predicate") or {}
+    got = str(facts.get("compatibility_mode") or "").strip()
+    if not got:
+        return _result(criterion, "fail", "compat_mode_missing")
+    want = str(pred.get("val") or "").strip()
+    if want and got != want:
+        return _result(criterion, "fail", "compat_mode_mismatch")
+    minimum = pred.get("min")
+    if minimum is not None and got.isdigit() and int(got) < int(minimum):
+        return _result(criterion, "fail", "compat_mode_too_old")
+    return _result(criterion, "pass", "compat_mode_ok")
+
+
 def _hdphoto(facts: dict, criterion: dict) -> dict:
     if facts.get("has_hdphoto"):
         return _result(criterion, "pass", "hdphoto_present")
@@ -1117,6 +1144,8 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang
             "comment_reply": _comment_reply,
             "revision_max": _revision_max,
             "document_protection": _document_protection,
+            "personal_info_removed": _personal_info_removed,
+            "compatibility_mode": _compatibility_mode,
             "hdphoto": _hdphoto,
             "theme_name": _theme_name,
             "core_empty": _core_empty,

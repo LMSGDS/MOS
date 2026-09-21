@@ -81,6 +81,8 @@ def _skill_defaults() -> dict:
         "document_protection": False,
         "document_protection_edit": "",
         "document_protection_enforced": False,
+        "personal_info_removed": False,
+        "compatibility_mode": "",
         "has_picture": False,
         "has_3d": False,
         "has_smartart": False,
@@ -674,6 +676,8 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
     document_protection = False
     protection_edit = ""
     protection_enforced = False
+    personal_info_removed = False
+    compatibility_mode = ""
     if settings is not None:
         node = settings.find(f"{W}documentProtection")
         document_protection = node is not None
@@ -683,6 +687,15 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
             # bất kỳ kiểu Restrict Editing nào khác.
             protection_edit = _attr(node, "edit")
             protection_enforced = _attr(node, "enforcement") in ("1", "true", "on")
+        # Dấu vết Inspect Document > Remove All (Document Properties and
+        # Personal Information): Word ghi w:removePersonalInformation vào
+        # settings.xml và xóa dc:creator. Check Compatibility không đổi tệp,
+        # nhưng Word 2019 lưu compatibilityMode=15 sau khi tệp được nâng cấp.
+        rpi = settings.find(f"{W}removePersonalInformation")
+        personal_info_removed = rpi is not None and _attr(rpi, "val") not in ("0", "false", "off")
+        for cs in settings.iter(f"{W}compatSetting"):
+            if _attr(cs, "name") == "compatibilityMode":
+                compatibility_mode = _attr(cs, "val")
 
     lower_names = [n.casefold() for n in names]
     has_picture = any("word/media/" in n and n.endswith((".png", ".jpeg", ".jpg", ".emf", ".wmf")) for n in lower_names)
@@ -720,6 +733,8 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
         "document_protection": document_protection,
         "document_protection_edit": protection_edit,
         "document_protection_enforced": protection_enforced,
+        "personal_info_removed": personal_info_removed,
+        "compatibility_mode": compatibility_mode,
         "has_picture": has_picture,
         "has_3d": has_3d,
         "has_smartart": has_smartart,
