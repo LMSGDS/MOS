@@ -292,8 +292,23 @@ def test_no_rubric_has_unreachable_mastery():
         rubric = json.load(open(path, encoding="utf-8"))
         auto = ceiling(rubric)["auto"]
         assert MASTERY_RATIO * auto <= auto, path
-        if auto > 0:  # trần 0 (chỉ toàn thao tác chết) thì chỉ giáo viên đánh dấu mastered
-            assert level_for("in_progress", auto, Path(path).stem) == "mastered", path
+        pid = Path(path).stem
+        if auto > 0:
+            assert level_for("in_progress", auto, pid) == "mastered", path
+        else:
+            # Trần 0 (toàn thao tác chết): không ai "làm chủ" khi chưa làm gì,
+            # điểm không mở khoá được, chỉ giáo viên xác nhận.
+            assert level_for(None, 0, pid) == "new", path
+            assert level_for(None, 100, pid) == "new", path
+            assert level_for("submitted", 0, pid) == "learning", path
+            assert level_for("mastered", 0, pid) == "mastered", path
+
+
+def test_zero_ceiling_is_real_not_fallback():
+    from app.explore import auto_ceiling
+
+    assert auto_ceiling("powerpoint-objective-1-3") == 0
+    assert auto_ceiling("word-objective-9-9") == 100  # không tra được → 100
 
 
 # ------------------------------------------------------- cờ Secure của cookie
@@ -316,9 +331,11 @@ def test_vary_header_present_for_language_negotiation():
     c = TestClient(app)
     vary = c.get("/dang-nhap").headers.get("Vary", "").lower()
     assert "accept-language" in vary and "cookie" in vary
-    # Vary sẵn có (StaticFiles/FileResponse) được gộp, không bị ghi đè.
-    vary_static = c.get("/static/tokens.css").headers.get("Vary", "").lower()
-    assert "accept-language" in vary_static and "cookie" in vary_static
+    # Tệp tĩnh không đổi theo ngôn ngữ: KHÔNG được gắn Vary: Cookie, nếu không
+    # cache biên phải tách bản theo từng mos_session.
+    for path in ("/static/tokens.css", "/static/mos.css", "/static/kulkul.png"):
+        vary_static = c.get(path).headers.get("Vary", "").lower()
+        assert "cookie" not in vary_static and "accept-language" not in vary_static, path
 
 
 # ------------------------------------------------------------- đổi mật khẩu

@@ -194,22 +194,31 @@ def lesson(project_id: str) -> dict | None:
 
 @lru_cache(maxsize=None)
 def auto_ceiling(project_id: str) -> int:
-    """Trần điểm chấm tự động của một rubric. Trả 100 nếu không tra được."""
+    """Trần điểm chấm tự động. 100 nếu không tra được rubric; 0 là giá trị THẬT.
+
+    Cache không hết hạn: rubric tĩnh theo mỗi lần triển khai. Test nào sửa
+    rubric phải gọi auto_ceiling.cache_clear().
+    """
     if not valid_slug(project_id):
         return 100
     rubric = _load(RUBRIC_DIR / f"{project_id}.json")
     if not rubric:
         return 100
-    return int(ceiling(rubric).get("auto") or 100) or 100
+    return int(ceiling(rubric).get("auto") or 0)
 
 
 def level_for(status: str | None, best: float | None, project_id: str | None = None) -> str:
     """Ngưỡng "đã làm chủ" tính theo trần điểm THẬT của rubric: bài 1-3 chỉ chấm
     tự động được 55/100, nên làm đúng hết phần máy chấm phải là mastered chứ
     không kẹt ở 'đang học' vì ngưỡng cứng 70."""
-    tran = auto_ceiling(project_id) if project_id else MASTERY_SCORE / MASTERY_RATIO
-    nguong = MASTERY_RATIO * tran
-    if status == "mastered" or (best or 0) >= nguong:
+    tran = auto_ceiling(project_id) if project_id else 100
+    if tran <= 0:
+        # Không một điểm nào máy chấm được: "không đo được" khác "chưa đạt",
+        # chỉ giáo viên mới xác nhận làm chủ.
+        if status == "mastered":
+            return "mastered"
+        return "learning" if status in ("in_progress", "submitted") else "new"
+    if status == "mastered" or (best or 0) >= MASTERY_RATIO * tran:
         return "mastered"
     if status in ("in_progress", "submitted") or (best or 0) > 0:
         return "learning"
