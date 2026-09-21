@@ -1,0 +1,285 @@
+/* tokens.css — một nguồn màu duy nhất cho mos.gds.edu.vn.
+ *
+ * Nạp SAU mos.css để các luật tiếp cận ở cuối file đè được luật cũ.
+ * Giá trị mặc định GIỮ NGUYÊN màu đang dùng nên diện mạo không đổi;
+ * mos.css thay hex cứng bằng var() dần theo bảng tra dưới đây.
+ *
+ *   #008EE2  → var(--brand)            #0374b5 → var(--brand-deep)
+ *   #006bb0  → var(--brand-strong)     #0b2545 → var(--brand-ink)
+ *   #394b58  → var(--nav-bg)           #1e4f73 → var(--dock-bg)
+ *   #0f172a  → var(--ink)              #475569 → var(--muted)
+ *   #f4f8fc / #f5f5f5 → var(--bg)      #ffffff → var(--card)
+ *   #d9e8f5 / #e8eaec → var(--line)    #e8f4fb → var(--brand-tint)
+ *   #fee2e2 / #991b1b → var(--danger-bg) / var(--danger-ink)
+ *   #f0fdf4 / #86efac → var(--success-bg) / var(--success-line)
+ *   #fff7ed / #fdba74 → var(--warn-bg)  / var(--warn-line)
+ */
+:root {
+  --brand: #008ee2;
+  --brand-strong: #006bb0;
+  --brand-deep: #0374b5;
+  --brand-ink: #0b2545;
+  --brand-tint: #e8f4fb;
+  --nav-bg: #394b58;
+  --nav-ink: #ffffff;
+  --dock-bg: #1e4f73;
+
+  --ink: #0f172a;
+  --muted: #475569;
+  --bg: #f4f8fc;
+  --card: #ffffff;
+  --line: #d9e8f5;
+
+  --danger-bg: #fee2e2;
+  --danger-ink: #991b1b;
+  --success-bg: #f0fdf4;
+  --success-line: #86efac;
+  --success-ink: #166534;
+  --warn-bg: #fff7ed;
+  --warn-line: #fdba74;
+  --warn-ink: #9a3412;
+
+  /* Hướng dẫn học tập — KHÔNG phải lỗi. Tông ấm, viền trái. */
+  --coach-bg: #fffbeb;
+  --coach-line: #d97706;
+  --coach-ink: #78350f;
+  --coach-muted: #92400e;
+
+  /* Bản đồ Năng lực: xám (chưa khám phá) / vàng đất (đang học) / xanh rêu (đã làm chủ). */
+  --node-new: #e2e8f0;
+  --node-new-ink: #475569;
+  --node-learning: #d4a373;
+  --node-learning-ink: #3f2a12;
+  --node-mastered: #6b8e23;
+  --node-mastered-ink: #ffffff;
+
+  --focus: #ffbf47;
+  --focus-ring: 0 0 0 3px var(--focus);
+  --radius: 12px;
+}
+
+/* Cùng giá trị cho hệ Canvas cũ, để hai bộ biến không lệch nhau. */
+:root {
+  --gds: var(--brand);
+  --gds-dark: var(--brand-strong);
+  --ic-brand-global-nav-bgd: var(--nav-bg);
+  --ic-brand-global-nav-ic: var(--nav-ink);
+  --ic-brand-primary: var(--brand-deep);
+  --ic-app-bg: var(--bg);
+}
+
+/* ---------------------------------------------------------------- nền tối */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e5eef7;
+    --muted: #a8b6c6;
+    --bg: #0f1720;
+    --card: #172230;
+    --line: #2a3a4d;
+    --brand-tint: #16344a;
+    --nav-bg: #0b1119;
+    --danger-bg: #3f1d1d;
+    --danger-ink: #fecaca;
+    --success-bg: #14291b;
+    --success-ink: #bbf7d0;
+    --warn-bg: #3a2410;
+    --warn-ink: #fed7aa;
+    --coach-bg: #2b2210;
+    --coach-ink: #fde68a;
+    --coach-muted: #fcd34d;
+    --node-new: #2a3a4d;
+    --node-new-ink: #cbd5e1;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #e5eef7;
+  --muted: #a8b6c6;
+  --bg: #0f1720;
+  --card: #172230;
+  --line: #2a3a4d;
+  --brand-tint: #16344a;
+  --nav-bg: #0b1119;
+  --danger-bg: #3f1d1d;
+  --danger-ink: #fecaca;
+  --success-bg: #14291b;
+  --success-ink: #bbf7d0;
+  --warn-bg: #3a2410;
+  --warn-ink: #fed7aa;
+  --coach-bg: #2b2210;
+  --coach-ink: #fde68a;
+  --coach-muted: #fcd34d;
+  --node-new: #2a3a4d;
+  --node-new-ink: #cbd5e1;
+}
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] body.student-app,
+:root[data-theme="dark"] body.ic-app { background: var(--bg); color: var(--ink); }
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .task-card,
+:root[data-theme="dark"] .student-top { background: var(--card); color: var(--ink); border-color: var(--line); }
+
+/* ---------------------------------------------------- tương phản cao (UDL) */
+:root[data-contrast="high"] {
+  --ink: #000000;
+  --muted: #1f2937;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --line: #000000;
+  --brand: #003f7f;
+  --brand-deep: #003f7f;
+  --brand-strong: #002a55;
+  --brand-tint: #dbeafe;
+  --coach-line: #7c2d12;
+  --coach-ink: #000000;
+  --coach-muted: #1f2937;
+  --focus: #ff00ff;
+}
+:root[data-contrast="high"] a { text-decoration: underline; }
+:root[data-contrast="high"] .card,
+:root[data-contrast="high"] .task-card { border: 2px solid var(--line); }
+:root[data-contrast="high"] .ic-app-header__menu-list-item-sub,
+:root[data-contrast="high"] .student-top__nav a { opacity: 1; color: inherit; }
+
+/* ------------------------------------------------ ba lỗi tiếp cận (WCAG) */
+/* 4.1 — Nav từng xóa outline và thay bằng nền trắng 8%: không thấy khi dùng bàn phím. */
+.ic-app-header__menu-list-item:focus-visible,
+.student-top__nav a:focus-visible,
+.student-top__out button:focus-visible,
+.btn:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.ic-app-header__menu-list-item:focus-visible { background: rgba(255, 255, 255, 0.16); }
+
+/* 4.2 — Chữ phụ 70% trên #394b58 chỉ đạt ~3,5:1; ngưỡng AA là 4,5:1. */
+.ic-app-header__menu-list-item-sub {
+  opacity: 1;
+  color: #d3dbe3;
+  font-size: 11px;
+}
+
+/* 4.3 — Tôn trọng thiết lập giảm chuyển động của hệ. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  tr.just-submitted td { animation: none; background: var(--brand-tint); }
+}
+
+/* --------------------------------------------- hướng dẫn học tập (.coach) */
+.coach {
+  background: var(--coach-bg);
+  border-left: 4px solid var(--coach-line);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 14px;
+  margin: 8px 0;
+  color: var(--coach-ink);
+}
+.coach__what { margin: 0 0 2px; font-weight: 800; }
+.coach__why { margin: 0; color: var(--coach-muted); }
+.coach a { color: inherit; font-weight: 700; }
+
+/* ---------------------------------------------------------- VI / EN switch */
+.lang-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+}
+.lang-switch a {
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--muted);
+}
+.lang-switch a[aria-current="true"] { background: var(--brand-deep); color: #fff; }
+
+/* -------------------------------------------- Bản đồ Năng lực / Khám phá */
+.skill-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 12px 0 20px;
+  list-style: none;
+  padding: 0;
+}
+.skill-map__group {
+  grid-column: 1 / -1;
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.skill-node {
+  display: block;
+  text-decoration: none;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--node-new);
+  color: var(--node-new-ink);
+  border: 1px solid transparent;
+  min-height: 74px;
+}
+.skill-node:hover { border-color: var(--brand-deep); }
+.skill-node[data-level="learning"] { background: var(--node-learning); color: var(--node-learning-ink); }
+.skill-node[data-level="mastered"] { background: var(--node-mastered); color: var(--node-mastered-ink); }
+.skill-node[aria-current="page"] { outline: 3px solid var(--brand-deep); outline-offset: 1px; }
+.skill-node__code { display: block; font-size: 12px; font-weight: 900; opacity: 0.85; }
+.skill-node__title { display: block; font-size: 13px; font-weight: 700; line-height: 1.3; }
+.skill-node__state { display: block; font-size: 11px; margin-top: 4px; opacity: 0.9; }
+.skill-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.skill-legend li::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  background: var(--node-new);
+}
+.skill-legend li[data-level="learning"]::before { background: var(--node-learning); }
+.skill-legend li[data-level="mastered"]::before { background: var(--node-mastered); }
+
+.explore { display: grid; grid-template-columns: minmax(220px, 3fr) 7fr; gap: 20px; align-items: start; }
+.explore__tree .skill-map { grid-template-columns: 1fr; gap: 6px; margin-top: 8px; }
+.explore__tree .skill-node { min-height: 0; padding: 8px 10px; }
+.explore__lesson h1 { margin-top: 0; }
+.explore__meta { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; color: var(--muted); font-size: 14px; }
+.lesson-step {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.lesson-step h2 { margin: 0 0 8px; font-size: 17px; }
+.lesson-step ol { margin: 6px 0 0; padding-left: 22px; }
+.lesson-step li { margin: 4px 0; }
+.lesson-step__kc { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+.lesson-step__media { margin: 10px 0 0; }
+.lesson-step__media img { max-width: 100%; border-radius: 8px; border: 1px solid var(--line); }
+@media (max-width: 820px) {
+  .explore { grid-template-columns: 1fr; }
+}
+
+/* --------------------------------------------------- trần điểm chấm tự động */
+.ceiling { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.ceiling strong { color: var(--ink); }
