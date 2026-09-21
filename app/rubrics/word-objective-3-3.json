@@ -115,24 +115,24 @@
       "objective": "3.3",
       "kind": "artifact",
       "weight": 20,
-      "prompt": "Restart numbering / tách list (nhiều The Journey).",
+      "prompt": "Tách The Journey thành các danh sách độc lập (đánh số bắt đầu lại, không chạy tiếp).",
       "predicate": {
-        "type": "style_used",
-        "style": "ListParagraph",
-        "min": 20
+        "type": "list_instances",
+        "text": "The Journey",
+        "min": 3
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Đã có nhiều ListParagraph.",
-        "fail": "Chưa tạo đủ các list.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "The Journey nằm trên các danh sách độc lập — đánh số đã bắt đầu lại.",
+        "fail": "Các khối The Journey vẫn thuộc cùng một danh sách nên số chạy tiếp. Bấm chuột phải số đầu mỗi khối và chọn Restart at 1.",
+        "unverified": "Chưa đọc được thông tin danh sách.",
+        "error": "Không đọc được danh sách trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
-        "Bấm chuột phải số thứ tự.",
-        "Chọn **Restart at 1** khi bắt đầu list mới.",
-        "Dùng **Increase Indent** / **Decrease Indent** đổi cấp."
+        "Bấm chuột phải vào số thứ tự đầu của khối **The Journey** thứ hai.",
+        "Chọn **Restart at 1** để tách khỏi danh sách trước.",
+        "Làm tương tự cho khối thứ ba."
       ]
     }
   ]

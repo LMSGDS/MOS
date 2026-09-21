@@ -64,23 +64,23 @@
       "objective": "6.1",
       "kind": "artifact",
       "weight": 15,
-      "prompt": "Reply mang tên người dùng (Joan Lambert trên bài mẫu).",
+      "prompt": "Dùng Reply để trả lời comment (không tạo comment mới rời).",
       "predicate": {
-        "type": "comment_author",
-        "author": "Joan Lambert"
+        "type": "comment_reply",
+        "min": 1
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Có comment Joan Lambert.",
-        "fail": "Chưa thấy tác giả Joan Lambert.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Đã trả lời bằng Reply, gắn đúng vào luồng comment.",
+        "fail": "Chưa có reply nào. Bấm Reply ngay trên comment cần trả lời, đừng tạo comment mới rời.",
+        "unverified": "Chưa đọc được luồng comment.",
+        "error": "Không đọc được comment trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
         "Tab **Review**, mở **Comments**.",
-        "Bấm **Reply** — Word gắn tên tài khoản Office.",
-        "Bài mẫu dùng **Joan Lambert**; máy học sinh dùng tên đăng nhập Word."
+        "Bấm **Reply** ngay trên comment cần trả lời.",
+        "Word tự gắn tên tài khoản của em — hệ thống không chấm theo tên."
       ]
     },
     {

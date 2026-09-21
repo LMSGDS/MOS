@@ -213,6 +213,44 @@ Chèn vào bản kế hoạch trước, không thay thế:
 
 ---
 
+## 8b. A5 — đã sửa 4 tiêu chí đo nhầm
+
+Làm xong ngày 21/09/2026. Cả bốn đều **không phải sửa JSON thuần**: hai tiêu chí cần facts mà `word_xml.py` chưa trích.
+
+| Tiêu chí | Predicate cũ | Predicate mới | Điểm |
+|---|---|---|---:|
+| `W32-D01` | `table_has_text: "Customer"` | `table_lacks_text: "ID", scope: "header"` | 15 |
+| `W33-R01` | `style_used: ListParagraph, min: 20` | `list_instances: "The Journey", min: 3` | 20 |
+| `W61-A01` | `comment_author: "Joan Lambert"` | `comment_reply, min: 1` | 15 |
+| `W62-L01` | `document_protection` (boolean) | `document_protection, edit: "trackedChanges"` | 15 |
+
+Mỗi ca đều có test dựng một tài liệu **làm sai mà luật cũ vẫn cho đỗ**, rồi chứng minh luật mới bắt được (`tests/test_a5_mismeasured_criteria.py`). Cả 4 file đáp án của Study Guide vẫn đạt đúng 100, file đề vẫn 0.
+
+### Ba chỗ phải đổi cách sửa so với dự kiến ở mục 4
+
+**`W62-L01` — không được đòi `enforcement="1"`.** File đáp án thật ghi `<w:documentProtection w:edit="trackedChanges" w:enforcement="0"/>`: Word 2019 đặt enforcement 0 khi Lock Tracking **không có mật khẩu**. Đòi enforcement=1 như dự kiến ban đầu sẽ **đánh trượt chính đáp án chính thức**. Nên chỉ đòi đúng `edit`, còn `enforced` để làm tùy chọn cho đề nào yêu cầu mật khẩu.
+
+**`W33-R01` — `w:startOverride` không tồn tại trong file thật.** Cả file đề lẫn file đáp án đều **không có startOverride nào**. Word 2019 thực hiện "Restart at 1" bằng cách **tạo hẳn `w:num` mới trỏ tới `abstractNum` mới**: file đề có 7 `w:num`, file đáp án có 17. Dấu vết thật là **cùng một mục nằm trên nhiều numId độc lập** — trong đáp án, khối *The Journey* xuất hiện trên ba danh sách riêng (numId 12 `upperLetter`, 14 `decimal`, 17 `bullet`). Predicate `list_instances` đo đúng cái đó. Vẫn giữ tùy chọn `restarts` cho bản Word nào có ghi startOverride.
+
+**`W32-D01` — `table_lacks_text: "ID"` quét cả bảng thì báo sai.** `ID` cũng là **mã bang Idaho**, nằm trong ô State của một dòng dữ liệu. Phải thêm `scope: "header"`. Mà hàng tiêu đề cũng không hiển nhiên: Word chỉ đánh `w:tblHeader` lên hàng **gộp** (`Customer | Appointment`), còn hàng nhãn cột ngay dưới thì không. Cách nhận ra: hàng gộp có **ít ô hơn số cột của bảng**, nên lấy thêm hàng kế tiếp và dừng ngay khi gặp hàng đủ số ô — không bao giờ ăn lan vào dữ liệu.
+
+### Facts mới trong `word_xml.py`
+
+| Fact | Dùng cho |
+|---|---|
+| `document_protection_edit`, `document_protection_enforced` | phân biệt Lock Tracking với các kiểu Restrict Editing khác |
+| `numbering_restarts` | đếm `w:lvlOverride/w:startOverride` |
+| `paragraphs[].num_id` | đã được phân tích sẵn nhưng trước đây bị vứt đi |
+| `tables[].header_rows` | chỉ số hàng tiêu đề, cho `scope: "header"` |
+
+Một lưu ý cho C2: ba trong bốn fact này **đã nằm sẵn trong XML mà code chỉ đọc lướt qua** (`num_id` thậm chí đã được parse rồi bỏ). Nên ước lượng 3–4 ngày cho C2 có thể rộng rãi hơn thực tế.
+
+### Còn lại của mục 4
+
+`W42C-H01` (30 điểm, `contains_text: "References"`) và `W42A-T01/H01/E01` (100 điểm cho một cú bấm) **chưa sửa** — cả hai là quyết định nội dung chứ không phải lỗi kỹ thuật: cái đầu cần chọn giữa `style_used: Bibliography` và `field_contains: BIBLIOGRAPHY`, cái sau cần tách lại nhiệm vụ. Để thầy quyết.
+
+---
+
 ## 9. Đã kiểm chứng trên repo thật
 
 Toàn bộ số liệu ở mục 2 và 3 đã được dựng lại **từ chính các file trong `app/rubrics/`**, không phải từ bảng chép tay:

@@ -134,23 +134,24 @@
       "objective": "3.2",
       "kind": "artifact",
       "weight": 15,
-      "prompt": "Xóa cột ID.",
+      "prompt": "Xóa cột ID (bảng không còn cột tiêu đề ID).",
       "predicate": {
-        "type": "table_has_text",
-        "text": "Customer"
+        "type": "table_lacks_text",
+        "text": "ID",
+        "scope": "header"
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Cột ID / dòng thừa đã xử lý.",
-        "fail": "Vẫn còn dấu hiệu cột ID hoặc dòng chưa xóa.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Đã xóa cột ID.",
+        "fail": "Bảng vẫn còn cột tiêu đề ID. Xóa đúng cột ID, không xóa nhầm LastName.",
+        "unverified": "Chưa đọc được bảng để kiểm cột ID.",
+        "error": "Không đọc được bảng trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
-        "Bấm cột ID.",
+        "Bấm vào ô bất kỳ của cột **ID**.",
         "**Layout** > **Delete** > **Delete Columns**.",
-        "Không xóa nhầm LastName."
+        "Kiểm lại: hàng tiêu đề không còn **ID**, vẫn còn **LastName**."
       ]
     },
     {

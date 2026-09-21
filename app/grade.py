@@ -289,10 +289,40 @@ def _table_has_text(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "table_text_missing")
 
 
+def _header_row_indexes(tbl: dict) -> list[int]:
+    """Các hàng tiêu đề của một bảng.
+
+    Word chỉ đánh w:tblHeader lên hàng tiêu đề GỘP (Customer | Appointment);
+    hàng nhãn cột ngay dưới thì không được đánh. Nhận ra hàng gộp bằng chỗ nó
+    ít ô hơn số cột của bảng, rồi lấy thêm hàng kế tiếp — dừng ngay khi gặp
+    hàng đủ số ô, nên không bao giờ ăn lan vào hàng dữ liệu.
+    """
+    rows = tbl.get("cells") or []
+    if not rows:
+        return []
+    cols = int(tbl.get("cols") or 0)
+    indexes = sorted(set(tbl.get("header_rows") or [0]))
+    last = max(indexes)
+    while last + 1 < len(rows) and len(rows[last]) < cols:
+        last += 1
+        indexes.append(last)
+    return sorted(set(indexes))
+
+
 def _table_lacks_text(facts: dict, criterion: dict) -> dict:
-    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    """`scope: "header"` chỉ quét hàng tiêu đề.
+
+    Cần thiết khi chuỗi cần vắng mặt cũng là dữ liệu hợp lệ: "xóa cột ID" mà
+    quét cả bảng thì đụng ngay ô State = "ID" (Idaho) và báo sai.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    header_only = str(pred.get("scope") or "").casefold() == "header"
     for tbl in facts.get("tables") or []:
-        for row in tbl.get("cells") or []:
+        rows = tbl.get("cells") or []
+        if header_only:
+            rows = [rows[i] for i in _header_row_indexes(tbl) if 0 <= i < len(rows)]
+        for row in rows:
             for cell in row:
                 if needle and same(cell, needle):
                     return _result(criterion, "fail", "table_text_still_present")
@@ -353,6 +383,39 @@ def _list_format(facts: dict, criterion: dict) -> dict:
     if not needle and fmt and fmt in [f.casefold() for f in facts.get("numbering_formats") or []]:
         return _result(criterion, "pass", "list_format_present")
     return _result(criterion, "fail", "list_format_missing")
+
+
+def _list_instances(facts: dict, criterion: dict) -> dict:
+    """Đếm số danh sách ĐỘC LẬP mà một mục xuất hiện trong đó.
+
+    "Restart numbering" trong Word 2019 không ghi ra w:startOverride: Word tạo
+    hẳn một <w:num> mới trỏ tới abstractNum mới. Nên dấu vết thật của việc tách
+    list là cùng một mục nằm trên nhiều numId khác nhau — đo cái đó, không đếm
+    số đoạn ListParagraph (đếm đoạn chỉ đo độ dài danh sách).
+
+    Tùy chọn `restarts`: đòi thêm w:startOverride, cho bản Word có ghi ra.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    fmt = (pred.get("fmt") or "").casefold()
+    minimum = int(pred.get("min") or 2)
+    seen: set[str] = set()
+    for para in facts.get("paragraphs") or []:
+        num_id = str(para.get("num_id") or "")
+        if not num_id or not para.get("num_fmt"):
+            continue
+        if fmt and (para.get("num_fmt") or "").casefold() != fmt:
+            continue
+        if needle and needle.casefold() not in norm(para.get("text")).casefold():
+            continue
+        seen.add(num_id)
+    required_restarts = pred.get("restarts")
+    if required_restarts is not None:
+        if int(facts.get("numbering_restarts") or 0) < int(required_restarts):
+            return _result(criterion, "fail", "list_restart_missing")
+    if len(seen) >= minimum:
+        return _result(criterion, "pass", "list_instances_ok")
+    return _result(criterion, "fail", "list_instances_too_few")
 
 
 def _footnote_min(facts: dict, criterion: dict) -> dict:
@@ -480,9 +543,22 @@ def _revision_max(facts: dict, criterion: dict) -> dict:
 
 
 def _document_protection(facts: dict, criterion: dict) -> dict:
-    if facts.get("document_protection"):
-        return _result(criterion, "pass", "tracking_lock_present")
-    return _result(criterion, "fail", "tracking_lock_missing")
+    """`edit` phân biệt Lock Tracking với các kiểu Restrict Editing khác.
+
+    Không khai `edit` thì giữ hành vi cũ (chỉ hỏi "có khóa hay không") để
+    rubric cũ chạy nguyên. Khai `enforced: true` thì đòi thêm w:enforcement=1 —
+    lưu ý Word 2019 ghi enforcement="0" khi bật Lock Tracking không mật khẩu,
+    nên đừng đòi enforced trừ khi đề yêu cầu đặt mật khẩu.
+    """
+    if not facts.get("document_protection"):
+        return _result(criterion, "fail", "tracking_lock_missing")
+    pred = criterion.get("predicate") or {}
+    want = str(pred.get("edit") or "").strip().casefold()
+    if want and str(facts.get("document_protection_edit") or "").casefold() != want:
+        return _result(criterion, "fail", "protection_wrong_mode")
+    if _as_bool(pred.get("enforced")) and not facts.get("document_protection_enforced"):
+        return _result(criterion, "fail", "protection_not_enforced")
+    return _result(criterion, "pass", "tracking_lock_present")
 
 
 def _hdphoto(facts: dict, criterion: dict) -> dict:
@@ -977,6 +1053,7 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang
             "table_repeat_header": _table_repeat_header,
             "table_merged": _table_merged,
             "list_format": _list_format,
+            "list_instances": _list_instances,
             "footnote_min": _footnote_min,
             "field_contains": _field_contains,
             "style_used": _style_used,

@@ -114,22 +114,23 @@
       "objective": "6.2",
       "kind": "artifact",
       "weight": 15,
-      "prompt": "Lock Tracking (Restrict Editing tracked changes).",
+      "prompt": "Lock Tracking (khóa đúng kiểu theo dõi thay đổi, không phải kiểu hạn chế khác).",
       "predicate": {
-        "type": "document_protection"
+        "type": "document_protection",
+        "edit": "trackedChanges"
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Đã có documentProtection.",
-        "fail": "Chưa thấy Lock Tracking.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Đã khóa đúng kiểu trackedChanges.",
+        "fail": "Tài liệu có khóa nhưng không phải Lock Tracking. Dùng Review > Lock Tracking, không phải Restrict Editing kiểu chỉ đọc / chỉ nhận xét / điền form.",
+        "unverified": "Chưa đọc được thiết lập bảo vệ tài liệu.",
+        "error": "Không đọc được settings.xml trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
-        "**Review** > **Lock Tracking** (hoặc **Restrict Editing**).",
-        "Bật khóa theo dõi thay đổi.",
-        "Có thể để trống mật khẩu nếu đề không yêu cầu."
+        "Tab **Review**, nhóm **Tracking**.",
+        "Bấm **Lock Tracking**.",
+        "Để trống mật khẩu nếu đề không yêu cầu — vẫn tính là khóa đúng kiểu."
       ]
     }
   ]
