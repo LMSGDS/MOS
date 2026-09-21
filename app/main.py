@@ -134,14 +134,21 @@ except Exception as exc:
 app.include_router(admin_router)
 # Identity innermost so SessionMiddleware fills scope["session"] first.
 app.add_middleware(RequestIdentityMiddleware)
+# Nguồn sự thật duy nhất cho cờ Secure của mọi cookie.
+# Máy chủ thật sau nginx + Cloudflare: request.url.scheme là 'http', không tin được.
+# Mặc định bật; chỉ tắt (MOS_HTTPS_ONLY=0) khi chạy http://127.0.0.1 trên máy cá nhân.
+def https_only_from_env(env: dict) -> bool:
+    return env.get("MOS_HTTPS_ONLY", "1") != "0"
+
+
+HTTPS_ONLY = https_only_from_env(os.environ)
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="mos_session",
     same_site="lax",
-    # Mặc định bật cờ Secure: server thật chạy sau nginx + Cloudflare.
-    # Chỉ tắt (MOS_HTTPS_ONLY=0) khi chạy http://127.0.0.1 trên máy cá nhân.
-    https_only=os.environ.get("MOS_HTTPS_ONLY", "1") != "0",
+    https_only=HTTPS_ONLY,
     max_age=60 * 60 * 12,
 )
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
@@ -177,7 +184,7 @@ async def frame_same_origin(request, call_next):
             lang_cookie,
             max_age=LANG_COOKIE_MAX_AGE,
             samesite="lax",
-            secure=request.url.scheme == "https",
+            secure=HTTPS_ONLY,
         )
     path = request.url.path
     if request.method == "GET" and path.startswith("/quan-tri"):
