@@ -16,7 +16,7 @@ jobs:
     name: Windows Setup.exe
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
@@ -65,7 +65,7 @@ jobs:
     name: macOS Setup.zip (source)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build zip installer
         run: bash desktop/installer/macos/make-zip.sh
       - uses: actions/upload-artifact@v4
@@ -77,7 +77,7 @@ jobs:
     name: macOS Setup.app + .pkg
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build app, zip, and pkg
         run: bash desktop/installer/macos/build-pkg.sh
       - name: Check Mac installer names and hashes
@@ -113,7 +113,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v4
         with:
           name: MOS-KulKul-Setup-Windows
