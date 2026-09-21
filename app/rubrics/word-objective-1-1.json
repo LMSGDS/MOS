@@ -1,11 +1,20 @@
 {
   "schema": "mos-kulkul-1",
   "project_id": "word-objective-1-1",
-  "rubric_version": "1.0.0",
+  "rubric_version": "1.1.0",
   "grader_version": "1.0.0",
-  "title": "Word Objective 1.1 — Navigate within documents",
+  "langs": [
+    "vi",
+    "en"
+  ],
+  "default_lang": "vi",
+  "title": {
+    "vi": "Word Objective 1.1 — Điều hướng trong tài liệu",
+    "en": "Word Objective 1.1 — Navigate within documents"
+  },
   "program": "word",
   "objective": "1.1",
+  "source_file": "Word_1-1.docx",
   "max_score": 100,
   "capabilities": [
     "word.bookmarks",
@@ -15,9 +24,15 @@
     {
       "id": "W11-S01",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.1"
+      ],
       "kind": "action_sequence",
       "weight": 4,
-      "prompt": "Tìm từ to từ Navigation pane.",
+      "prompt": {
+        "vi": "Từ Navigation pane, tìm tất cả các chỗ xuất hiện của to.",
+        "en": "From the Navigation pane, locate all instances of to."
+      },
       "selector": {
         "action": "find",
         "query": "to",
@@ -29,24 +44,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã tìm to từ Navigation pane.",
-        "fail": "Chưa dùng Navigation pane để tìm to.",
-        "unverified": "Chưa thu được bằng chứng Find trên Navigation pane. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được thao tác tìm kiếm."
+        "pass": {
+          "vi": "Đã tìm to từ Navigation pane.",
+          "en": "Found to from the Navigation pane."
+        },
+        "fail": {
+          "vi": "Chưa dùng Navigation pane để tìm to.",
+          "en": "You did not use the Navigation pane to search for to."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Find trên Navigation pane. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for Find in the Navigation pane. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được thao tác tìm kiếm.",
+          "en": "The search action could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Mở tab **Home**.",
-        "Nhóm **Editing**, bấm **Find** (hoặc Ctrl+F) để mở **Navigation** pane.",
-        "Gõ to vào ô **Search Document**."
+        {
+          "vi": "Mở tab **Home**.",
+          "en": "Open the **Home** tab."
+        },
+        {
+          "vi": "Nhóm **Editing**, bấm **Find** (hoặc Ctrl+F) để mở **Navigation** pane.",
+          "en": "In the **Editing** group, click **Find** (or press Ctrl+F) to open the **Navigation** pane."
+        },
+        {
+          "vi": "Gõ to vào ô **Search Document**.",
+          "en": "Type to in the **Search Document** box."
+        }
       ]
     },
     {
       "id": "W11-S02",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.1"
+      ],
       "kind": "action_sequence",
       "weight": 4,
-      "prompt": "Xem kết quả trên thẻ Results.",
+      "prompt": {
+        "vi": "Xem lại kết quả tìm kiếm trên thẻ Results của Navigation pane.",
+        "en": "Review the search results on the Results tab of the Navigation pane."
+      },
       "selector": {
         "action": "results_tab"
       },
@@ -55,24 +97,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã mở thẻ Results có kết quả.",
-        "fail": "Chưa chuyển sang thẻ Results.",
-        "unverified": "Chưa thu được bằng chứng thẻ Results. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được thẻ Results."
+        "pass": {
+          "vi": "Đã mở thẻ Results có kết quả.",
+          "en": "The Results tab was opened with results showing."
+        },
+        "fail": {
+          "vi": "Chưa chuyển sang thẻ Results.",
+          "en": "You did not switch to the Results tab."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng thẻ Results. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for the Results tab. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được thẻ Results.",
+          "en": "The Results tab could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Giữ **Navigation** pane đang mở.",
-        "Bấm thẻ **Results** dưới ô tìm kiếm.",
-        "Xem danh sách kết quả to trong tài liệu."
+        {
+          "vi": "Giữ **Navigation** pane đang mở.",
+          "en": "Keep the **Navigation** pane open."
+        },
+        {
+          "vi": "Bấm thẻ **Results** dưới ô tìm kiếm.",
+          "en": "Click the **Results** tab below the search box."
+        },
+        {
+          "vi": "Xem danh sách kết quả to trong tài liệu.",
+          "en": "Review the list of to results found in the document."
+        }
       ]
     },
     {
       "id": "W11-S03",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.1"
+      ],
       "kind": "action_sequence",
       "weight": 4,
-      "prompt": "Đổi truy vấn sang toy và chuyển giữa các kết quả.",
+      "prompt": {
+        "vi": "Đổi từ khóa thành toy, rồi chuyển giữa các kết quả bằng nút điều hướng trên thẻ Results.",
+        "en": "Modify the search term to locate all instances of toy, then move between the search results by using the navigation buttons on the Results tab."
+      },
       "selector": {
         "action": "find_navigate",
         "query": "toy"
@@ -84,24 +153,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã tìm toy và chuyển giữa ít nhất hai kết quả.",
-        "fail": "Chưa đổi sang toy hoặc chưa chuyển kết quả bằng nút điều hướng.",
-        "unverified": "Chưa thu được bằng chứng điều hướng kết quả tìm kiếm. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được điều hướng kết quả."
+        "pass": {
+          "vi": "Đã tìm toy và chuyển giữa ít nhất hai kết quả.",
+          "en": "Searched for toy and moved between at least two results."
+        },
+        "fail": {
+          "vi": "Chưa đổi sang toy hoặc chưa chuyển kết quả bằng nút điều hướng.",
+          "en": "You did not change the term to toy, or did not move between results using the navigation buttons."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng điều hướng kết quả tìm kiếm. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for moving between search results. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được điều hướng kết quả.",
+          "en": "Result navigation could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Trong **Navigation** pane, xóa to và gõ toy.",
-        "Bấm **Next Search Result** để nhảy kết quả.",
-        "Chuyển ít nhất hai lần giữa các kết quả toy."
+        {
+          "vi": "Trong **Navigation** pane, xóa to và gõ toy.",
+          "en": "In the **Navigation** pane, clear to and type toy."
+        },
+        {
+          "vi": "Bấm **Next Search Result** để nhảy sang kết quả kế tiếp.",
+          "en": "Click **Next Search Result** to jump to the next hit."
+        },
+        {
+          "vi": "Chuyển ít nhất hai lần giữa các kết quả toy.",
+          "en": "Move between the toy results at least twice."
+        }
       ]
     },
     {
       "id": "W11-S04",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.1"
+      ],
       "kind": "action_sequence",
       "weight": 4,
-      "prompt": "Tìm đúng từ Toymakers, phân biệt hoa/thường.",
+      "prompt": {
+        "vi": "Đổi tùy chọn tìm kiếm để chỉ tìm đúng từ viết hoa Toymakers, rồi xem lại kết quả.",
+        "en": "Modify the search options to locate only instances of the capitalized word Toymakers, then review the results."
+      },
       "selector": {
         "action": "find",
         "query": "Toymakers",
@@ -116,24 +212,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã tìm đúng từ Toymakers.",
-        "fail": "Chưa tìm Toymakers với Match Case và Whole Word.",
-        "unverified": "Chưa thu được bằng chứng Find Match Case. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được Find nâng cao."
+        "pass": {
+          "vi": "Đã tìm đúng từ Toymakers.",
+          "en": "Located the exact word Toymakers."
+        },
+        "fail": {
+          "vi": "Chưa tìm Toymakers với Match case và Find whole words only.",
+          "en": "You did not search for Toymakers with Match case and Find whole words only enabled."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Find Match case. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for a Match case search. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được Find nâng cao.",
+          "en": "The advanced search could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Mở **Find** rồi bấm mũi tên **Find Options** / **Advanced Find**.",
-        "Gõ Toymakers. Bật **Match case** và **Find whole words only**.",
-        "Bấm **Find Next**."
+        {
+          "vi": "Mở **Find**, bấm mũi tên **Search for more things** rồi chọn **Options** hoặc **Advanced Find**.",
+          "en": "Open **Find**, click the **Search for more things** arrow, then choose **Options** or **Advanced Find**."
+        },
+        {
+          "vi": "Gõ Toymakers. Bật **Match case** và **Find whole words only**.",
+          "en": "Type Toymakers. Select **Match case** and **Find whole words only**."
+        },
+        {
+          "vi": "Bấm **Find Next**.",
+          "en": "Click **Find Next**."
+        }
       ]
     },
     {
       "id": "W11-S05",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.1"
+      ],
       "kind": "action_sequence",
       "weight": 4,
-      "prompt": "Advanced Find Toy/toy, giới hạn Heading 2.",
+      "prompt": {
+        "vi": "Dùng Advanced Find để tìm mọi chỗ xuất hiện của Toy hoặc toy có áp style Heading 2.",
+        "en": "Perform an advanced search for all instances of Toy or toy (either capitalized or lowercase) that have the Heading 2 style applied."
+      },
       "selector": {
         "action": "advanced_find",
         "query": "toy",
@@ -146,24 +269,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã dùng Advanced Find Toy trong Heading 2.",
-        "fail": "Chưa dùng Advanced Find với style Heading 2.",
-        "unverified": "Chưa thu được bằng chứng Advanced Find. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được Advanced Find."
+        "pass": {
+          "vi": "Đã dùng Advanced Find tìm toy trong Heading 2.",
+          "en": "Used Advanced Find to search for toy within Heading 2."
+        },
+        "fail": {
+          "vi": "Chưa dùng Advanced Find kèm điều kiện style Heading 2.",
+          "en": "You did not use Advanced Find with the Heading 2 style condition."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Advanced Find. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for Advanced Find. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được Advanced Find.",
+          "en": "Advanced Find could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Mở **Advanced Find**.",
-        "Gõ toy. Trong **Format** / **Style** chọn **Heading 2**.",
-        "Bấm **Find Next** để tìm Toy/toy chỉ trong **Heading 2**."
+        {
+          "vi": "Mở **Advanced Find**.",
+          "en": "Open **Advanced Find**."
+        },
+        {
+          "vi": "Gõ toy. Bấm **More**, vào **Format** > **Style** rồi chọn **Heading 2**.",
+          "en": "Type toy. Click **More**, then **Format** > **Style** and select **Heading 2**."
+        },
+        {
+          "vi": "Bấm **Find Next** để tìm Toy/toy chỉ trong **Heading 2**.",
+          "en": "Click **Find Next** to locate Toy/toy only within **Heading 2**."
+        }
       ]
     },
     {
       "id": "W11-B01",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 10,
-      "prompt": "Bookmark SalesManager phủ đúng Lola Jacobsen.",
+      "prompt": {
+        "vi": "Trong phần Contact Us, chọn tên Lola Jacobsen và chèn một bookmark tên SalesManager.",
+        "en": "In the Contact Us section, select the name Lola Jacobsen and insert a bookmark named SalesManager."
+      },
       "selector": {
         "bookmark": "SalesManager"
       },
@@ -174,24 +324,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "SalesManager gắn đúng tên Lola Jacobsen.",
-        "fail": "Bookmark SalesManager phải phủ đúng chữ Lola Jacobsen.",
-        "unverified": "Chưa đọc được bookmark SalesManager.",
-        "error": "Không đọc được bookmark trong tệp."
+        "pass": {
+          "vi": "SalesManager gắn đúng tên Lola Jacobsen.",
+          "en": "SalesManager correctly covers the name Lola Jacobsen."
+        },
+        "fail": {
+          "vi": "Bookmark SalesManager phải phủ đúng chữ Lola Jacobsen.",
+          "en": "The SalesManager bookmark must cover exactly the text Lola Jacobsen."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được bookmark SalesManager.",
+          "en": "The SalesManager bookmark could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được bookmark trong tệp.",
+          "en": "Bookmarks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen đúng chữ Lola Jacobsen.",
-        "Tab **Insert**, nhóm **Links**, bấm **Bookmark**.",
-        "Đặt tên SalesManager rồi bấm **Add**."
+        {
+          "vi": "Bôi đen đúng chữ Lola Jacobsen.",
+          "en": "Select exactly the text Lola Jacobsen."
+        },
+        {
+          "vi": "Tab **Insert**, nhóm **Links**, bấm **Bookmark**.",
+          "en": "On the **Insert** tab, in the **Links** group, click **Bookmark**."
+        },
+        {
+          "vi": "Đặt tên SalesManager rồi bấm **Add**.",
+          "en": "Enter SalesManager, then click **Add**."
+        }
       ]
     },
     {
       "id": "W11-B02",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 10,
-      "prompt": "Bookmark DesignManager phủ đúng Sarah Jones.",
+      "prompt": {
+        "vi": "Gắn một bookmark tên DesignManager vào tên Sarah Jones.",
+        "en": "Attach a bookmark named DesignManager to the name Sarah Jones."
+      },
       "selector": {
         "bookmark": "DesignManager"
       },
@@ -202,24 +379,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "DesignManager gắn đúng tên Sarah Jones.",
-        "fail": "Bookmark DesignManager phải phủ đúng chữ Sarah Jones trong phần Contact Us.",
-        "unverified": "Chưa đọc được bookmark DesignManager.",
-        "error": "Không đọc được bookmark trong tệp."
+        "pass": {
+          "vi": "DesignManager gắn đúng tên Sarah Jones.",
+          "en": "DesignManager correctly covers the name Sarah Jones."
+        },
+        "fail": {
+          "vi": "Bookmark DesignManager phải phủ đúng chữ Sarah Jones trong phần Contact Us.",
+          "en": "The DesignManager bookmark must cover exactly the text Sarah Jones in the Contact Us section."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được bookmark DesignManager.",
+          "en": "The DesignManager bookmark could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được bookmark trong tệp.",
+          "en": "Bookmarks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Trong phần Contact Us, bôi đen đúng chữ Sarah Jones.",
-        "**Insert** > **Bookmark**.",
-        "Đặt tên DesignManager rồi bấm **Add**."
+        {
+          "vi": "Trong phần Contact Us, bôi đen đúng chữ Sarah Jones.",
+          "en": "In the Contact Us section, select exactly the text Sarah Jones."
+        },
+        {
+          "vi": "**Insert** > **Bookmark**.",
+          "en": "**Insert** > **Bookmark**."
+        },
+        {
+          "vi": "Đặt tên DesignManager rồi bấm **Add**.",
+          "en": "Enter DesignManager, then click **Add**."
+        }
       ]
     },
     {
       "id": "W11-H01",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục New Electronic Favorites.",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục New Electronic Favorites tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry New Electronic Favorites to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "New Electronic Favorites"
       },
@@ -230,24 +434,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading New Electronic Favorites.",
-        "fail": "New Electronic Favorites phải là liên kết nội bộ tới đúng heading, không phải website hay cùng một đích.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading New Electronic Favorites.",
+          "en": "The table of contents entry links to the New Electronic Favorites heading."
+        },
+        "fail": {
+          "vi": "New Electronic Favorites phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "New Electronic Favorites must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen dòng mục lục New Electronic Favorites.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading cùng tên rồi bấm **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục New Electronic Favorites.",
+          "en": "Select the table of contents entry New Electronic Favorites."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading New Electronic Favorites rồi bấm **OK**.",
+          "en": "Select the New Electronic Favorites heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-H02",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục Why Buy Wingtip Toys?",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục Why Buy Wingtip Toys? tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry Why Buy Wingtip Toys? to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "Why Buy Wingtip Toys?"
       },
@@ -258,24 +489,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading Why Buy Wingtip Toys?.",
-        "fail": "Why Buy Wingtip Toys? phải liên kết nội bộ tới đúng heading.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading Why Buy Wingtip Toys?.",
+          "en": "The table of contents entry links to the Why Buy Wingtip Toys? heading."
+        },
+        "fail": {
+          "vi": "Why Buy Wingtip Toys? phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "Why Buy Wingtip Toys? must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen Why Buy Wingtip Toys? trong mục lục.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading Why Buy Wingtip Toys? rồi **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục Why Buy Wingtip Toys?.",
+          "en": "Select the table of contents entry Why Buy Wingtip Toys?."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading Why Buy Wingtip Toys? rồi bấm **OK**.",
+          "en": "Select the Why Buy Wingtip Toys? heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-H03",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục Recognition.",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục Recognition tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry Recognition to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "Recognition"
       },
@@ -286,24 +544,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading Recognition.",
-        "fail": "Recognition phải liên kết nội bộ tới đúng heading.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading Recognition.",
+          "en": "The table of contents entry links to the Recognition heading."
+        },
+        "fail": {
+          "vi": "Recognition phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "Recognition must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen Recognition trong mục lục.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading Recognition rồi **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục Recognition.",
+          "en": "Select the table of contents entry Recognition."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading Recognition rồi bấm **OK**.",
+          "en": "Select the Recognition heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-H04",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục Make It Your Own.",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục Make It Your Own tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry Make It Your Own to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "Make It Your Own"
       },
@@ -314,24 +599,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading Make It Your Own.",
-        "fail": "Make It Your Own phải liên kết nội bộ tới đúng heading.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading Make It Your Own.",
+          "en": "The table of contents entry links to the Make It Your Own heading."
+        },
+        "fail": {
+          "vi": "Make It Your Own phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "Make It Your Own must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen Make It Your Own trong mục lục.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading Make It Your Own rồi **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục Make It Your Own.",
+          "en": "Select the table of contents entry Make It Your Own."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading Make It Your Own rồi bấm **OK**.",
+          "en": "Select the Make It Your Own heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-H05",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục Hand-Carved Toys.",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục Hand-Carved Toys tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry Hand-Carved Toys to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "Hand-Carved Toys"
       },
@@ -342,24 +654,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading Hand-Carved Toys.",
-        "fail": "Hand-Carved Toys phải liên kết nội bộ tới đúng heading.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading Hand-Carved Toys.",
+          "en": "The table of contents entry links to the Hand-Carved Toys heading."
+        },
+        "fail": {
+          "vi": "Hand-Carved Toys phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "Hand-Carved Toys must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen Hand-Carved Toys trong mục lục.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading Hand-Carved Toys rồi **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục Hand-Carved Toys.",
+          "en": "Select the table of contents entry Hand-Carved Toys."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading Hand-Carved Toys rồi bấm **OK**.",
+          "en": "Select the Hand-Carved Toys heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-H06",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.2"
+      ],
       "kind": "artifact",
       "weight": 7,
-      "prompt": "Liên kết mục lục Resources.",
+      "prompt": {
+        "vi": "Chèn siêu liên kết từ dòng mục lục Resources tới heading tương ứng trong tài liệu.",
+        "en": "Insert a hyperlink from the table of contents entry Resources to the corresponding heading in the document."
+      },
       "selector": {
         "toc_label": "Resources"
       },
@@ -370,24 +709,51 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Mục lục dẫn đúng heading Resources.",
-        "fail": "Resources phải liên kết nội bộ tới đúng heading.",
-        "unverified": "Chưa đọc được siêu liên kết mục lục.",
-        "error": "Không đọc được siêu liên kết trong tệp."
+        "pass": {
+          "vi": "Mục lục dẫn đúng heading Resources.",
+          "en": "The table of contents entry links to the Resources heading."
+        },
+        "fail": {
+          "vi": "Resources phải là liên kết nội bộ tới đúng heading cùng tên, không phải liên kết web và không trỏ trùng đích với dòng khác.",
+          "en": "Resources must be an internal link to the heading of the same name — not a web link, and not pointing to the same target as another entry."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được siêu liên kết mục lục.",
+          "en": "The table of contents hyperlink could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được siêu liên kết trong tệp.",
+          "en": "Hyperlinks could not be read from the file."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Bôi đen Resources trong mục lục.",
-        "**Insert** > **Link** > **Place in This Document**.",
-        "Chọn heading Resources rồi **OK**."
+        {
+          "vi": "Bôi đen dòng mục lục Resources.",
+          "en": "Select the table of contents entry Resources."
+        },
+        {
+          "vi": "**Insert** > **Link** > **Place in This Document**.",
+          "en": "**Insert** > **Link** > **Place in This Document**."
+        },
+        {
+          "vi": "Chọn heading Resources rồi bấm **OK**.",
+          "en": "Select the Resources heading, then click **OK**."
+        }
       ]
     },
     {
       "id": "W11-N01",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.3"
+      ],
       "kind": "action_sequence",
       "weight": 6,
-      "prompt": "Từ đầu tài liệu, Go To Graphic đến đối tượng cuối.",
+      "prompt": {
+        "vi": "Về đầu tài liệu, rồi dùng Go To chuyển lần lượt giữa các graphic cho tới graphic cuối cùng.",
+        "en": "Return to the beginning of the document, then use the Go To function to move between graphics until you reach the end."
+      },
       "selector": {
         "action": "goto_graphic"
       },
@@ -396,24 +762,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã dùng Go To Graphic từ đầu tài liệu đến đối tượng cuối.",
-        "fail": "Chưa dùng Go To Graphic; cuộn hay bấm chuột không đủ.",
-        "unverified": "Chưa thu được bằng chứng Go To Graphic. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được Go To Graphic."
+        "pass": {
+          "vi": "Đã dùng Go To Graphic từ đầu tài liệu đến đối tượng cuối.",
+          "en": "Used Go To Graphic from the start of the document to the last object."
+        },
+        "fail": {
+          "vi": "Chưa dùng Go To Graphic; cuộn chuột hay bấm trực tiếp vào ảnh không tính.",
+          "en": "You did not use Go To Graphic; scrolling or clicking an image directly does not count."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Go To Graphic. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for Go To Graphic. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được Go To Graphic.",
+          "en": "Go To Graphic could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Đưa con trỏ về đầu tài liệu.",
-        "Ctrl+G (**Go To**), chọn **Graphic**.",
-        "Nhảy đến đối tượng **Graphic** cuối cùng."
+        {
+          "vi": "Đưa con trỏ về đầu tài liệu (Ctrl+Home).",
+          "en": "Move the cursor to the start of the document (Ctrl+Home)."
+        },
+        {
+          "vi": "Nhấn Ctrl+G để mở **Go To**, chọn **Graphic**.",
+          "en": "Press Ctrl+G to open **Go To**, then select **Graphic**."
+        },
+        {
+          "vi": "Bấm **Next** liên tiếp tới đối tượng **Graphic** cuối cùng.",
+          "en": "Click **Next** repeatedly until you reach the last **Graphic**."
+        }
       ]
     },
     {
       "id": "W11-N02",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.3"
+      ],
       "kind": "action_sequence",
       "weight": 6,
-      "prompt": "Từ graphic cuối, Go To đầu trang 3.",
+      "prompt": {
+        "vi": "Từ graphic cuối cùng, dùng Go To để về đầu trang 3.",
+        "en": "From the last graphic, use Go To to move to the top of page 3."
+      },
       "selector": {
         "action": "goto_page",
         "page": 3
@@ -424,24 +817,51 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã dùng Go To Page tới đầu trang 3.",
-        "fail": "Chưa dùng Go To tới đầu trang 3.",
-        "unverified": "Chưa thu được bằng chứng Go To Page. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được Go To Page."
+        "pass": {
+          "vi": "Đã dùng Go To Page tới đầu trang 3.",
+          "en": "Used Go To Page to reach the top of page 3."
+        },
+        "fail": {
+          "vi": "Chưa dùng Go To để tới đầu trang 3.",
+          "en": "You did not use Go To to reach the top of page 3."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Go To Page. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for Go To Page. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được Go To Page.",
+          "en": "Go To Page could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Từ vị trí graphic cuối, Ctrl+G.",
-        "Chọn **Page**, gõ 3.",
-        "Bấm **Go To** để về đầu trang 3."
+        {
+          "vi": "Từ vị trí graphic cuối, nhấn Ctrl+G.",
+          "en": "From the last graphic, press Ctrl+G."
+        },
+        {
+          "vi": "Chọn **Page**, gõ 3.",
+          "en": "Select **Page** and type 3."
+        },
+        {
+          "vi": "Bấm **Go To** để về đầu trang 3.",
+          "en": "Click **Go To** to move to the top of page 3."
+        }
       ]
     },
     {
       "id": "W11-N03",
       "objective": "1.1",
+      "kc": [
+        "KC-1.1.3"
+      ],
       "kind": "action_sequence",
       "weight": 6,
-      "prompt": "Từ đầu trang 3, Go To bookmark SalesManager.",
+      "prompt": {
+        "vi": "Từ đầu trang 3, dùng Go To để nhảy tới bookmark SalesManager.",
+        "en": "From the top of page 3, use Go To to move to the SalesManager bookmark."
+      },
       "selector": {
         "action": "goto_bookmark",
         "bookmark": "SalesManager"
@@ -452,16 +872,37 @@
       },
       "evidence_policy": "required_method",
       "feedback": {
-        "pass": "Đã dùng Go To Bookmark SalesManager.",
-        "fail": "Chưa dùng Go To Bookmark; chỉ đứng sẵn tại bookmark thì chưa đủ.",
-        "unverified": "Chưa thu được bằng chứng Go To Bookmark. Không kết luận học sinh làm sai.",
-        "error": "Không ghi nhận được Go To Bookmark."
+        "pass": {
+          "vi": "Đã dùng Go To Bookmark SalesManager.",
+          "en": "Used Go To Bookmark to reach SalesManager."
+        },
+        "fail": {
+          "vi": "Chưa dùng Go To Bookmark; đứng sẵn ở vị trí bookmark thì chưa tính.",
+          "en": "You did not use Go To Bookmark; already having the cursor there does not count."
+        },
+        "unverified": {
+          "vi": "Chưa thu được bằng chứng Go To Bookmark. Không kết luận học sinh làm sai.",
+          "en": "No evidence captured for Go To Bookmark. This is not counted as a wrong answer."
+        },
+        "error": {
+          "vi": "Không ghi nhận được Go To Bookmark.",
+          "en": "Go To Bookmark could not be recorded."
+        }
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "help_steps": [
-        "Từ đầu trang 3, Ctrl+G.",
-        "Chọn **Bookmark**.",
-        "Chọn SalesManager rồi **Go To**."
+        {
+          "vi": "Từ đầu trang 3, nhấn Ctrl+G.",
+          "en": "From the top of page 3, press Ctrl+G."
+        },
+        {
+          "vi": "Chọn **Bookmark**.",
+          "en": "Select **Bookmark**."
+        },
+        {
+          "vi": "Chọn SalesManager rồi bấm **Go To**.",
+          "en": "Select SalesManager, then click **Go To**."
+        }
       ]
     }
   ]

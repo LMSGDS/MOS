@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+from app import i18n
 from app.qmatrix import attach as attach_qmatrix
 from app.excel_xml import extract_xlsx_facts
 from app.ppt_xml import extract_ppt_facts
@@ -927,7 +928,11 @@ def _grade_action(criterion: dict, events: list[dict]) -> dict:
     return _result(criterion, "fail", "action_missing")
 
 
-def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> dict:
+def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang: str | None = None) -> dict:
+    # Rubric song ngữ lưu {"vi": …, "en": …}. Dẹp về một ngôn ngữ NGAY TẠI ĐÂY,
+    # trước khi criterion đi vào _result()/_feedback()/qmatrix — nhờ vậy phần
+    # còn lại của grade.py và toàn bộ qmatrix.py vẫn đọc chuỗi thuần như cũ.
+    rubric = i18n.localize_rubric(rubric, lang or rubric.get("default_lang") or i18n.DEFAULT_LANG)
     criteria = list(rubric.get("criteria") or [])
     results: list[dict] = []
     parse_error = not facts.get("ok")
@@ -1067,7 +1072,12 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
     }
 
 
-def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | None = None) -> dict:
+def grade_path(
+    path: Path | None,
+    rubric: dict | None = None,
+    evidence: list | None = None,
+    lang: str | None = None,
+) -> dict:
     rubric = load_rubric(rubric)
     suffix = Path(path).suffix.lower() if path else ""
     if path is None:
@@ -1078,4 +1088,4 @@ def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | N
         facts = extract_xlsx_facts(Path(path))
     else:
         facts = extract_word_facts(Path(path))
-    return evaluate_facts(facts, rubric, evidence)
+    return evaluate_facts(facts, rubric, evidence, lang)

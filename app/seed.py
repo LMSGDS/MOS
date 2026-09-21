@@ -7,6 +7,7 @@ from pathlib import Path
 from app.auth import load_users
 from app.db import cursor
 from app.progress import assign_class_projects, backfill_all
+from app import i18n
 from app.grade import load_rubric, sha256_file
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -127,11 +128,14 @@ def seed() -> None:
         excel_projects = []
         for rubric_path in sorted(RUBRIC_DIR.glob("word-objective-*.json")):
             rubric = load_rubric(rubric_path)
+            # `rubric` giữ NGUYÊN khối song ngữ để lưu vào DB — mất bản EN ở đây
+            # là mất vĩnh viễn. `display` chỉ dùng để dựng chuỗi hiển thị.
+            display = i18n.localize_rubric(rubric)
             pid = rubric.get("project_id") or rubric_path.stem
             tail = pid.removeprefix("word-objective-")
             filename = f"Word_{tail}.docx"
             file_path = PROJECTS_DIR / pid / filename
-            prompts = [c.get("prompt") for c in rubric.get("criteria") or [] if c.get("prompt")]
+            prompts = [c.get("prompt") for c in display.get("criteria") or [] if c.get("prompt")]
             steps = [
                 f"Mở {filename} trên Microsoft Word đã cài trên máy (không dùng Office Online).",
                 *prompts,
@@ -140,9 +144,9 @@ def seed() -> None:
             word_projects.append(
                 {
                     "id": pid,
-                    "title": rubric.get("title") or pid,
+                    "title": display.get("title") or pid,
                     "program": "word",
-                    "skill_domain": rubric.get("title") or pid,
+                    "skill_domain": display.get("title") or pid,
                     "objective": str(rubric.get("objective") or tail),
                     "sort_order": _sort_order(tail),
                     "filename": filename,
@@ -155,11 +159,14 @@ def seed() -> None:
             )
         for rubric_path in sorted(RUBRIC_DIR.glob("powerpoint-objective-*.json")):
             rubric = load_rubric(rubric_path)
+            # `rubric` giữ NGUYÊN khối song ngữ để lưu vào DB — mất bản EN ở đây
+            # là mất vĩnh viễn. `display` chỉ dùng để dựng chuỗi hiển thị.
+            display = i18n.localize_rubric(rubric)
             pid = rubric.get("project_id") or rubric_path.stem
             tail = pid.removeprefix("powerpoint-objective-")
             filename = f"PowerPoint_{tail}.pptx"
             file_path = PROJECTS_DIR / pid / filename
-            prompts = [c.get("prompt") for c in rubric.get("criteria") or [] if c.get("prompt")]
+            prompts = [c.get("prompt") for c in display.get("criteria") or [] if c.get("prompt")]
             steps = [
                 f"Mở {filename} trên Microsoft PowerPoint đã cài trên máy (không dùng Office Online).",
                 *prompts,
@@ -168,9 +175,9 @@ def seed() -> None:
             ppt_projects.append(
                 {
                     "id": pid,
-                    "title": rubric.get("title") or pid,
+                    "title": display.get("title") or pid,
                     "program": "powerpoint",
-                    "skill_domain": rubric.get("title") or pid,
+                    "skill_domain": display.get("title") or pid,
                     "objective": str(rubric.get("objective") or tail),
                     "sort_order": _sort_order(tail),
                     "filename": filename,
@@ -183,11 +190,14 @@ def seed() -> None:
             )
         for rubric_path in sorted(RUBRIC_DIR.glob("excel-objective-*.json")):
             rubric = load_rubric(rubric_path)
+            # `rubric` giữ NGUYÊN khối song ngữ để lưu vào DB — mất bản EN ở đây
+            # là mất vĩnh viễn. `display` chỉ dùng để dựng chuỗi hiển thị.
+            display = i18n.localize_rubric(rubric)
             pid = rubric.get("project_id") or rubric_path.stem
             tail = pid.removeprefix("excel-objective-")
             filename = f"Excel_{tail}.xlsx"
             file_path = PROJECTS_DIR / pid / filename
-            prompts = [c.get("prompt") for c in rubric.get("criteria") or [] if c.get("prompt")]
+            prompts = [c.get("prompt") for c in display.get("criteria") or [] if c.get("prompt")]
             steps = [
                 f"Mở {filename} trên Microsoft Excel đã cài trên máy (không dùng Office Online).",
                 *prompts,
@@ -196,9 +206,9 @@ def seed() -> None:
             excel_projects.append(
                 {
                     "id": pid,
-                    "title": rubric.get("title") or pid,
+                    "title": display.get("title") or pid,
                     "program": "excel",
-                    "skill_domain": rubric.get("title") or pid,
+                    "skill_domain": display.get("title") or pid,
                     "objective": str(rubric.get("objective") or tail),
                     "sort_order": _sort_order(tail),
                     "filename": filename,

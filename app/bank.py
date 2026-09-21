@@ -13,6 +13,7 @@ from functools import wraps
 from itertools import combinations
 from pathlib import Path
 
+from app import i18n
 from app.db import as_service, cursor
 
 
@@ -230,7 +231,8 @@ def sync_existing_projects() -> None:
                 rubric = {}
         if not isinstance(rubric, dict):
             rubric = {}
-        criteria = rubric.get("criteria") or []
+        # hint_tiers và tên task là chuỗi hiển thị — dẹp song ngữ trước khi lưu.
+        criteria = i18n.localize_rubric(rubric).get("criteria") or []
         with cursor() as cur:
             cur.execute(
                 """

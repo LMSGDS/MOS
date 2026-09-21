@@ -39,10 +39,15 @@ def extract_text(path: Path) -> str:
     return "\n".join(chunks)
 
 
-def score_file(path: Path | None, rubric: dict | None = None, evidence: list | None = None) -> dict:
+def score_file(
+    path: Path | None,
+    rubric: dict | None = None,
+    evidence: list | None = None,
+    lang: str | None = None,
+) -> dict:
     rubric = load_rubric(rubric)
     if rubric.get("criteria"):
-        return grade_path(path, rubric, evidence)
+        return grade_path(path, rubric, evidence, lang)
 
     if path is None:
         path = Path("")
