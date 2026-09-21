@@ -277,3 +277,13 @@ def test_lang_cookie_secure_follows_https_only(monkeypatch):
     r = c.get("/dang-nhap?lang=en")
     dat = [v for k, v in r.headers.items() if k.lower() == "set-cookie" and "mos_lang" in v]
     assert dat and "Secure" not in dat[0]
+
+
+# ------------------------------------------------------------------- Vary
+def test_vary_header_present_for_language_negotiation():
+    c = TestClient(app)
+    vary = c.get("/dang-nhap").headers.get("Vary", "").lower()
+    assert "accept-language" in vary and "cookie" in vary
+    # Vary sẵn có (StaticFiles/FileResponse) được gộp, không bị ghi đè.
+    vary_static = c.get("/static/tokens.css").headers.get("Vary", "").lower()
+    assert "accept-language" in vary_static and "cookie" in vary_static
