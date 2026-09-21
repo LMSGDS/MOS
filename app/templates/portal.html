@@ -8,10 +8,10 @@
   {% if adaptive %}
   <h2 style="margin-top:16px;font-size:18px">Lộ trình thích ứng</h2>
   {% for c in adaptive %}
-  <p class="alert heat-red">
-    <strong>{{ c.title }}</strong> — {{ c.reason }}
-    Mở MOS-KulKul, bài <code>{{ c.project_id }}</code>.
-  </p>
+  <div class="coach">
+    <p class="coach__what"><strong>{{ c.title }}</strong></p>
+    <p class="coach__why">{{ c.reason }} Mở MOS-KulKul, bài <code>{{ c.project_id }}</code>.</p>
+  </div>
   {% endfor %}
   {% endif %}
   {% if user.role in ['admin', 'teacher'] %}

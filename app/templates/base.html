@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="{{ lang or 'vi' }}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,10 +7,11 @@
   <title>{% block title %}MOS-KulKul · mos.gds.edu.vn{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&amp;family=Calibri:wght@400;700&amp;display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&amp;display=swap" rel="stylesheet" />
   <link rel="icon" href="/static/favicon.ico?v={{ asset_v }}" />
   <link rel="apple-touch-icon" href="/static/kulkul.png?v={{ asset_v }}" />
   <link rel="stylesheet" href="/static/mos.css?v={{ asset_v }}" />
+  <link rel="stylesheet" href="/static/tokens.css?v={{ asset_v }}" />
 </head>
 <body class="{% block bodyclass %}{% endblock %}{% if user and persona != 'student' %} ic-app{% endif %}{% if persona == 'student' %} student-app{% endif %}">
   {% block chrome %}

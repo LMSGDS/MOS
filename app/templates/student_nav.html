@@ -1,14 +1,22 @@
-<header class="student-top" aria-label="Cổng học sinh">
+<header class="student-top" aria-label="{{ 'Student portal' if lang == 'en' else 'Cổng học sinh' }}">
   <a class="student-top__brand" href="/tien-do">
     <img src="/static/kulkul.png?v={{ asset_v }}" width="28" height="28" alt="" />
     <span>MOS-KulKul</span>
   </a>
   <nav class="student-top__nav">
-    <a href="/tien-do" {% if student_nav == 'progress' %}aria-current="page"{% endif %}>Tiến độ của tôi</a>
-    <a href="/tien-do/nhiem-vu" {% if student_nav == 'tasks' %}aria-current="page"{% endif %}>Nhiệm vụ cần làm</a>
-    <a href="/tien-do/lich-su" {% if student_nav == 'history' %}aria-current="page"{% endif %}>Lịch sử bài nộp</a>
+    <a href="/tien-do" {% if student_nav == 'progress' %}aria-current="page"{% endif %}>{{ 'My progress' if lang == 'en' else 'Tiến độ của tôi' }}</a>
+    <a href="/tien-do/nhiem-vu" {% if student_nav == 'tasks' %}aria-current="page"{% endif %}>{{ 'My tasks' if lang == 'en' else 'Nhiệm vụ cần làm' }}</a>
+    <a href="/tien-do/lich-su" {% if student_nav == 'history' %}aria-current="page"{% endif %}>{{ 'Submission history' if lang == 'en' else 'Lịch sử bài nộp' }}</a>
+    <a href="/hoc" {% if student_nav == 'explore' %}aria-current="page"{% endif %}>{{ 'Learn' if lang == 'en' else 'Học' }}</a>
   </nav>
+  {% if lang_urls %}
+  <div class="lang-switch" aria-label="{{ 'Language' if lang == 'en' else 'Ngôn ngữ' }}">
+    {% for code in langs %}
+    <a href="{{ lang_urls[code] }}" aria-current="{{ 'true' if code == lang else 'false' }}" lang="{{ code }}" hreflang="{{ code }}" title="{{ lang_names[code] }}">{{ lang_labels[code] }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
   <form class="student-top__out" method="post" action="/dang-xuat">
-    <button type="submit">Đăng xuất</button>
+    <button type="submit">{{ 'Sign out' if lang == 'en' else 'Đăng xuất' }}</button>
   </form>
 </header>
