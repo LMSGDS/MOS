@@ -1,0 +1,113 @@
+{
+  "_comment": "Lỗi rubric đang tồn đọng, đã chốt để CI chỉ gãy khi có lỗi MỚI. Sửa xong một lỗi thì chạy lại: python3 scripts/rubric_tool.py baseline app/rubrics",
+  "known_errors": {
+    "excel-objective-1-2.json": [
+      "E12-H01 dùng contains_text cho 50 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "excel-objective-2-1.json": [
+      "E21-F01 dùng contains_text cho 50 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "excel-objective-3-2.json": [
+      "E32-R01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "E32-C01 dùng contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "excel-objective-4-2.json": [
+      "E42-I01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "excel-objective-4-3.json": [
+      "E43-C01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "excel-objective-5-2.json": [
+      "E52-V01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-1-1.json": [
+      "P11-L02 trùng predicate với P11-L01 — không phân biệt được hai kỹ năng",
+      "P11-L03 trùng predicate với P11-L01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-1-3.json": [
+      "P13-A02 trùng predicate với P13-A01 — không phân biệt được hai kỹ năng",
+      "P13-A01 (50 điểm) dùng thao tác «print_settings» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "P13-A02 (50 điểm) dùng thao tác «print_settings» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "tổng 100/100 điểm không có nguồn bằng chứng nào"
+    ],
+    "powerpoint-objective-1-4.json": [
+      "P14-C02 trùng predicate với P14-C01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-2-1.json": [
+      "P21-T01 dùng contains_text cho 50 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-2-1b.json": [
+      "P21B-S01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "P21B-T01 dùng contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-2-2.json": [
+      "P22-H01 trùng predicate với P22-T01 — không phân biệt được hai kỹ năng",
+      "P22-T01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-3-1.json": [
+      "P31-C03 trùng predicate với P31-C01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-3-2.json": [
+      "P32-S01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-3-4.json": [
+      "P34-T01 dùng contains_text cho 34 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "P34-T02 dùng contains_text cho 33 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "P34-T03 dùng contains_text cho 33 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-3-5.json": [
+      "P35-O02 trùng predicate với P35-O01 — không phân biệt được hai kỹ năng",
+      "P35-O01 dùng contains_text cho 60 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "P35-O02 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-4-1.json": [
+      "P41-T01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-4-2.json": [
+      "P42-C02 trùng predicate với P42-C01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-4-3.json": [
+      "P43-S01 dùng not_contains_text cho 70 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "P43-S02 dùng not_contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "powerpoint-objective-4-4.json": [
+      "P44-M02 trùng predicate với P44-M01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-4-5.json": [
+      "P45-M02 trùng predicate với P45-M01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-5-1.json": [
+      "P51-R02 trùng predicate với P51-R01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-5-2.json": [
+      "P52-A02 trùng predicate với P52-A01 — không phân biệt được hai kỹ năng"
+    ],
+    "powerpoint-objective-5-3.json": [
+      "P53-R02 trùng predicate với P53-R01 — không phân biệt được hai kỹ năng"
+    ],
+    "word-objective-1-1.json": [
+      "W11-N01 (6 điểm) dùng thao tác «goto_graphic» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "W11-N02 (6 điểm) dùng thao tác «goto_page» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "W11-N03 (6 điểm) dùng thao tác «goto_bookmark» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "tổng 18/100 điểm không có nguồn bằng chứng nào"
+    ],
+    "word-objective-1-3.json": [
+      "W13-S01 (15 điểm) dùng thao tác «save_alternate_format» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "W13-S02 (15 điểm) dùng thao tác «print_settings» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "W13-S03 (15 điểm) dùng thao tác «share_electronic» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "tổng 45/100 điểm không có nguồn bằng chứng nào"
+    ],
+    "word-objective-1-4.json": [
+      "W14-I01 (15 điểm) dùng thao tác «inspect_document» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "W14-X01 (15 điểm) dùng thao tác «compatibility_check» — WordActionProbe không sinh bằng chứng cho loại này, nên tiêu chí vĩnh viễn unverified. Chuyển sang dạng artifact hoặc bổ sung bộ ghi nhận",
+      "tổng 30/100 điểm không có nguồn bằng chứng nào"
+    ],
+    "word-objective-2-1.json": [
+      "W21-R01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\"",
+      "W21-S01 dùng contains_text cho 40 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ],
+    "word-objective-4-1.json": [
+      "W41-C02 dùng contains_text cho 30 điểm — chỉ dò chuỗi, học sinh gõ tay cũng đỗ (ngưỡng 20). Nếu cố ý, thêm \"weak_ok\": \"<lý do>\""
+    ]
+  }
+}

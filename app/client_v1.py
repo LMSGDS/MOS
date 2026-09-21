@@ -14,6 +14,7 @@ from app.accounts import record_login
 from app.auth import authenticate
 from app.db import cursor
 from app.demo_all import results_file
+from app import i18n
 from app.grade import GRADER_VERSION, _coerce_evidence, sha256_file
 from app.project_files import project_extra_files, resolve_extra
 from app.programs import normalize
@@ -97,8 +98,10 @@ def _locked_rubric(attempt: dict) -> dict:
     return _as_dict(attempt.get("rubric"))
 
 
-def _public_criteria(rubric: dict) -> list[dict]:
+def _public_criteria(rubric: dict, lang: str | None = None) -> list[dict]:
     out = []
+    # Payload gửi cho client phải là chuỗi thuần, không phải khối {"vi","en"}.
+    rubric = i18n.localize_rubric(rubric, lang or rubric.get("default_lang") or i18n.DEFAULT_LANG)
     for item in rubric.get("criteria") or []:
         out.append(
             {

@@ -5,6 +5,7 @@ import io
 import zipfile
 from pathlib import Path
 
+from app import i18n
 from app.grade import evaluate_facts, grade_path, load_rubric
 from app.word_xml import extract_word_facts, same
 
@@ -18,10 +19,12 @@ W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 def test_training_help_steps_present():
     assert len(RUBRIC["criteria"]) == 16
-    for item in RUBRIC["criteria"]:
-        steps = item.get("help_steps") or []
-        assert len(steps) >= 2, item.get("id")
-        assert any("**" in step for step in steps), item.get("id")
+    # Rubric song ngữ: cả hai ngôn ngữ đều phải có help_steps in đậm tên lệnh ribbon.
+    for lang in ("vi", "en"):
+        for item in i18n.localize_rubric(RUBRIC, lang)["criteria"]:
+            steps = item.get("help_steps") or []
+            assert len(steps) >= 2, (lang, item.get("id"))
+            assert any("**" in step for step in steps), (lang, item.get("id"))
 
 
 def _docx(document_xml: str) -> Path:

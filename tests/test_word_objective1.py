@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app import i18n
 from app.grade import grade_path, load_rubric
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -21,12 +22,14 @@ def _pack(n: str):
 
 def test_objective_1_training_help_steps():
     for n in ("1", "2", "3", "4"):
-        rubric = load_rubric(RUBRICS / f"word-objective-1-{n}.json")
-        assert rubric["criteria"], n
-        for item in rubric["criteria"]:
-            steps = item.get("help_steps") or []
-            assert len(steps) >= 2, item["id"]
-            assert any("**" in step for step in steps), item["id"]
+        raw = load_rubric(RUBRICS / f"word-objective-1-{n}.json")
+        assert raw["criteria"], n
+        # localize trước: rubric đã chuyển song ngữ lưu {"vi": …, "en": …}.
+        for lang in ("vi", "en"):
+            for item in i18n.localize_rubric(raw, lang)["criteria"]:
+                steps = item.get("help_steps") or []
+                assert len(steps) >= 2, (lang, item["id"])
+                assert any("**" in step for step in steps), (lang, item["id"])
 
 
 def test_word_12_starter_fails_results_earn_100():

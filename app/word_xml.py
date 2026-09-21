@@ -63,6 +63,7 @@ def _skill_defaults() -> dict:
         "breaks": {},
         "tables": [],
         "numbering_formats": [],
+        "numbering_restarts": 0,
         "footnote_count": 0,
         "footnote_texts": [],
         "fields": [],
@@ -78,6 +79,8 @@ def _skill_defaults() -> dict:
         "resolved_count": 0,
         "reply_count": 0,
         "document_protection": False,
+        "document_protection_edit": "",
+        "document_protection_enforced": False,
         "has_picture": False,
         "has_3d": False,
         "has_smartart": False,
@@ -463,10 +466,30 @@ def _numbering_formats(raw: bytes | None) -> tuple[dict[str, str], list[str]]:
     return mapping, formats
 
 
+def _numbering_restarts(raw: bytes | None) -> int:
+    """Số lần đánh số được bắt đầu lại.
+
+    Word ghi "Restart at 1" thành một <w:num> mới mang <w:lvlOverride> với
+    <w:startOverride>. Đếm số w:num có startOverride chính là đếm số lần
+    restart — đo đúng thao tác, khác hẳn việc đếm số đoạn ListParagraph.
+    """
+    node = _parse_xml(raw)
+    if node is None:
+        return 0
+    count = 0
+    for num in node.findall(f"{W}num"):
+        for override in num.findall(f"{W}lvlOverride"):
+            if override.find(f"{W}startOverride") is not None:
+                count += 1
+                break
+    return count
+
+
 def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[str]) -> dict:
     parts = parts or {}
     names = names or []
     numbering_map, numbering_formats = _numbering_formats(parts.get("word/numbering.xml"))
+    numbering_restarts = _numbering_restarts(parts.get("word/numbering.xml"))
 
     paragraphs: list[dict] = []
     text_effects: list[str] = []
@@ -491,7 +514,7 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
             style_counts[style] = style_counts.get(style, 0) + 1
         fmt = numbering_map.get(num_id) or ""
         if text or style or fmt:
-            paragraphs.append({"text": text, "style": style, "num_fmt": fmt})
+            paragraphs.append({"text": text, "style": style, "num_fmt": fmt, "num_id": num_id})
         for instr in p.iter(f"{W}instrText"):
             if instr.text:
                 fields.append(instr.text.strip())
@@ -526,11 +549,13 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
         rows = list(tbl.findall(f"{W}tr"))
         header = False
         merged = False
+        header_rows: list[int] = []
         cells: list[list[str]] = []
-        for tr in rows:
+        for index, tr in enumerate(rows):
             trpr = tr.find(f"{W}trPr")
             if trpr is not None and trpr.find(f"{W}tblHeader") is not None:
                 header = True
+                header_rows.append(index)
             row: list[str] = []
             for tc in tr.findall(f"{W}tc"):
                 row.append(norm("".join((t.text or "") for t in tc.iter(f"{W}t"))))
@@ -547,6 +572,9 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
                 "rows": len(rows),
                 "cols": max((len(r) for r in cells), default=0),
                 "header": header,
+                # Chỉ số các hàng mang w:tblHeader. Không có thì coi hàng đầu là
+                # tiêu đề — đủ để phân biệt ô tiêu đề với ô dữ liệu.
+                "header_rows": header_rows or ([0] if cells else []),
                 "merged": merged,
                 "cells": cells,
             }
@@ -644,8 +672,17 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
 
     settings = _parse_xml(parts.get("word/settings.xml"))
     document_protection = False
+    protection_edit = ""
+    protection_enforced = False
     if settings is not None:
-        document_protection = settings.find(f"{W}documentProtection") is not None
+        node = settings.find(f"{W}documentProtection")
+        document_protection = node is not None
+        if node is not None:
+            # Kiểu khóa: trackedChanges / comments / readOnly / forms.
+            # Chỉ "có phần tử" thì không phân biệt được Lock Tracking với
+            # bất kỳ kiểu Restrict Editing nào khác.
+            protection_edit = _attr(node, "edit")
+            protection_enforced = _attr(node, "enforcement") in ("1", "true", "on")
 
     lower_names = [n.casefold() for n in names]
     has_picture = any("word/media/" in n and n.endswith((".png", ".jpeg", ".jpg", ".emf", ".wmf")) for n in lower_names)
@@ -665,6 +702,7 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
         "breaks": breaks,
         "tables": tables,
         "numbering_formats": numbering_formats,
+        "numbering_restarts": numbering_restarts,
         "footnote_count": len(footnote_texts),
         "footnote_texts": footnote_texts,
         "fields": fields,
@@ -680,6 +718,8 @@ def _skill_facts(root: ET.Element, parts: dict[str, bytes | None], names: list[s
         "resolved_count": resolved_count,
         "reply_count": reply_count,
         "document_protection": document_protection,
+        "document_protection_edit": protection_edit,
+        "document_protection_enforced": protection_enforced,
         "has_picture": has_picture,
         "has_3d": has_3d,
         "has_smartart": has_smartart,

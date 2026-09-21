@@ -1,11 +1,20 @@
 {
   "schema": "mos-kulkul-1",
   "project_id": "word-objective-1-2",
-  "rubric_version": "1.0.0",
+  "rubric_version": "1.1.0",
   "grader_version": "1.1.0",
-  "title": "Word Objective 1.2 — Format documents",
+  "langs": [
+    "vi",
+    "en"
+  ],
+  "default_lang": "vi",
+  "title": {
+    "vi": "Word Objective 1.2 — Định dạng tài liệu",
+    "en": "Word Objective 1.2 — Format documents"
+  },
   "program": "word",
   "objective": "1.2",
+  "source_file": "Word_1-2.docx",
   "max_score": 100,
   "capabilities": [
     "word.page_background",
@@ -15,143 +24,358 @@
   "criteria": [
     {
       "id": "W12-BG01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.4"
+      ],
       "weight": 15,
-      "prompt": "Đặt màu nền trang (Page Color) thành xám nhạt DFDBD5.",
-      "predicate": { "type": "page_background", "color": "DFDBD5" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "page_background",
+        "color": "DFDBD5"
+      },
+      "prompt": {
+        "vi": "Đặt màu nền trang (Page Color) thành xám nhạt DFDBD5.",
+        "en": "Set the page color to the light grey DFDBD5."
+      },
       "feedback": {
-        "pass": "Đã đặt màu nền trang.",
-        "fail": "Chưa thấy Page Color DFDBD5.",
-        "unverified": "Chưa đọc được màu nền trang.",
-        "error": "Không đọc được phần nền trang."
+        "pass": {
+          "vi": "Đã đặt màu nền trang.",
+          "en": "The page color is set."
+        },
+        "fail": {
+          "vi": "Chưa thấy Page Color DFDBD5.",
+          "en": "Page Color DFDBD5 was not found."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được màu nền trang.",
+          "en": "The page color could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được phần nền trang.",
+          "en": "The page background could not be read."
+        }
       },
       "help_steps": [
-        "Mở tab **Design**.",
-        "Nhóm **Page Background**, bấm **Page Color**.",
-        "Chọn màu xám nhạt (Theme **Background 2** / DFDBD5)."
-      ]
+        {
+          "vi": "Mở tab **Design**.",
+          "en": "Open the **Design** tab."
+        },
+        {
+          "vi": "Nhóm **Page Background**, bấm **Page Color**.",
+          "en": "In the **Page Background** group, click **Page Color**."
+        },
+        {
+          "vi": "Chọn màu xám nhạt (Theme **Background 2** / DFDBD5).",
+          "en": "Choose the light grey (Theme **Background 2** / DFDBD5)."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-WM01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.4"
+      ],
       "weight": 15,
-      "prompt": "Chèn watermark chữ Example Only.",
-      "predicate": { "type": "watermark_text", "text": "Example Only" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "watermark_text",
+        "text": "Example Only"
+      },
+      "prompt": {
+        "vi": "Chèn watermark chữ Example Only.",
+        "en": "Insert a text watermark that reads Example Only."
+      },
       "feedback": {
-        "pass": "Watermark Example Only đã có trên trang.",
-        "fail": "Chưa thấy watermark Example Only.",
-        "unverified": "Chưa đọc được watermark.",
-        "error": "Không đọc được header watermark."
+        "pass": {
+          "vi": "Watermark Example Only đã có trên trang.",
+          "en": "The Example Only watermark is present."
+        },
+        "fail": {
+          "vi": "Chưa thấy watermark Example Only.",
+          "en": "The Example Only watermark was not found."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được watermark.",
+          "en": "The watermark could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được header watermark.",
+          "en": "The watermark header could not be read."
+        }
       },
       "help_steps": [
-        "Tab **Design**, nhóm **Page Background**.",
-        "Bấm **Watermark** > **Custom Watermark**.",
-        "Chọn **Text watermark**, gõ **Example Only**, rồi **OK**."
-      ]
+        {
+          "vi": "Tab **Design**, nhóm **Page Background**.",
+          "en": "On the **Design** tab, in the **Page Background** group."
+        },
+        {
+          "vi": "Bấm **Watermark** > **Custom Watermark**.",
+          "en": "Click **Watermark** > **Custom Watermark**."
+        },
+        {
+          "vi": "Chọn **Text watermark**, gõ **Example Only**, rồi **OK**.",
+          "en": "Select **Text watermark**, type **Example Only**, then click **OK**."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-BR01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.4"
+      ],
       "weight": 15,
-      "prompt": "Thêm đường viền trang (Page Borders) nét đơn.",
-      "predicate": { "type": "page_border" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "page_border"
+      },
+      "prompt": {
+        "vi": "Thêm đường viền trang (Page Borders) nét đơn.",
+        "en": "Add a single-line page border to the document."
+      },
       "feedback": {
-        "pass": "Đã có Page Borders.",
-        "fail": "Chưa thấy Page Borders.",
-        "unverified": "Chưa đọc được viền trang.",
-        "error": "Không đọc được sectPr."
+        "pass": {
+          "vi": "Đã có Page Borders.",
+          "en": "A page border is present."
+        },
+        "fail": {
+          "vi": "Chưa thấy Page Borders.",
+          "en": "No page border was found."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được viền trang.",
+          "en": "The page border could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được sectPr.",
+          "en": "The section properties could not be read."
+        }
       },
       "help_steps": [
-        "Tab **Design**, nhóm **Page Background**.",
-        "Bấm **Page Borders**.",
-        "Setting **Box**, Style nét đơn, **Apply to: Whole document**, **OK**."
-      ]
+        {
+          "vi": "Tab **Design**, nhóm **Page Background**.",
+          "en": "On the **Design** tab, in the **Page Background** group."
+        },
+        {
+          "vi": "Bấm **Page Borders**.",
+          "en": "Click **Page Borders**."
+        },
+        {
+          "vi": "Setting **Box**, Style nét đơn, **Apply to: Whole document**, **OK**.",
+          "en": "Choose Setting **Box**, a single-line Style, **Apply to: Whole document**, then **OK**."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-HD01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.3"
+      ],
       "weight": 10,
-      "prompt": "Thêm header có tiêu đề tài liệu.",
-      "predicate": { "type": "header_contains", "text": "Document title" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "header_contains",
+        "text": "Document title"
+      },
+      "prompt": {
+        "vi": "Thêm header có tiêu đề tài liệu.",
+        "en": "Insert a header that contains the document title."
+      },
       "feedback": {
-        "pass": "Header có Document title.",
-        "fail": "Header chưa có trường Title / Document title.",
-        "unverified": "Chưa đọc được header.",
-        "error": "Không đọc được header."
+        "pass": {
+          "vi": "Header có Document title.",
+          "en": "The header contains the document title."
+        },
+        "fail": {
+          "vi": "Header chưa có trường Title / Document title.",
+          "en": "The header does not contain a Title / Document Title field."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được header.",
+          "en": "The header could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được header.",
+          "en": "The header could not be read."
+        }
       },
       "help_steps": [
-        "Tab **Insert**, nhóm **Header & Footer**, bấm **Header**.",
-        "Chọn kiểu có **Document Title**.",
-        "Bấm **Close Header and Footer**."
-      ]
+        {
+          "vi": "Tab **Insert**, nhóm **Header & Footer**, bấm **Header**.",
+          "en": "On the **Insert** tab, in the **Header & Footer** group, click **Header**."
+        },
+        {
+          "vi": "Chọn kiểu có **Document Title**.",
+          "en": "Choose a built-in header that includes **Document Title**."
+        },
+        {
+          "vi": "Bấm **Close Header and Footer**.",
+          "en": "Click **Close Header and Footer**."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-HD02",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.3"
+      ],
       "weight": 15,
-      "prompt": "Thêm số trang (PAGE) trong header.",
-      "predicate": { "type": "header_instruction", "text": "PAGE" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "header_instruction",
+        "text": "PAGE"
+      },
+      "prompt": {
+        "vi": "Thêm số trang (trường PAGE) trong header.",
+        "en": "Add a page number (PAGE field) to the header."
+      },
       "feedback": {
-        "pass": "Header có trường PAGE.",
-        "fail": "Chưa thấy số trang trong header.",
-        "unverified": "Chưa đọc được trường PAGE.",
-        "error": "Không đọc được header."
+        "pass": {
+          "vi": "Header có trường PAGE.",
+          "en": "The header contains a PAGE field."
+        },
+        "fail": {
+          "vi": "Chưa thấy số trang trong header.",
+          "en": "No page number was found in the header."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được trường PAGE.",
+          "en": "The PAGE field could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được header.",
+          "en": "The header could not be read."
+        }
       },
       "help_steps": [
-        "Double-click vùng **Header**.",
-        "Tab **Header & Footer**, bấm **Page Number**.",
-        "Chọn vị trí trên trang, rồi đóng header."
-      ]
+        {
+          "vi": "Double-click vùng **Header**.",
+          "en": "Double-click the **Header** area."
+        },
+        {
+          "vi": "Tab **Header & Footer**, bấm **Page Number**.",
+          "en": "On the **Header & Footer** tab, click **Page Number**."
+        },
+        {
+          "vi": "Chọn vị trí trên trang, rồi đóng header.",
+          "en": "Choose a position on the page, then close the header."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-FP01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.3"
+      ],
       "weight": 15,
-      "prompt": "Bật Different First Page cho header/footer.",
-      "predicate": { "type": "first_page_header" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "first_page_header"
+      },
+      "prompt": {
+        "vi": "Bật Different First Page cho header/footer.",
+        "en": "Turn on Different First Page for the header and footer."
+      },
       "feedback": {
-        "pass": "Đã bật Different First Page kèm header.",
-        "fail": "Chưa bật Different First Page hoặc chưa có header.",
-        "unverified": "Chưa đọc được titlePg.",
-        "error": "Không đọc được sectPr."
+        "pass": {
+          "vi": "Đã bật Different First Page kèm header.",
+          "en": "Different First Page is on and a header is present."
+        },
+        "fail": {
+          "vi": "Chưa bật Different First Page hoặc chưa có header.",
+          "en": "Different First Page is off, or there is no header."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được titlePg.",
+          "en": "The first-page setting could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được sectPr.",
+          "en": "The section properties could not be read."
+        }
       },
       "help_steps": [
-        "Double-click **Header**.",
-        "Tab **Header & Footer**, bật **Different First Page**.",
-        "Để trang đầu trống hoặc chỉ watermark; số trang từ trang 2."
-      ]
+        {
+          "vi": "Double-click **Header**.",
+          "en": "Double-click the **Header**."
+        },
+        {
+          "vi": "Tab **Header & Footer**, bật **Different First Page**.",
+          "en": "On the **Header & Footer** tab, select **Different First Page**."
+        },
+        {
+          "vi": "Để trang đầu trống hoặc chỉ watermark; số trang từ trang 2.",
+          "en": "Leave the first page blank (or watermark only); numbering starts on page 2."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     },
     {
       "id": "W12-ST01",
-      "objective": "1.2",
-      "kind": "artifact",
+      "kc": [
+        "KC-1.2.2"
+      ],
       "weight": 15,
-      "prompt": "Áp style set làm Heading 1 cỡ 15 pt (sz 30).",
-      "predicate": { "type": "style_size", "sz": "30" },
-      "evidence_policy": "file",
+      "predicate": {
+        "type": "style_size",
+        "sz": "30"
+      },
+      "prompt": {
+        "vi": "Áp một Style Set sao cho Heading 1 có cỡ 15 pt.",
+        "en": "Apply a style set so that Heading 1 is 15 pt."
+      },
       "feedback": {
-        "pass": "Heading 1 đã đổi cỡ theo style set.",
-        "fail": "Heading 1 chưa ở cỡ 15 pt — hãy áp một Style Set trên tab Design.",
-        "unverified": "Chưa đọc được styles.xml.",
-        "error": "Không đọc được style."
+        "pass": {
+          "vi": "Heading 1 đã đổi cỡ theo style set.",
+          "en": "Heading 1 changed size with the style set."
+        },
+        "fail": {
+          "vi": "Heading 1 chưa ở cỡ 15 pt — hãy áp một Style Set trên tab Design.",
+          "en": "Heading 1 is not 15 pt — apply a Style Set on the Design tab."
+        },
+        "unverified": {
+          "vi": "Chưa đọc được styles.xml.",
+          "en": "The style definitions could not be read."
+        },
+        "error": {
+          "vi": "Không đọc được style.",
+          "en": "The style could not be read."
+        }
       },
       "help_steps": [
-        "Tab **Design**, nhóm **Document Formatting**.",
-        "Mở gallery **Style Sets**.",
-        "Chọn một bộ (ví dụ **Casual**) rồi xem **Heading 1** đổi cỡ."
-      ]
+        {
+          "vi": "Tab **Design**, nhóm **Document Formatting**.",
+          "en": "On the **Design** tab, in the **Document Formatting** group."
+        },
+        {
+          "vi": "Mở gallery **Style Sets**.",
+          "en": "Open the **Style Sets** gallery."
+        },
+        {
+          "vi": "Chọn một bộ (ví dụ **Casual**) rồi xem **Heading 1** đổi cỡ.",
+          "en": "Choose a set (for example **Casual**) and check that **Heading 1** changes size."
+        }
+      ],
+      "objective": "1.2",
+      "kind": "artifact",
+      "evidence_policy": "file",
+      "version": "1.1.0"
     }
   ]
 }

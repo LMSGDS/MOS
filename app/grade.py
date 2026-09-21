@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+from app import i18n
 from app.qmatrix import attach as attach_qmatrix
 from app.excel_xml import extract_xlsx_facts
 from app.ppt_xml import extract_ppt_facts
@@ -288,10 +289,40 @@ def _table_has_text(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "table_text_missing")
 
 
+def _header_row_indexes(tbl: dict) -> list[int]:
+    """Các hàng tiêu đề của một bảng.
+
+    Word chỉ đánh w:tblHeader lên hàng tiêu đề GỘP (Customer | Appointment);
+    hàng nhãn cột ngay dưới thì không được đánh. Nhận ra hàng gộp bằng chỗ nó
+    ít ô hơn số cột của bảng, rồi lấy thêm hàng kế tiếp — dừng ngay khi gặp
+    hàng đủ số ô, nên không bao giờ ăn lan vào hàng dữ liệu.
+    """
+    rows = tbl.get("cells") or []
+    if not rows:
+        return []
+    cols = int(tbl.get("cols") or 0)
+    indexes = sorted(set(tbl.get("header_rows") or [0]))
+    last = max(indexes)
+    while last + 1 < len(rows) and len(rows[last]) < cols:
+        last += 1
+        indexes.append(last)
+    return sorted(set(indexes))
+
+
 def _table_lacks_text(facts: dict, criterion: dict) -> dict:
-    needle = norm((criterion.get("predicate") or {}).get("text") or "")
+    """`scope: "header"` chỉ quét hàng tiêu đề.
+
+    Cần thiết khi chuỗi cần vắng mặt cũng là dữ liệu hợp lệ: "xóa cột ID" mà
+    quét cả bảng thì đụng ngay ô State = "ID" (Idaho) và báo sai.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    header_only = str(pred.get("scope") or "").casefold() == "header"
     for tbl in facts.get("tables") or []:
-        for row in tbl.get("cells") or []:
+        rows = tbl.get("cells") or []
+        if header_only:
+            rows = [rows[i] for i in _header_row_indexes(tbl) if 0 <= i < len(rows)]
+        for row in rows:
             for cell in row:
                 if needle and same(cell, needle):
                     return _result(criterion, "fail", "table_text_still_present")
@@ -354,11 +385,89 @@ def _list_format(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "list_format_missing")
 
 
+def _list_instances(facts: dict, criterion: dict) -> dict:
+    """Đếm số danh sách ĐỘC LẬP mà một mục xuất hiện trong đó.
+
+    "Restart numbering" trong Word 2019 không ghi ra w:startOverride: Word tạo
+    hẳn một <w:num> mới trỏ tới abstractNum mới. Nên dấu vết thật của việc tách
+    list là cùng một mục nằm trên nhiều numId khác nhau — đo cái đó, không đếm
+    số đoạn ListParagraph (đếm đoạn chỉ đo độ dài danh sách).
+
+    Tùy chọn `restarts`: đòi thêm w:startOverride, cho bản Word có ghi ra.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    fmt = (pred.get("fmt") or "").casefold()
+    minimum = int(pred.get("min") or 2)
+    seen: set[str] = set()
+    for para in facts.get("paragraphs") or []:
+        num_id = str(para.get("num_id") or "")
+        if not num_id or not para.get("num_fmt"):
+            continue
+        if fmt and (para.get("num_fmt") or "").casefold() != fmt:
+            continue
+        if needle and needle.casefold() not in norm(para.get("text")).casefold():
+            continue
+        seen.add(num_id)
+    required_restarts = pred.get("restarts")
+    if required_restarts is not None:
+        if int(facts.get("numbering_restarts") or 0) < int(required_restarts):
+            return _result(criterion, "fail", "list_restart_missing")
+    if len(seen) >= minimum:
+        return _result(criterion, "pass", "list_instances_ok")
+    return _result(criterion, "fail", "list_instances_too_few")
+
+
 def _footnote_min(facts: dict, criterion: dict) -> dict:
     minimum = int((criterion.get("predicate") or {}).get("min") or 1)
     if int(facts.get("footnote_count") or 0) >= minimum:
         return _result(criterion, "pass", "footnotes_present")
     return _result(criterion, "fail", "footnotes_missing")
+
+
+def _styled_text(facts: dict, criterion: dict) -> dict:
+    """Chuỗi phải nằm trong đoạn MANG ĐÚNG STYLE này.
+
+    Dùng khi chuỗi cần tìm là KẾT QUẢ do Word sinh ra ở một vùng cụ thể —
+    ví dụ đổi kiểu citation thì mục danh mục phải hiện "Grimm, Jacob, and
+    Wilhelm Grimm". Quét cả thân bài thì gõ tay vào đoạn văn thường cũng đỗ;
+    buộc đúng style thì học sinh phải để Word dựng ra đoạn đó.
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    style = str(pred.get("style") or "").strip()
+    minimum = int(pred.get("min") or 1)
+    if not needle or not style:
+        return _result(criterion, "fail", "styled_text_missing")
+    hits = 0
+    for para in facts.get("paragraphs") or []:
+        if str(para.get("style") or "") != style:
+            continue
+        if needle.casefold() in norm(para.get("text")).casefold():
+            hits += 1
+    if hits >= minimum:
+        return _result(criterion, "pass", "styled_text_present")
+    return _result(criterion, "fail", "styled_text_missing")
+
+
+def _heading_text(facts: dict, criterion: dict) -> dict:
+    """Một heading mang đúng chữ này có tồn tại không.
+
+    Khác `contains_text` ở chỗ chữ phải nằm trên MỘT HEADING, không phải bất
+    kỳ đâu trong thân bài. Cần cho những chữ vừa là tiêu đề cần tạo vừa là từ
+    thường gặp trong văn bản (References, Contents, Summary…).
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    style = str(pred.get("style") or "").strip()
+    if not needle:
+        return _result(criterion, "fail", "heading_text_missing")
+    for head in facts.get("headings") or []:
+        if style and str(head.get("style") or "") != style:
+            continue
+        if same(head.get("text"), needle):
+            return _result(criterion, "pass", "heading_text_present")
+    return _result(criterion, "fail", "heading_text_missing")
 
 
 def _field_contains(facts: dict, criterion: dict) -> dict:
@@ -479,9 +588,22 @@ def _revision_max(facts: dict, criterion: dict) -> dict:
 
 
 def _document_protection(facts: dict, criterion: dict) -> dict:
-    if facts.get("document_protection"):
-        return _result(criterion, "pass", "tracking_lock_present")
-    return _result(criterion, "fail", "tracking_lock_missing")
+    """`edit` phân biệt Lock Tracking với các kiểu Restrict Editing khác.
+
+    Không khai `edit` thì giữ hành vi cũ (chỉ hỏi "có khóa hay không") để
+    rubric cũ chạy nguyên. Khai `enforced: true` thì đòi thêm w:enforcement=1 —
+    lưu ý Word 2019 ghi enforcement="0" khi bật Lock Tracking không mật khẩu,
+    nên đừng đòi enforced trừ khi đề yêu cầu đặt mật khẩu.
+    """
+    if not facts.get("document_protection"):
+        return _result(criterion, "fail", "tracking_lock_missing")
+    pred = criterion.get("predicate") or {}
+    want = str(pred.get("edit") or "").strip().casefold()
+    if want and str(facts.get("document_protection_edit") or "").casefold() != want:
+        return _result(criterion, "fail", "protection_wrong_mode")
+    if _as_bool(pred.get("enforced")) and not facts.get("document_protection_enforced"):
+        return _result(criterion, "fail", "protection_not_enforced")
+    return _result(criterion, "pass", "tracking_lock_present")
 
 
 def _hdphoto(facts: dict, criterion: dict) -> dict:
@@ -927,7 +1049,11 @@ def _grade_action(criterion: dict, events: list[dict]) -> dict:
     return _result(criterion, "fail", "action_missing")
 
 
-def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> dict:
+def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang: str | None = None) -> dict:
+    # Rubric song ngữ lưu {"vi": …, "en": …}. Dẹp về một ngôn ngữ NGAY TẠI ĐÂY,
+    # trước khi criterion đi vào _result()/_feedback()/qmatrix — nhờ vậy phần
+    # còn lại của grade.py và toàn bộ qmatrix.py vẫn đọc chuỗi thuần như cũ.
+    rubric = i18n.localize_rubric(rubric, lang or rubric.get("default_lang") or i18n.DEFAULT_LANG)
     criteria = list(rubric.get("criteria") or [])
     results: list[dict] = []
     parse_error = not facts.get("ok")
@@ -972,8 +1098,11 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
             "table_repeat_header": _table_repeat_header,
             "table_merged": _table_merged,
             "list_format": _list_format,
+            "list_instances": _list_instances,
             "footnote_min": _footnote_min,
             "field_contains": _field_contains,
+            "heading_text": _heading_text,
+            "styled_text": _styled_text,
             "style_used": _style_used,
             "drawing_kind": _drawing_kind,
             "drawing_text": _drawing_text,
@@ -1067,7 +1196,12 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None) -> d
     }
 
 
-def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | None = None) -> dict:
+def grade_path(
+    path: Path | None,
+    rubric: dict | None = None,
+    evidence: list | None = None,
+    lang: str | None = None,
+) -> dict:
     rubric = load_rubric(rubric)
     suffix = Path(path).suffix.lower() if path else ""
     if path is None:
@@ -1078,4 +1212,4 @@ def grade_path(path: Path | None, rubric: dict | None = None, evidence: list | N
         facts = extract_xlsx_facts(Path(path))
     else:
         facts = extract_word_facts(Path(path))
-    return evaluate_facts(facts, rubric, evidence)
+    return evaluate_facts(facts, rubric, evidence, lang)

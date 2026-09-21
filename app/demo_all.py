@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 from urllib import error, request
 
+from app import i18n
 from app.grade import GRADER_VERSION, grade_path, load_rubric
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -117,7 +118,7 @@ def iter_packs() -> list[dict]:
         packs.append(
             {
                 "project_id": project_id,
-                "title": rubric.get("title") or project_id,
+                "title": i18n.pick(rubric.get("title")) or project_id,
                 "objective": rubric.get("objective") or project_id.removeprefix("word-objective-"),
                 "rubric": rubric,
                 "starter": starter,
