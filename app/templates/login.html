@@ -10,6 +10,9 @@
   {% if error %}
   <p class="alert" role="alert">Tên đăng nhập hoặc mật khẩu không đúng.</p>
   {% endif %}
+  {% if request.query_params.get('doi') == 'ok' %}
+  <p class="coach" role="status">Đã đổi mật khẩu. Đăng nhập lại bằng mật khẩu mới.</p>
+  {% endif %}
   <form method="post" action="/dang-nhap" autocomplete="on">
     <label for="username">Tài khoản</label>
     <input id="username" name="username" required autofocus />

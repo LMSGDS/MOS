@@ -319,3 +319,65 @@ def test_vary_header_present_for_language_negotiation():
     # Vary sẵn có (StaticFiles/FileResponse) được gộp, không bị ghi đè.
     vary_static = c.get("/static/tokens.css").headers.get("Vary", "").lower()
     assert "accept-language" in vary_static and "cookie" in vary_static
+
+
+# ------------------------------------------------------------- đổi mật khẩu
+def test_doi_mat_khau_requires_login_and_links_in_nav():
+    c = TestClient(app)
+    assert c.get("/doi-mat-khau", follow_redirects=False).status_code == 303
+    assert c.post("/doi-mat-khau", data={}, follow_redirects=False).status_code == 303
+    s = _student_client()
+    assert 'href="/doi-mat-khau"' in s.get("/tien-do").text
+    assert s.get("/doi-mat-khau").status_code == 200
+
+
+def _login_ok(username: str, password: str) -> bool:
+    return TestClient(app).post("/api/dang-nhap", json={"username": username, "password": password}).json()["ok"]
+
+
+def test_doi_mat_khau_doi_duoc_va_chan_mat_khau_cu_sai():
+    """Chạy trên tài khoản dùng một lần để không đụng vào hocsinh/giaovien/admin."""
+    from app.accounts import create_account
+    from app.db import cursor
+
+    username = "tmp-doi-mk"
+    password = "MatKhauGoc123"
+    with cursor() as cur:
+        cur.execute("DELETE FROM users WHERE username = %s", (username,))
+    create_account(username=username, name="Tạm đổi MK", role="student", password=password)
+    try:
+        c = TestClient(app)
+        assert c.post("/api/dang-nhap", json={"username": username, "password": password}).json()["ok"]
+
+        # Sai mật khẩu cũ → 400, không đổi, không lộ gì thêm.
+        r = c.post(
+            "/doi-mat-khau",
+            data={"mat_khau_cu": "sai-bet", "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "MatKhauMoi123"},
+            follow_redirects=False,
+        )
+        assert r.status_code == 400 and "Mật khẩu hiện tại không đúng" in r.text
+        assert _login_ok(username, password) and not _login_ok(username, "MatKhauMoi123")
+
+        # Quá ngắn / không khớp / trùng cũ đều bị chặn.
+        for body, msg in (
+            ({"mat_khau_cu": password, "mat_khau_moi": "ngan", "xac_nhan": "ngan"}, "ít nhất 8"),
+            ({"mat_khau_cu": password, "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "KhacHan123"}, "không khớp"),
+            ({"mat_khau_cu": password, "mat_khau_moi": password, "xac_nhan": password}, "phải khác"),
+        ):
+            r = c.post("/doi-mat-khau", data=body, follow_redirects=False)
+            assert r.status_code == 400 and msg in r.text, body
+        assert _login_ok(username, password)
+
+        # Đúng mật khẩu cũ → đổi được, phiên bị huỷ, đăng nhập lại bằng mật khẩu mới.
+        r = c.post(
+            "/doi-mat-khau",
+            data={"mat_khau_cu": password, "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "MatKhauMoi123"},
+            follow_redirects=False,
+        )
+        assert r.status_code == 303 and r.headers["location"] == "/dang-nhap?doi=ok"
+        assert c.get("/doi-mat-khau", follow_redirects=False).status_code == 303  # phiên đã huỷ
+        assert _login_ok(username, "MatKhauMoi123") and not _login_ok(username, password)
+        assert "Đã đổi mật khẩu" in TestClient(app).get("/dang-nhap?doi=ok").text
+    finally:
+        with cursor() as cur:
+            cur.execute("DELETE FROM users WHERE username = %s", (username,))

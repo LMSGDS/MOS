@@ -740,6 +740,49 @@ def install_macos_file(name: str):
     return FileResponse(path, filename=name)
 
 
+PASSWORD_ERRORS = {
+    "sai_mat_khau": {"vi": "Mật khẩu hiện tại không đúng.", "en": "The current password is incorrect."},
+    "qua_ngan": {"vi": "Mật khẩu mới phải có ít nhất 8 ký tự.", "en": "The new password must be at least 8 characters."},
+    "khong_khop": {"vi": "Hai lần nhập mật khẩu mới không khớp.", "en": "The new passwords do not match."},
+    "trung_cu": {"vi": "Mật khẩu mới phải khác mật khẩu hiện tại.", "en": "The new password must differ from the current one."},
+    "khong_luu_duoc": {"vi": "Chưa lưu được. Thử lại sau ít phút.", "en": "Could not save. Try again in a few minutes."},
+}
+
+
+@app.get("/doi-mat-khau", response_class=HTMLResponse)
+def change_password_form(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "doi_mat_khau.html", _ctx(request, {"error": None}))
+
+
+@app.post("/doi-mat-khau", response_class=HTMLResponse)
+def change_password_submit(
+    request: Request,
+    mat_khau_cu: str = Form(""),
+    mat_khau_moi: str = Form(""),
+    xac_nhan: str = Form(""),
+):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    from app.accounts import PasswordChangeError, change_password
+
+    try:
+        change_password(user["username"], mat_khau_cu, mat_khau_moi, xac_nhan)
+    except PasswordChangeError as exc:
+        code = str(exc) if str(exc) in PASSWORD_ERRORS else "khong_luu_duoc"
+        return TEMPLATES.TemplateResponse(
+            request,
+            "doi_mat_khau.html",
+            _ctx(request, {"error": PASSWORD_ERRORS[code]}),
+            status_code=400,
+        )
+    # Đổi xong thì huỷ phiên: mọi phiên cũ (kể cả trên máy khác) phải đăng nhập lại.
+    request.session.clear()
+    return RedirectResponse("/dang-nhap?doi=ok", status_code=303)
+
+
 @app.get("/dang-xuat")
 @app.post("/dang-xuat")
 def logout(request: Request):

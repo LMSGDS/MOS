@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set en = lang == 'en' %}
+{% block title %}{{ 'Change password' if en else 'Đổi mật khẩu' }} · MOS-KulKul{% endblock %}
+{% block body %}
+<section class="card hero student-shell" style="width:min(520px,100%) !important">
+  <h1>{{ 'Change password' if en else 'Đổi mật khẩu' }}</h1>
+  <p class="lead">
+    {% if en %}Account <strong>{{ user.username }}</strong>. After saving you will be signed out and must sign in again.
+    {% else %}Tài khoản <strong>{{ user.username }}</strong>. Sau khi lưu, bạn sẽ được đăng xuất và phải đăng nhập lại.{% endif %}
+  </p>
+  {% if error %}
+  <p class="alert" role="alert">{{ error | t(lang) }}</p>
+  {% endif %}
+  <form method="post" action="/doi-mat-khau" autocomplete="off">
+    <label for="mat_khau_cu">{{ 'Current password' if en else 'Mật khẩu hiện tại' }}</label>
+    <input id="mat_khau_cu" name="mat_khau_cu" type="password" required autocomplete="current-password" autofocus />
+    <label for="mat_khau_moi">{{ 'New password (at least 8 characters)' if en else 'Mật khẩu mới (ít nhất 8 ký tự)' }}</label>
+    <input id="mat_khau_moi" name="mat_khau_moi" type="password" required minlength="8" autocomplete="new-password" />
+    <label for="xac_nhan">{{ 'Confirm new password' if en else 'Nhập lại mật khẩu mới' }}</label>
+    <input id="xac_nhan" name="xac_nhan" type="password" required minlength="8" autocomplete="new-password" />
+    <button type="submit" class="btn btn-primary">{{ 'Save' if en else 'Lưu' }}</button>
+  </form>
+  <p class="hint"><a href="{{ '/quan-tri' if persona != 'student' else '/tien-do' }}">{{ '← Back' if en else '← Quay lại' }}</a></p>
+</section>
+{% endblock %}

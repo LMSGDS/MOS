@@ -280,6 +280,11 @@ textarea:focus-visible,
   .explore { grid-template-columns: 1fr; }
 }
 
+/* ---------------------------------------------------------- đổi mật khẩu */
+.student-top__out { display: flex; align-items: center; gap: 14px; }
+.student-top__pw { color: var(--muted); font-weight: 700; text-decoration: none; }
+.student-top__pw:hover { color: var(--brand-deep); }
+
 /* --------------------------------------------------- trần điểm chấm tự động */
 .ceiling { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
 .ceiling strong { color: var(--ink); }

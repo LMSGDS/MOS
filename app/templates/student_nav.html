@@ -17,6 +17,7 @@
   </div>
   {% endif %}
   <form class="student-top__out" method="post" action="/dang-xuat">
+    <a href="/doi-mat-khau" class="student-top__pw">{{ 'Change password' if lang == 'en' else 'Đổi mật khẩu' }}</a>
     <button type="submit">{{ 'Sign out' if lang == 'en' else 'Đăng xuất' }}</button>
   </form>
 </header>
