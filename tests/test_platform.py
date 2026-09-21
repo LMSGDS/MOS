@@ -1,4 +1,5 @@
 """PostgreSQL platform: JWT, projects, telemetry, OpenXML scoring, admin."""
+import json
 from pathlib import Path
 
 import pytest
@@ -183,6 +184,7 @@ def test_openxml_scoring_reads_sample_docx(pg):
 
 WORD11 = Path(__file__).resolve().parent / "fixtures" / "word-objective-1-1" / "Word_1-1.docx"
 WORD11_RESULTS = Path(__file__).resolve().parent / "fixtures" / "word-objective-1-1" / "Word_1-1_results.docx"
+WORD11_RUBRIC = Path(__file__).resolve().parent.parent / "app" / "rubrics" / "word-objective-1-1.json"
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "data" / "results"
 WORD_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -193,11 +195,19 @@ def test_word_11_manifest_checkpoint_and_submit(client):
     manifest = client.get("/api/v1/projects/word-objective-1-1/manifest", headers=headers).json()
     assert manifest["ok"] is True
     assert manifest["sha256"] == "c29dec782138d02025f4f6d915c71bf9cb8e44a8c0cce60cb210ba0d29a753c8"
-    assert manifest["rubric_version"] == "1.0.0"
+    # Lấy từ chính file rubric để lần bump phiên bản sau không làm gãy test.
+    expected_version = json.loads(WORD11_RUBRIC.read_text(encoding="utf-8"))["rubric_version"]
+    assert manifest["rubric_version"] == expected_version
     assert len(manifest["criteria"]) == 16
     ids = [c["id"] for c in manifest["criteria"]]
     assert "W11-B01" in ids
     assert all(len(c.get("help_steps") or []) >= 2 for c in manifest["criteria"])
+    # Rubric 1.1 là song ngữ: manifest phải là chuỗi đã localize, không được
+    # lọt khối {"vi": …, "en": …} ra client.
+    for item in manifest["criteria"]:
+        assert isinstance(item["prompt"], str) and not item["prompt"].startswith("{"), item["id"]
+        for step in item.get("help_steps") or []:
+            assert isinstance(step, str) and "'vi'" not in step, item["id"]
     starter = client.get("/api/v1/projects/word-objective-1-1/file", headers=headers)
     assert starter.status_code == 200
     assert starter.content[:2] == b"PK"
