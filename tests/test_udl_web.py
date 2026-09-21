@@ -52,10 +52,42 @@ def test_word_frame_does_not_embed_itself():
     assert 'src="/khung/office' in kulkul
 
 
-def test_security_headers_and_https_default():
-    main_src = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
-    assert 'os.environ.get("MOS_HTTPS_ONLY", "1") != "0"' in main_src
-    assert 'MOS_HTTPS_ONLY="${MOS_HTTPS_ONLY:-0}"' in (ROOT / "scripts" / "run-mos-web.sh").read_text(encoding="utf-8")
+def test_https_only_defaults_to_on():
+    """Không đặt biến môi trường thì cờ Secure bật; chỉ '0' mới tắt."""
+    from app.main import https_only_from_env
+
+    assert https_only_from_env({}) is True
+    assert https_only_from_env({"MOS_HTTPS_ONLY": "1"}) is True
+    assert https_only_from_env({"MOS_HTTPS_ONLY": "0"}) is False
+    assert https_only_from_env({"MOS_HTTPS_ONLY": ""}) is True
+
+
+def test_dev_script_runs_over_plain_http(tmp_path):
+    """scripts/run-mos-web.sh phải tắt cờ Secure vì nó phục vụ http://127.0.0.1."""
+    import os
+    import subprocess
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    # Thế uvicorn bằng script in ra biến môi trường rồi thoát.
+    (tmp_path / ".venv" / "bin").mkdir(parents=True)
+    stub = tmp_path / ".venv" / "bin" / "python"
+    stub.write_text("#!/bin/sh\necho \"HTTPS_ONLY=$MOS_HTTPS_ONLY\"\n")
+    stub.chmod(0o755)
+    (tmp_path / ".venv" / "bin" / "pip").write_text("#!/bin/sh\nexit 0\n")
+    (tmp_path / ".venv" / "bin" / "pip").chmod(0o755)
+    (tmp_path / "requirements.txt").write_text("")
+    (tmp_path / "scripts").mkdir()
+    script = tmp_path / "scripts" / "run-mos-web.sh"
+    script.write_text((ROOT / "scripts" / "run-mos-web.sh").read_text(encoding="utf-8"))
+    script.chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if k != "MOS_HTTPS_ONLY"}
+    out = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    assert "HTTPS_ONLY=0" in out.stdout
+
+
+def test_security_headers():
     c = TestClient(app)
     r = c.get("/dang-nhap")
     csp = r.headers["content-security-policy"]
