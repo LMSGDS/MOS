@@ -88,3 +88,79 @@ def test_mac_certiport_split_65_35():
     assert dock[3] == 315
     assert office[1] == 0
     assert dock[1] == 585
+
+
+def test_sync_installers_keeps_pkg_zip_not_source_zip(tmp_path):
+    """Hai artifact CI cùng mang tệp MOS-KulKul-Setup-macOS.zip: bản pkg nén (job macOS)
+    và bản script nguồn (job macos-zip). Máy chủ phải giữ bản pkg nén — bản GitHub
+    Release công bố — không để bản nguồn ~70 KB ghi đè."""
+    import io
+    import json
+    import os
+    import subprocess
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    def art_zip(**files: bytes) -> bytes:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            for name, data in files.items():
+                zf.writestr(name, data)
+        return buf.getvalue()
+
+    blobs = {
+        "/dl/1": art_zip(**{
+            "MOS-KulKul-Setup-macOS.zip": b"PKG-ZIP" * 1000,
+            "MOS-KulKul-Setup-macOS.pkg": b"PKG" * 1000,
+            "SHA256-macOS.txt": b"x",
+        }),
+        "/dl/2": art_zip(**{"MOS-KulKul-Setup-macOS.zip": b"SRC-ZIP"}),
+    }
+    listing = {"artifacts": []}
+    server = HTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+    base = f"http://127.0.0.1:{server.server_port}"
+    run = {"head_branch": "main"}
+    listing["artifacts"] = [
+        # Bản nguồn mới hơn và đứng trước để chắc rằng thứ tự không cứu được.
+        {"id": 2, "name": "MOS-KulKul-Setup-macOS-src", "expired": False, "created_at": "2026-09-21T00:00:02Z",
+         "archive_download_url": f"{base}/dl/2", "workflow_run": run},
+        {"id": 1, "name": "MOS-KulKul-Setup-macOS", "expired": False, "created_at": "2026-09-21T00:00:01Z",
+         "archive_download_url": f"{base}/dl/1", "workflow_run": run},
+    ]
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a):  # im lặng
+            pass
+
+        def do_GET(self):
+            if self.path.startswith("/repos/") and "/actions/artifacts" in self.path:
+                body = json.dumps(listing).encode()
+                ctype = "application/json"
+            elif self.path in blobs:
+                body = blobs[self.path]
+                ctype = "application/zip"
+            else:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server.RequestHandlerClass = Handler
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    try:
+        env = dict(os.environ, MOS_ROOT=str(tmp_path), MOS_GITHUB_TOKEN="t", MOS_GITHUB_API=base)
+        out = subprocess.run(
+            ["bash", str(ROOT / "scripts" / "sync-installers.sh")],
+            env=env, capture_output=True, text=True, timeout=60,
+        )
+    finally:
+        server.shutdown()
+    assert out.returncode == 0, out.stderr
+    got = (tmp_path / "data" / "installers" / "MOS-KulKul-Setup-macOS.zip").read_bytes()
+    assert got == b"PKG-ZIP" * 1000, "bản nguồn đã ghi đè bản pkg nén"
+    assert (tmp_path / "data" / "installers" / "MOS-KulKul-Setup-macOS.pkg").is_file()

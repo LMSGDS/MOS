@@ -25,7 +25,9 @@ token = sys.argv[2]
 dest = root / "data" / "installers"
 dest.mkdir(parents=True, exist_ok=True)
 repo = os.environ.get("MOS_GITHUB_REPO", "LMSGDS/MOS")
-api = f"https://api.github.com/repos/{repo}/actions/artifacts?per_page=30"
+# MOS_GITHUB_API chỉ để test trỏ vào máy chủ giả; production luôn là api.github.com.
+api_base = os.environ.get("MOS_GITHUB_API", "https://api.github.com").rstrip("/")
+api = f"{api_base}/repos/{repo}/actions/artifacts?per_page=30"
 wanted = {
     "MOS-KulKul-Setup-Windows": (
         "MOS-KulKul-Setup-Windows.exe",
@@ -34,13 +36,15 @@ wanted = {
         "MOS-KulKul-Setup-Windows-Full.zip",
         "SHA256.txt",
     ),
+    # Chỉ lấy artifact của job "macOS Setup.app + .pkg". Artifact
+    # MOS-KulKul-Setup-macOS-src (bộ script install.sh, ~70 KB) cũng mang tên tệp
+    # MOS-KulKul-Setup-macOS.zip; tải nó sau sẽ ghi đè bản pkg nén (~1,5 MB) mà
+    # GitHub Release công bố, khiến /cai-dat/macos trả bản khác Release.
     "MOS-KulKul-Setup-macOS": (
         "MOS-KulKul-Setup-macOS.zip",
         "MOS-KulKul-Setup-macOS.pkg",
         "SHA256-macOS.txt",
     ),
-    "MOS-KulKul-Setup-macOS-zip": ("MOS-KulKul-Setup-macOS.zip",),
-    "MOS-KulKul-Setup-macOS-src": ("MOS-KulKul-Setup-macOS.zip",),
 }
 
 
@@ -105,7 +109,7 @@ for name, files in wanted.items():
         sys.stderr.write(f"Khong co artifact {name}\n")
         continue
     art = pick[0]
-    url = art.get("archive_download_url") or f"https://api.github.com/repos/{repo}/actions/artifacts/{art['id']}/zip"
+    url = art.get("archive_download_url") or f"{api_base}/repos/{repo}/actions/artifacts/{art['id']}/zip"
     with tempfile.TemporaryDirectory(prefix="mos-art-") as tmp:
         zpath = Path(tmp) / "art.zip"
         zpath.write_bytes(get(url, binary=True))
