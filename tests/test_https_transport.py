@@ -163,7 +163,9 @@ def test_github_sync_downloads_installers_over_https():
     assert 'os.environ.get("MOS_INSTALLER_BRANCH", "main")' in sync
     assert "MOS_INSTALLER_ARTIFACT_ID" in sync
     assert "dependabot/" in sync
-    assert "https://api.github.com/repos/" in sync
+    # Mặc định luôn là api.github.com qua HTTPS; MOS_GITHUB_API chỉ để test trỏ máy chủ giả.
+    assert 'os.environ.get("MOS_GITHUB_API", "https://api.github.com")' in sync
+    assert "/repos/{repo}/actions/artifacts" in sync
     assert "MOS-KulKul-Setup-Windows-Full.exe" in sync
     assert "MOS-KulKul-Setup-macOS.pkg" in sync
     assert "ssh://" not in sync.lower()
