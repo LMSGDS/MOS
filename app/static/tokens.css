@@ -282,7 +282,7 @@ textarea:focus-visible,
 
 /* ---------------------------------------------------------- đổi mật khẩu */
 .student-top__out { display: flex; align-items: center; gap: 14px; }
-.student-top__pw { color: var(--muted); font-weight: 700; text-decoration: none; }
+.student-top__pw { color: var(--muted); font-weight: 700; text-decoration: none; white-space: nowrap; }
 .student-top__pw:hover { color: var(--brand-deep); }
 
 /* --------------------------------------------------- trần điểm chấm tự động */
