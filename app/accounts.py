@@ -176,3 +176,48 @@ def list_classes() -> list[dict]:
             return list(cur.fetchall())
     except Exception:
         return []
+
+
+class PasswordChangeError(ValueError):
+    """Mã lỗi ngắn: sai_mat_khau | qua_ngan | khong_khop | trung_cu | khong_luu_duoc."""
+
+
+def change_password(username: str, old_password: str, new_password: str, confirm: str) -> None:
+    """Người dùng tự đổi mật khẩu. Kiểm mật khẩu cũ trước, không tiết lộ gì thêm.
+
+    Ghi vào bảng users trong Postgres — nguồn sự thật sau lần đăng nhập đầu
+    (record_login đã sao chép từ data/users.json). Không có DB thì báo lỗi,
+    không sửa tệp JSON trong repo.
+    """
+    from app.auth import find_user, hash_password, verify_password
+
+    user = find_user(username)
+    if not user or not verify_password(old_password or "", user.get("password_hash") or ""):
+        raise PasswordChangeError("sai_mat_khau")
+    new = new_password or ""
+    if len(new) < 8:
+        raise PasswordChangeError("qua_ngan")
+    if new != (confirm or ""):
+        raise PasswordChangeError("khong_khop")
+    if new == old_password:
+        raise PasswordChangeError("trung_cu")
+    uname = (username or "").strip().lower()
+    try:
+        with cursor() as cur:
+            cur.execute(
+                "UPDATE users SET password_hash = %s WHERE username = %s RETURNING id",
+                (hash_password(new), uname),
+            )
+            row = cur.fetchone()
+    except Exception as exc:  # DB chưa sẵn sàng
+        raise PasswordChangeError("khong_luu_duoc") from exc
+    if not row:
+        # Tài khoản chỉ có trong users.json, chưa từng đăng nhập để được ghi vào DB.
+        record_login(uname, "web")
+        with cursor() as cur:
+            cur.execute(
+                "UPDATE users SET password_hash = %s WHERE username = %s RETURNING id",
+                (hash_password(new), uname),
+            )
+            if not cur.fetchone():
+                raise PasswordChangeError("khong_luu_duoc")

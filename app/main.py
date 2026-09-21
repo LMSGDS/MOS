@@ -134,14 +134,21 @@ except Exception as exc:
 app.include_router(admin_router)
 # Identity innermost so SessionMiddleware fills scope["session"] first.
 app.add_middleware(RequestIdentityMiddleware)
+# Nguồn sự thật duy nhất cho cờ Secure của mọi cookie.
+# Máy chủ thật sau nginx + Cloudflare: request.url.scheme là 'http', không tin được.
+# Mặc định bật; chỉ tắt (MOS_HTTPS_ONLY=0) khi chạy http://127.0.0.1 trên máy cá nhân.
+def https_only_from_env(env: dict) -> bool:
+    return env.get("MOS_HTTPS_ONLY", "1") != "0"
+
+
+HTTPS_ONLY = https_only_from_env(os.environ)
+
 app.add_middleware(
     SessionMiddleware,
     secret_key=SESSION_SECRET,
     session_cookie="mos_session",
     same_site="lax",
-    # Mặc định bật cờ Secure: server thật chạy sau nginx + Cloudflare.
-    # Chỉ tắt (MOS_HTTPS_ONLY=0) khi chạy http://127.0.0.1 trên máy cá nhân.
-    https_only=os.environ.get("MOS_HTTPS_ONLY", "1") != "0",
+    https_only=HTTPS_ONLY,
     max_age=60 * 60 * 12,
 )
 app.mount("/static", StaticFiles(directory=str(STATIC)), name="static")
@@ -170,6 +177,14 @@ async def frame_same_origin(request, call_next):
     response.headers["Content-Security-Policy"] = CSP
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
+    # Nội dung đổi theo ngôn ngữ (cookie mos_lang, Accept-Language): cache trung
+    # gian như Cloudflare phải tách bản. Gộp với Vary sẵn có, không ghi đè.
+    # Tệp tĩnh không đổi theo ngôn ngữ; gắn Vary: Cookie vào đó sẽ khiến mỗi
+    # phiên mos_session một bản cache riêng, phòng máy mất cache biên.
+    if not request.url.path.startswith("/static/"):
+        can = {p.strip().lower() for p in (response.headers.get("Vary") or "").split(",") if p.strip()}
+        can.update({"accept-language", "cookie"})
+        response.headers["Vary"] = ", ".join(sorted(can))
     lang_cookie = getattr(request.state, "lang_cookie", None)
     if lang_cookie:
         response.set_cookie(
@@ -177,7 +192,7 @@ async def frame_same_origin(request, call_next):
             lang_cookie,
             max_age=LANG_COOKIE_MAX_AGE,
             samesite="lax",
-            secure=request.url.scheme == "https",
+            secure=HTTPS_ONLY,
         )
     path = request.url.path
     if request.method == "GET" and path.startswith("/quan-tri"):
@@ -726,6 +741,49 @@ def install_macos_file(name: str):
     if path is None or not path.is_file():
         return HTMLResponse("Not found", status_code=404)
     return FileResponse(path, filename=name)
+
+
+PASSWORD_ERRORS = {
+    "sai_mat_khau": {"vi": "Mật khẩu hiện tại không đúng.", "en": "The current password is incorrect."},
+    "qua_ngan": {"vi": "Mật khẩu mới phải có ít nhất 8 ký tự.", "en": "The new password must be at least 8 characters."},
+    "khong_khop": {"vi": "Hai lần nhập mật khẩu mới không khớp.", "en": "The new passwords do not match."},
+    "trung_cu": {"vi": "Mật khẩu mới phải khác mật khẩu hiện tại.", "en": "The new password must differ from the current one."},
+    "khong_luu_duoc": {"vi": "Chưa lưu được. Thử lại sau ít phút.", "en": "Could not save. Try again in a few minutes."},
+}
+
+
+@app.get("/doi-mat-khau", response_class=HTMLResponse)
+def change_password_form(request: Request):
+    if not current_user(request):
+        return RedirectResponse("/dang-nhap", status_code=303)
+    return TEMPLATES.TemplateResponse(request, "doi_mat_khau.html", _ctx(request, {"error": None}))
+
+
+@app.post("/doi-mat-khau", response_class=HTMLResponse)
+def change_password_submit(
+    request: Request,
+    mat_khau_cu: str = Form(""),
+    mat_khau_moi: str = Form(""),
+    xac_nhan: str = Form(""),
+):
+    user = current_user(request)
+    if not user:
+        return RedirectResponse("/dang-nhap", status_code=303)
+    from app.accounts import PasswordChangeError, change_password
+
+    try:
+        change_password(user["username"], mat_khau_cu, mat_khau_moi, xac_nhan)
+    except PasswordChangeError as exc:
+        code = str(exc) if str(exc) in PASSWORD_ERRORS else "khong_luu_duoc"
+        return TEMPLATES.TemplateResponse(
+            request,
+            "doi_mat_khau.html",
+            _ctx(request, {"error": PASSWORD_ERRORS[code]}),
+            status_code=400,
+        )
+    # Đổi xong thì huỷ phiên: mọi phiên cũ (kể cả trên máy khác) phải đăng nhập lại.
+    request.session.clear()
+    return RedirectResponse("/dang-nhap?doi=ok", status_code=303)
 
 
 @app.get("/dang-xuat")

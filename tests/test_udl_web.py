@@ -52,10 +52,42 @@ def test_word_frame_does_not_embed_itself():
     assert 'src="/khung/office' in kulkul
 
 
-def test_security_headers_and_https_default():
-    main_src = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
-    assert 'os.environ.get("MOS_HTTPS_ONLY", "1") != "0"' in main_src
-    assert 'MOS_HTTPS_ONLY="${MOS_HTTPS_ONLY:-0}"' in (ROOT / "scripts" / "run-mos-web.sh").read_text(encoding="utf-8")
+def test_https_only_defaults_to_on():
+    """Không đặt biến môi trường thì cờ Secure bật; chỉ '0' mới tắt."""
+    from app.main import https_only_from_env
+
+    assert https_only_from_env({}) is True
+    assert https_only_from_env({"MOS_HTTPS_ONLY": "1"}) is True
+    assert https_only_from_env({"MOS_HTTPS_ONLY": "0"}) is False
+    assert https_only_from_env({"MOS_HTTPS_ONLY": ""}) is True
+
+
+def test_dev_script_runs_over_plain_http(tmp_path):
+    """scripts/run-mos-web.sh phải tắt cờ Secure vì nó phục vụ http://127.0.0.1."""
+    import os
+    import subprocess
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    # Thế uvicorn bằng script in ra biến môi trường rồi thoát.
+    (tmp_path / ".venv" / "bin").mkdir(parents=True)
+    stub = tmp_path / ".venv" / "bin" / "python"
+    stub.write_text("#!/bin/sh\necho \"HTTPS_ONLY=$MOS_HTTPS_ONLY\"\n")
+    stub.chmod(0o755)
+    (tmp_path / ".venv" / "bin" / "pip").write_text("#!/bin/sh\nexit 0\n")
+    (tmp_path / ".venv" / "bin" / "pip").chmod(0o755)
+    (tmp_path / "requirements.txt").write_text("")
+    (tmp_path / "scripts").mkdir()
+    script = tmp_path / "scripts" / "run-mos-web.sh"
+    script.write_text((ROOT / "scripts" / "run-mos-web.sh").read_text(encoding="utf-8"))
+    script.chmod(0o755)
+    env = {k: v for k, v in os.environ.items() if k != "MOS_HTTPS_ONLY"}
+    out = subprocess.run(["bash", str(script)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    assert "HTTPS_ONLY=0" in out.stdout
+
+
+def test_security_headers():
     c = TestClient(app)
     r = c.get("/dang-nhap")
     csp = r.headers["content-security-policy"]
@@ -226,3 +258,143 @@ def test_study_guide_starters_already_inspected_so_1_4_keeps_action_kind():
     assert starter["personal_info_removed"] is True and starter["compatibility_mode"] == "15"
     rubric = (ROOT / "app" / "rubrics" / "word-objective-1-4.json").read_text(encoding="utf-8")
     assert re.search(r'"id":\s*"W14-I01"[\s\S]*?"kind":\s*"action_sequence"', rubric)
+
+
+# ------------------------------------------------ ngưỡng làm chủ theo trần điểm
+def test_mastery_threshold_follows_real_ceiling():
+    from app.explore import auto_ceiling, level_for
+
+    # 1-3 trần 55: làm hết phần máy chấm được thì phải là mastered
+    assert auto_ceiling("word-objective-1-3") == 55
+    assert level_for("in_progress", 55, "word-objective-1-3") == "mastered"
+    assert level_for("in_progress", 38, "word-objective-1-3") == "learning"
+    # rubric trọn vẹn giữ nguyên ngưỡng 70
+    assert level_for(None, 70, "word-objective-1-2") == "mastered"
+    assert level_for(None, 69, "word-objective-1-2") == "learning"
+    # không truyền project_id thì giữ hành vi cũ
+    assert level_for(None, 70) == "mastered"
+    assert level_for(None, 69) == "learning"
+    assert level_for(None, 0) == "new"
+    # slug lạ / rubric không tồn tại → coi như trần 100
+    assert auto_ceiling("word-objective-9-9") == 100
+    assert auto_ceiling("../etc/passwd") == 100
+
+
+def test_no_rubric_has_unreachable_mastery():
+    """Không rubric nào được đặt ngưỡng cao hơn trần điểm của chính nó."""
+    import glob
+    import json
+
+    from app.ceiling import ceiling
+    from app.explore import MASTERY_RATIO, level_for
+
+    for path in glob.glob(str(ROOT / "app" / "rubrics" / "*-objective-*.json")):
+        rubric = json.load(open(path, encoding="utf-8"))
+        auto = ceiling(rubric)["auto"]
+        assert MASTERY_RATIO * auto <= auto, path
+        pid = Path(path).stem
+        if auto > 0:
+            assert level_for("in_progress", auto, pid) == "mastered", path
+        else:
+            # Trần 0 (toàn thao tác chết): không ai "làm chủ" khi chưa làm gì,
+            # điểm không mở khoá được, chỉ giáo viên xác nhận.
+            assert level_for(None, 0, pid) == "new", path
+            assert level_for(None, 100, pid) == "new", path
+            assert level_for("submitted", 0, pid) == "learning", path
+            assert level_for("mastered", 0, pid) == "mastered", path
+
+
+def test_zero_ceiling_is_real_not_fallback():
+    from app.explore import auto_ceiling
+
+    assert auto_ceiling("powerpoint-objective-1-3") == 0
+    assert auto_ceiling("word-objective-9-9") == 100  # không tra được → 100
+
+
+# ------------------------------------------------------- cờ Secure của cookie
+def test_lang_cookie_secure_follows_https_only(monkeypatch):
+    monkeypatch.setattr("app.main.HTTPS_ONLY", True)
+    c = TestClient(app)
+    r = c.get("/dang-nhap?lang=en")
+    dat = [v for k, v in r.headers.items() if k.lower() == "set-cookie" and "mos_lang" in v]
+    assert dat and "Secure" in dat[0]
+
+    monkeypatch.setattr("app.main.HTTPS_ONLY", False)
+    c = TestClient(app)
+    r = c.get("/dang-nhap?lang=en")
+    dat = [v for k, v in r.headers.items() if k.lower() == "set-cookie" and "mos_lang" in v]
+    assert dat and "Secure" not in dat[0]
+
+
+# ------------------------------------------------------------------- Vary
+def test_vary_header_present_for_language_negotiation():
+    c = TestClient(app)
+    vary = c.get("/dang-nhap").headers.get("Vary", "").lower()
+    assert "accept-language" in vary and "cookie" in vary
+    # Tệp tĩnh không đổi theo ngôn ngữ: KHÔNG được gắn Vary: Cookie, nếu không
+    # cache biên phải tách bản theo từng mos_session.
+    for path in ("/static/tokens.css", "/static/mos.css", "/static/kulkul.png"):
+        vary_static = c.get(path).headers.get("Vary", "").lower()
+        assert "cookie" not in vary_static and "accept-language" not in vary_static, path
+
+
+# ------------------------------------------------------------- đổi mật khẩu
+def test_doi_mat_khau_requires_login_and_links_in_nav():
+    c = TestClient(app)
+    assert c.get("/doi-mat-khau", follow_redirects=False).status_code == 303
+    assert c.post("/doi-mat-khau", data={}, follow_redirects=False).status_code == 303
+    s = _student_client()
+    assert 'href="/doi-mat-khau"' in s.get("/tien-do").text
+    assert s.get("/doi-mat-khau").status_code == 200
+
+
+def _login_ok(username: str, password: str) -> bool:
+    return TestClient(app).post("/api/dang-nhap", json={"username": username, "password": password}).json()["ok"]
+
+
+def test_doi_mat_khau_doi_duoc_va_chan_mat_khau_cu_sai():
+    """Chạy trên tài khoản dùng một lần để không đụng vào hocsinh/giaovien/admin."""
+    from app.accounts import create_account
+    from app.db import cursor
+
+    username = "tmp-doi-mk"
+    password = "MatKhauGoc123"
+    with cursor() as cur:
+        cur.execute("DELETE FROM users WHERE username = %s", (username,))
+    create_account(username=username, name="Tạm đổi MK", role="student", password=password)
+    try:
+        c = TestClient(app)
+        assert c.post("/api/dang-nhap", json={"username": username, "password": password}).json()["ok"]
+
+        # Sai mật khẩu cũ → 400, không đổi, không lộ gì thêm.
+        r = c.post(
+            "/doi-mat-khau",
+            data={"mat_khau_cu": "sai-bet", "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "MatKhauMoi123"},
+            follow_redirects=False,
+        )
+        assert r.status_code == 400 and "Mật khẩu hiện tại không đúng" in r.text
+        assert _login_ok(username, password) and not _login_ok(username, "MatKhauMoi123")
+
+        # Quá ngắn / không khớp / trùng cũ đều bị chặn.
+        for body, msg in (
+            ({"mat_khau_cu": password, "mat_khau_moi": "ngan", "xac_nhan": "ngan"}, "ít nhất 8"),
+            ({"mat_khau_cu": password, "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "KhacHan123"}, "không khớp"),
+            ({"mat_khau_cu": password, "mat_khau_moi": password, "xac_nhan": password}, "phải khác"),
+        ):
+            r = c.post("/doi-mat-khau", data=body, follow_redirects=False)
+            assert r.status_code == 400 and msg in r.text, body
+        assert _login_ok(username, password)
+
+        # Đúng mật khẩu cũ → đổi được, phiên bị huỷ, đăng nhập lại bằng mật khẩu mới.
+        r = c.post(
+            "/doi-mat-khau",
+            data={"mat_khau_cu": password, "mat_khau_moi": "MatKhauMoi123", "xac_nhan": "MatKhauMoi123"},
+            follow_redirects=False,
+        )
+        assert r.status_code == 303 and r.headers["location"] == "/dang-nhap?doi=ok"
+        assert c.get("/doi-mat-khau", follow_redirects=False).status_code == 303  # phiên đã huỷ
+        assert _login_ok(username, "MatKhauMoi123") and not _login_ok(username, password)
+        assert "Đã đổi mật khẩu" in TestClient(app).get("/dang-nhap?doi=ok").text
+    finally:
+        with cursor() as cur:
+            cur.execute("DELETE FROM users WHERE username = %s", (username,))
