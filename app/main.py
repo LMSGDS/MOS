@@ -179,9 +179,12 @@ async def frame_same_origin(request, call_next):
     response.headers["Referrer-Policy"] = "same-origin"
     # Nội dung đổi theo ngôn ngữ (cookie mos_lang, Accept-Language): cache trung
     # gian như Cloudflare phải tách bản. Gộp với Vary sẵn có, không ghi đè.
-    can = {p.strip().lower() for p in (response.headers.get("Vary") or "").split(",") if p.strip()}
-    can.update({"accept-language", "cookie"})
-    response.headers["Vary"] = ", ".join(sorted(can))
+    # Tệp tĩnh không đổi theo ngôn ngữ; gắn Vary: Cookie vào đó sẽ khiến mỗi
+    # phiên mos_session một bản cache riêng, phòng máy mất cache biên.
+    if not request.url.path.startswith("/static/"):
+        can = {p.strip().lower() for p in (response.headers.get("Vary") or "").split(",") if p.strip()}
+        can.update({"accept-language", "cookie"})
+        response.headers["Vary"] = ", ".join(sorted(can))
     lang_cookie = getattr(request.state, "lang_cookie", None)
     if lang_cookie:
         response.set_cookie(
