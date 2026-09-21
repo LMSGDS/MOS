@@ -258,7 +258,9 @@ def test_baseline_file_covers_every_current_error():
 def test_baseline_records_the_expected_debt():
     baseline = json.loads((ROOT / "rubric-baseline.json").read_text(encoding="utf-8"))
     total = sum(len(v) for v in baseline["known_errors"].values())
-    assert total == 52, f"số lỗi tồn đọng đổi từ 52 thành {total} — cập nhật kỳ vọng nếu là chủ ý"
+    # 52 lúc chốt lần đầu; A5 + W42C-H01 hạ xuống 51. Con số chỉ được PHÉP
+    # giảm — tăng nghĩa là có rubric mới yếu lọt vào.
+    assert total == 51, f"số lỗi tồn đọng đổi từ 51 thành {total} — cập nhật kỳ vọng nếu là chủ ý"
 
 
 def test_load_baseline_tolerates_a_missing_or_broken_file(tmp_path):

@@ -16,23 +16,23 @@
       "objective": "4.2",
       "kind": "artifact",
       "weight": 40,
-      "prompt": "Chèn Table of Contents (trường TOC).",
+      "prompt": "Mục lục là trường TOC thật (không gõ tay, không dùng Manual Table).",
       "predicate": {
         "type": "field_contains",
-        "text": "TOC"
+        "text": "TOC \\o"
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Đã có trường TOC.",
-        "fail": "Chưa thấy TOC.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Mục lục là trường TOC thật, cập nhật được.",
+        "fail": "Chưa có trường TOC. Gõ tay hoặc dùng Manual Table thì không phải trường — References > Table of Contents > Automatic Table.",
+        "unverified": "Chưa đọc được trường trong tài liệu.",
+        "error": "Không đọc được trường trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
         "Đặt con trỏ đầu tài liệu (sau tiêu đề).",
         "**References** > **Table of Contents**.",
-        "Chọn **Automatic Table** (cấp 1-3)."
+        "Chọn **Automatic Table** — **Manual Table** không tạo ra trường TOC."
       ]
     },
     {
@@ -40,7 +40,7 @@
       "objective": "4.2",
       "kind": "artifact",
       "weight": 30,
-      "prompt": "Có heading Contents (TOCHeading).",
+      "prompt": "Mục lục dùng heading dựng sẵn (style TOC Heading), không phải tiêu đề tự gõ.",
       "predicate": {
         "type": "style_used",
         "style": "TOCHeading",
@@ -48,10 +48,10 @@
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Đã có TOCHeading.",
-        "fail": "Chưa thấy TOCHeading.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Heading của mục lục dùng đúng style TOC Heading.",
+        "fail": "Chưa có style TOC Heading. Automatic Table tự tạo heading Contents; nếu tự chèn thì phải áp style TOC Heading.",
+        "unverified": "Chưa đọc được style trong tài liệu.",
+        "error": "Không đọc được style trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
@@ -65,24 +65,24 @@
       "objective": "4.2",
       "kind": "artifact",
       "weight": 30,
-      "prompt": "Mục lục có các dòng TOC1.",
+      "prompt": "Mục lục phủ đủ cấp 1-3 (có dòng cấp 3 trong mục lục).",
       "predicate": {
         "type": "style_used",
-        "style": "TOC1",
+        "style": "TOC3",
         "min": 1
       },
       "evidence_policy": "file",
       "feedback": {
-        "pass": "Đã có mục TOC1.",
-        "fail": "Chưa thấy dòng TOC1.",
-        "unverified": "Chưa thu được bằng chứng thao tác. Không kết luận học sinh làm sai.",
-        "error": "Không đọc được tệp."
+        "pass": "Mục lục có dòng tới cấp 3.",
+        "fail": "Mục lục chưa có dòng cấp 3. Chọn Automatic Table (cấp 1-3), hoặc Custom TOC với Show levels = 3, rồi Update entire table.",
+        "unverified": "Chưa đọc được các dòng mục lục.",
+        "error": "Không đọc được mục lục trong tệp."
       },
       "version": "1.0.0",
       "help_steps": [
-        "Đảm bảo các tiêu đề dùng **Heading 1/2/3** trước khi chèn TOC.",
-        "**References** > **Update Table** nếu thiếu mục.",
-        "Chọn **Update entire table**."
+        "Đảm bảo tài liệu đã dùng **Heading 1/2/3** trước khi chèn.",
+        "**Automatic Table** mặc định phủ cấp 1-3; hoặc **Custom Table of Contents** > **Show levels: 3**.",
+        "**Update Table** > **Update entire table** nếu thiếu dòng."
       ]
     }
   ]

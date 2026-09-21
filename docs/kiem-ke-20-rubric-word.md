@@ -245,9 +245,47 @@ Mỗi ca đều có test dựng một tài liệu **làm sai mà luật cũ vẫ
 
 Một lưu ý cho C2: ba trong bốn fact này **đã nằm sẵn trong XML mà code chỉ đọc lướt qua** (`num_id` thậm chí đã được parse rồi bỏ). Nên ước lượng 3–4 ngày cho C2 có thể rộng rãi hơn thực tế.
 
-### Còn lại của mục 4
+### `W42C-H01` và `W42A` — đã sửa nốt
 
-`W42C-H01` (30 điểm, `contains_text: "References"`) và `W42A-T01/H01/E01` (100 điểm cho một cú bấm) **chưa sửa** — cả hai là quyết định nội dung chứ không phải lỗi kỹ thuật: cái đầu cần chọn giữa `style_used: Bibliography` và `field_contains: BIBLIOGRAPHY`, cái sau cần tách lại nhiệm vụ. Để thầy quyết.
+| Tiêu chí | Predicate cũ | Predicate mới | Điểm |
+|---|---|---|---:|
+| `W42C-H01` | `contains_text: "References"` | `heading_text: "References"` | 30 |
+| `W42A-T01` | `field_contains: "TOC"` | `field_contains: "TOC \o"` | 40 |
+| `W42A-E01` | `style_used: TOC1, min 1` | `style_used: TOC3, min 1` | 30 |
+
+**`W42C-H01` — cả hai đề xuất ở mục 4.5 đều không dùng được.** `field_contains: BIBLIOGRAPHY` thì file đáp án **không có field BIBLIOGRAPHY nào** (chỉ có ba field `CITATION`), nên sẽ đánh trượt chính đáp án. Còn `style_used: Bibliography` thì **đã là `W42C-B01`** — dùng lại sẽ trùng predicate và bị chính luật 2 bắt. Cách đúng là thêm predicate `heading_text`: chữ *References* phải nằm trên một **heading**, không phải bất kỳ đâu trong thân bài. Trong đáp án nó đúng là `Heading1`. Phân biệt được ngay câu *"See the References tab on the ribbon"* — câu này luật cũ cho đỗ 30 điểm.
+
+> Đính chính mục 4.5: giả định *"tài liệu gốc nhiều khả năng đã chứa từ References"* là **sai** với file thật — file đề không chứa từ đó. Lỗi không phải "đỗ sẵn", mà là "đỗ với bài làm sai".
+
+**`W42A-T01` có một false positive chưa ai để ý.** `field_contains` viết hoa cả hai phía trước khi so, nên needle `"TOC"` khớp luôn field `PAGEREF _Toc26916297 \h` — mà đó chính là loại field do tham chiếu chéo sinh ra. Một tài liệu chỉ có cross-reference, không có mục lục nào, vẫn ăn 40 điểm. Đổi sang `"TOC \o"` (switch mà mọi TOC thật đều mang, PAGEREF thì không) là hết.
+
+**`W42A-E01` trước đây không đo gì thêm.** `TOC1` có mặt ở **mọi** mục lục, kể cả loại chỉ 1 cấp — nên nó không hề đo yêu cầu *"cấp 1-3"* mà chính đề bài nêu trong `help_steps`. `TOC3` mới đo đúng.
+
+Kết quả: ba tiêu chí của 4.2a nay **bất đồng được với nhau**, mỗi lựa chọn sai trong hộp thoại Insert TOC cho một điểm khác nhau — trước đây trên đường làm đúng chúng chỉ cùng đỗ hoặc cùng trượt:
+
+| Học sinh làm | T01 | H01 | E01 | Điểm |
+|---|---|---|---|---:|
+| Automatic Table (đúng) | ✓ | ✓ | ✓ | 100 |
+| Custom TOC, Show levels = 1 | ✓ | ✓ | ✗ | 70 |
+| Manual Table | ✗ | ✓ | ✓ | 60 |
+| Custom TOC, bỏ heading | ✓ | ✗ | ✓ | 70 |
+| Gõ mục lục bằng tay | ✗ | ✗ | ✗ | 0 |
+
+### Còn lại một tiêu chí trong 4-2c
+
+`W42C-C01` (30 điểm, `contains_text: "Grimm, Jacob, and Wilhelm Grimm"`) vẫn là predicate yếu và là lỗi duy nhất còn lại của file này. Nó **gần** với ca miễn trừ `weak_ok` — kết quả của việc đổi kiểu citation *chính là* chuỗi đó — nhưng vẫn quét cả thân bài nên gõ tay vào đoạn văn thường cũng đỗ. Cách sửa gọn: giới hạn phép so vào **đoạn mang style `Bibliography`**. Chưa làm vì đây là quyết định nội dung. Để thầy quyết giữa `weak_ok` (ghi lý do) hay siết lại predicate.
+
+---
+
+## 8c. Lỗi CI đầu tiên của nhánh — và bài học
+
+---
+
+`tests/test_platform.py::test_word_11_manifest_checkpoint_and_submit` chốt cứng `rubric_version == "1.0.0"`, trong khi bản song ngữ của 1-1 là `1.1.0`. **Test này cần Postgres nên bị skip khi chạy cục bộ** — 62 test skip lặng lẽ, và lỗi chỉ lộ ra trên CI.
+
+Đã sửa: lấy phiên bản kỳ vọng từ chính file rubric, để lần bump sau không gãy lại. Và thêm phần test còn thiếu — assert cũ chỉ kiểm `len(help_steps) >= 2`, nên một khối `{"vi":…,"en":…}` lọt qua `str()` vẫn đỗ; nay kiểm luôn manifest không rò khối song ngữ ra client.
+
+**Bài học:** chạy test cục bộ mà không có Postgres thì 62 test không chạy, trong đó có toàn bộ tầng API. Từ giờ chạy bằng `DATABASE_URL=postgresql://mos:mos@localhost:5432/mos python3 -m pytest -q tests` — đủ 240 test.
 
 ---
 
@@ -284,5 +322,6 @@ CI chỉ gãy khi có **lỗi MỚI**. Lỗi tồn đọng hiện dấu `·` tha
 | `scripts/audit_word.py` | Dựng bảng mục 2 bằng cách đọc thẳng `app/rubrics/`; chạy trong CI |
 | `scripts/build_word_rubric.py` | Script đã dựng bản song ngữ 1-1, dùng làm khuôn cho file tiếp theo |
 | `rubric-baseline.json` | 52 lỗi tồn đọng đã chốt, để CI chỉ chặn lỗi mới |
-| `tests/test_rubric_tool.py` | 24 test cho bộ luật, gồm 2 test đối chiếu thẳng mã C# |
+| `tests/test_rubric_tool.py` | test cho bộ luật, gồm 2 test đối chiếu thẳng mã C# |
+| `tests/test_a5_mismeasured_criteria.py` | 21 test cho 6 tiêu chí đo nhầm, mỗi ca dựng tài liệu làm sai mà luật cũ cho đỗ |
 | `tests/test_i18n.py` | 15 test cho lớp song ngữ, gồm test chấm `vi`/`en` ra cùng điểm |

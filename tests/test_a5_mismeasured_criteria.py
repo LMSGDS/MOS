@@ -220,3 +220,124 @@ def test_legacy_document_protection_predicate_still_works_without_edit():
             "predicate": {"type": "document_protection"}, "feedback": {"fail": "f"}}
     assert _status(crit, _protection_doc("readOnly")) == "pass"
     assert _status(crit, _protection_doc(None)) == "fail"
+
+
+# ============================================================ W42C-H01, W42A
+# Hai ca còn lại của mục 4: predicate hợp lệ nhưng không đo đúng thứ cần đo.
+
+OLD.update({
+    "W42C-H01": {"type": "contains_text", "text": "References"},
+    "W42A-T01": {"type": "field_contains", "text": "TOC"},
+    "W42A-E01": {"type": "style_used", "style": "TOC1", "min": 1},
+})
+
+
+def _styled_doc(paras: list[tuple[str, str]], fields: list[str] | None = None) -> Path:
+    """paras = [(style, text)]; fields = danh sách instrText."""
+    body = "".join(
+        (f'<w:p><w:pPr><w:pStyle w:val="{style}"/></w:pPr>' if style else "<w:p>")
+        + f"<w:r><w:t>{text}</w:t></w:r></w:p>"
+        for style, text in paras
+    )
+    for instr in fields or []:
+        body += f'<w:p><w:r><w:instrText>{instr}</w:instrText></w:r></w:p>'
+    return _docx({"word/document.xml": f"<w:document {NS}><w:body>{body}</w:body></w:document>"})
+
+
+# ------------------------------------------------------------ W42C-H01
+
+def test_w42ch01_old_predicate_passes_the_word_anywhere_in_the_body():
+    """References là tên một tab ribbon và là từ rất thường gặp."""
+    prose = _styled_doc([
+        ("Heading1", "About the Brothers Grimm"),
+        ("", "See the References tab on the ribbon for more details."),
+    ])
+    crit = _criterion("word-objective-4-2c", "W42C-H01")
+    assert _status(_with_old_predicate(crit), prose) == "pass"   # 30 điểm cho không
+    assert _status(crit, prose) == "fail"
+
+
+def test_w42ch01_new_predicate_needs_a_real_heading():
+    titled = _styled_doc([("Heading1", "About the Brothers Grimm"), ("Heading1", "References")])
+    assert _status(_criterion("word-objective-4-2c", "W42C-H01"), titled) == "pass"
+
+
+def test_w42ch01_does_not_duplicate_w42cb01():
+    """Đề xuất ban đầu dùng lại style_used Bibliography — sẽ trùng predicate
+    với W42C-B01 và bị chính luật 2 của rubric_tool bắt."""
+    import json as _json
+    rubric = _json.loads((RUBRICS / "word-objective-4-2c.json").read_text(encoding="utf-8"))
+    preds = [_json.dumps(c["predicate"], sort_keys=True) for c in rubric["criteria"]]
+    assert len(preds) == len(set(preds))
+
+
+def test_w42c_answer_file_has_no_bibliography_field():
+    """Chốt lý do không dùng field_contains BIBLIOGRAPHY: field đó không tồn tại."""
+    facts = extract_word_facts(FIXTURES / "word-objective-4-2c" / "Word_4-2c_results.docx")
+    assert facts["fields"], "đáp án phải có field CITATION"
+    assert all("BIBLIOGRAPHY" not in f.upper() for f in facts["fields"])
+
+
+# --------------------------------------------------------------- W42A
+
+def test_w42at01_old_predicate_matches_a_pageref_field():
+    """field_contains "TOC" viết hoa hai phía nên khớp cả PAGEREF _Toc…"""
+    cross_ref_only = _styled_doc([("Heading1", "General Administration")],
+                                 fields=['PAGEREF _Toc26916297 \\h'])
+    crit = _criterion("word-objective-4-2a", "W42A-T01")
+    assert _status(_with_old_predicate(crit), cross_ref_only) == "pass"   # false positive
+    assert _status(crit, cross_ref_only) == "fail"
+
+
+def test_w42at01_new_predicate_accepts_a_real_toc_field():
+    real = _styled_doc([("TOCHeading", "Contents")], fields=['TOC \\o "1-3" \\h \\z \\u'])
+    assert _status(_criterion("word-objective-4-2a", "W42A-T01"), real) == "pass"
+
+
+def test_w42ae01_old_predicate_passes_a_single_level_toc():
+    """TOC1 có mặt ở MỌI mục lục, kể cả loại chỉ 1 cấp — không đo được
+    yêu cầu "cấp 1-3" mà chính đề bài nêu."""
+    one_level = _styled_doc(
+        [("TOCHeading", "Contents"), ("TOC1", "General Administration2"), ("TOC1", "Accounting5")],
+        fields=['TOC \\o "1-1" \\h \\z \\u'],
+    )
+    crit = _criterion("word-objective-4-2a", "W42A-E01")
+    assert _status(_with_old_predicate(crit), one_level) == "pass"   # 30 điểm cho không
+    assert _status(crit, one_level) == "fail"
+
+
+def _grade_42a(path: Path) -> dict[str, str]:
+    rubric = load_rubric(RUBRICS / "word-objective-4-2a.json")
+    from app.grade import evaluate_facts
+    graded = evaluate_facts(extract_word_facts(path), rubric)
+    return {c["criterion_id"]: c["status"] for c in graded["criteria"]}
+
+
+def test_w42a_three_criteria_can_now_disagree():
+    """Trước đây cả ba chỉ cùng đỗ hoặc cùng trượt trên đường làm đúng.
+    Giờ mỗi lựa chọn sai trong hộp thoại Insert TOC cho một điểm khác nhau."""
+    hand_typed = _styled_doc([("", "Contents"), ("", "General Administration....2")])
+    assert _grade_42a(hand_typed) == {"W42A-T01": "fail", "W42A-H01": "fail", "W42A-E01": "fail"}
+
+    # Manual Table: có style TOC nhưng KHÔNG có trường TOC.
+    manual = _styled_doc([("TOCHeading", "Contents"), ("TOC1", "Type chapter title (level 1)"),
+                          ("TOC2", "Type chapter title (level 2)"), ("TOC3", "Type chapter title (level 3)")])
+    assert _grade_42a(manual) == {"W42A-T01": "fail", "W42A-H01": "pass", "W42A-E01": "pass"}
+
+    # Custom TOC chỉ 1 cấp: có trường và heading, nhưng không phủ cấp 3.
+    one_level = _styled_doc([("TOCHeading", "Contents"), ("TOC1", "General Administration2")],
+                            fields=['TOC \\o "1-1" \\h \\z \\u'])
+    assert _grade_42a(one_level) == {"W42A-T01": "pass", "W42A-H01": "pass", "W42A-E01": "fail"}
+
+    # Custom TOC không kèm heading.
+    no_heading = _styled_doc([("TOC1", "General Administration2"), ("TOC3", "Office2")],
+                             fields=['TOC \\o "1-3" \\h \\z \\u'])
+    assert _grade_42a(no_heading) == {"W42A-T01": "pass", "W42A-H01": "fail", "W42A-E01": "pass"}
+
+
+def test_w42a_and_w42c_answer_files_still_score_100():
+    for n in ("4-2a", "4-2c"):
+        rubric = load_rubric(RUBRICS / f"word-objective-{n}.json")
+        folder = FIXTURES / f"word-objective-{n}"
+        assert grade_path(folder / f"Word_{n}.docx", rubric)["score"] == 0.0, n
+        assert grade_path(folder / f"Word_{n}_results.docx", rubric)["score"] == 100.0, n

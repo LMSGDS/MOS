@@ -425,6 +425,26 @@ def _footnote_min(facts: dict, criterion: dict) -> dict:
     return _result(criterion, "fail", "footnotes_missing")
 
 
+def _heading_text(facts: dict, criterion: dict) -> dict:
+    """Một heading mang đúng chữ này có tồn tại không.
+
+    Khác `contains_text` ở chỗ chữ phải nằm trên MỘT HEADING, không phải bất
+    kỳ đâu trong thân bài. Cần cho những chữ vừa là tiêu đề cần tạo vừa là từ
+    thường gặp trong văn bản (References, Contents, Summary…).
+    """
+    pred = criterion.get("predicate") or {}
+    needle = norm(pred.get("text") or "")
+    style = str(pred.get("style") or "").strip()
+    if not needle:
+        return _result(criterion, "fail", "heading_text_missing")
+    for head in facts.get("headings") or []:
+        if style and str(head.get("style") or "") != style:
+            continue
+        if same(head.get("text"), needle):
+            return _result(criterion, "pass", "heading_text_present")
+    return _result(criterion, "fail", "heading_text_missing")
+
+
 def _field_contains(facts: dict, criterion: dict) -> dict:
     needle = ((criterion.get("predicate") or {}).get("text") or "").upper()
     if any(needle in (f or "").upper() for f in facts.get("fields") or []):
@@ -1056,6 +1076,7 @@ def evaluate_facts(facts: dict, rubric: dict, evidence: list | None = None, lang
             "list_instances": _list_instances,
             "footnote_min": _footnote_min,
             "field_contains": _field_contains,
+            "heading_text": _heading_text,
             "style_used": _style_used,
             "drawing_kind": _drawing_kind,
             "drawing_text": _drawing_text,
