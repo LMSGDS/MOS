@@ -33,15 +33,10 @@ MAPS = i18n.CRITERION_MAP_FIELDS           # ("feedback",)
 WEAK_PREDICATES = {"contains_text", "not_contains_text"}
 WEAK_WEIGHT_LIMIT = 20                     # điểm tối đa một predicate yếu được gánh
 
-# Loại thao tác mà WordActionProbe.cs thật sự sinh ra được bằng chứng.
-# Mọi predicate action_sequence NGOÀI danh sách này là "điểm chết":
-# không có nguồn bằng chứng nào, nên vĩnh viễn ở trạng thái unverified.
-PRODUCIBLE_ACTIONS = {
-    "find", "search_query",
-    "find_navigate", "search_navigate",
-    "results_tab",
-    "advanced_find",
-}
+# Loại thao tác mà WordActionProbe.cs thật sự sinh ra được bằng chứng — nguồn
+# duy nhất nằm ở app/ceiling.py để web (trần điểm trên thẻ nhiệm vụ) và CI
+# (luật 7) không lệch nhau.
+from app.ceiling import PRODUCIBLE_ACTIONS  # noqa: E402
 
 # Predicate so sánh ngưỡng: hai tiêu chí cùng type + cùng text, khác min,
 # thì cái ngưỡng cao đỗ kéo theo cái ngưỡng thấp đỗ — không đo thêm gì.
